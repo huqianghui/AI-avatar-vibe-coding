@@ -1,8 +1,8 @@
-# AI Coach Platform
+# AI Avatar Platform
 
 <p align="center">
-  <strong>AI-Powered Medical Representative Training Platform</strong><br/>
-  <em>面向医药代表的 AI 智能教练平台 — BeiGene (百济神州)</em>
+  <strong>AI-Powered Digital Human Avatar Platform</strong><br/>
+  <em>基于 Azure AI 的智能数字人 Avatar 平台 — 官网问答 + 登录个性化知识助手</em>
 </p>
 
 <p align="center">
@@ -16,11 +16,16 @@
 
 ---
 
-## What is AI Coach?
+## What is AI Avatar Platform?
 
-AI Coach 是一个基于 **Azure AI Services** 的医药代表（MR）智能培训平台。平台通过 **实时语音对话 + 数字人形象 (Avatar)** 模拟真实的 HCP（Healthcare Professional，医疗专业人员）互动场景，帮助 MR 在安全的练习环境中提升沟通技巧和产品知识。
+AI Avatar Platform 是一个基于 **Azure AI Services** 的智能数字人问答平台，通过 **实时语音对话 + 数字人形象 (Avatar)** 提供两种交互模式：
 
-**核心价值**：MR 可以随时随地与 AI 驱动的数字化 HCP 进行逼真的对话练习，并获得即时的、多维度的反馈，无需真实 HCP 或培训师在场。
+- **匿名模式**（无需登录）：数字人基于官方网站内容知识（已索引至 Azure AI Foundry IQ）回答访客问题
+- **登录模式**（个性化）：数字人基于 CRM 关联的用户画像回答问题（POC 阶段以 Excel 对应关系表模拟，不做真实 CRM 集成），并记住用户偏好（通过 system prompt / prompt template 按 userid 注入）
+- **多语言**：支持中文、英文、西班牙语
+- **清爽 UI**：仅展示数字人形象与来源文档链接，语音内容与文档展示分离呈现
+
+**核心价值**：访客和登录用户都能获得即时、准确、多语言的数字人问答体验 — 匿名用户基于公开官网知识，登录用户则获得基于个人画像与偏好的个性化回答。
 
 ---
 

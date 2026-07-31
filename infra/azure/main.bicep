@@ -209,7 +209,7 @@ var deployContentUnderstanding = enableContentUnderstanding || isFullLegacyDeplo
 var deployAiSearch = enableAiSearch || knowledgeBaseMode == 'azureAiSearch' || isFullLegacyDeployment
 var useAzureAdDatabaseAuth = backendDatabaseAuthMode == 'azureAd'
 var commonTags = union({
-  project: 'ai-coach'
+  project: 'ai-avatar'
   environment: environmentName
   managedBy: 'bicep'
 }, empty(owner) ? {} : {

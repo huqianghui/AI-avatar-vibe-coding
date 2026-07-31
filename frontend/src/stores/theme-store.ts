@@ -8,8 +8,8 @@ interface ThemeState {
   accent: AccentColor;
 }
 
-const THEME_STORAGE_KEY = "ai-coach-theme";
-const ACCENT_STORAGE_KEY = "ai-coach-accent";
+const THEME_STORAGE_KEY = "ai-avatar-theme";
+const ACCENT_STORAGE_KEY = "ai-avatar-accent";
 
 export const ACCENT_COLORS = [
   { name: "blue" as const, color: "#1E40AF", label: "BeiGene Blue" },

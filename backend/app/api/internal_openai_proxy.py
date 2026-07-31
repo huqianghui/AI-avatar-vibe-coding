@@ -90,7 +90,7 @@ async def list_models(
                 "id": model,
                 "object": "model",
                 "created": 0,
-                "owned_by": "ai-coach",
+                "owned_by": "ai-avatar",
             }
         ],
     }

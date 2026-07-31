@@ -1,4 +1,4 @@
-# CLAUDE.md — AI Coach Platform Engineering Handbook
+# CLAUDE.md — AI Avatar Platform Engineering Handbook
 
 > This is the **single source of truth** for HOW to develop on this project.
 > For WHAT to build → `docs/specs/`, for WHY → `docs/requirements.md`
@@ -223,14 +223,15 @@ CI will reject PRs that fail these checks.
 
 ---
 
-## AI Coach Domain Rules
+## AI Avatar Domain Rules
 
-1. **Training Sessions** have a lifecycle: `created → in_progress → completed → scored`
-2. **Scoring** is multi-dimensional — never return a single score without breakdown
-3. **HCP profiles** include: name, specialty, personality, knowledge background, perspective
-4. **Conversations** are immutable once completed — only scoring/feedback can be added
-5. **Voice records** must respect retention policies (auto-delete per config)
-6. **All coaching interactions** must be auditable (traceable training paths)
+1. **Avatar Sessions** have a lifecycle: `created → active → ended`, tagged as `anonymous` or `personalized`
+2. **Anonymous mode** requires no login — avatar answers are grounded in official website content indexed into Azure AI Foundry IQ
+3. **Personalized mode** requires login — avatar responses are shaped by CRM-derived user profile data (POC: Excel-based user-profile mapping table, no live CRM integration)
+4. **User preferences** are injected via system prompt / prompt template at session start, keyed by `user_id`; preference extraction is backend-driven or manually tagged (deep memory mechanisms deferred post-POC)
+5. **Multi-language** support is mandatory across UI, voice, and avatar output for Chinese, English, and Spanish
+6. **Source separation** — the digital human's spoken/text response and the underlying source document/page link must render as separate UI elements, never merged into one bubble
+7. **All avatar interactions** must be auditable (traceable knowledge source per response)
 
 ---
 
@@ -265,18 +266,18 @@ See `.github/workflows/` for full configurations.
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**AI Coach Platform — BeiGene**
+**AI Avatar Platform**
 
-A production AI coaching platform for BeiGene (百济神州) that trains Medical Representatives (MRs) through AI-simulated HCP interactions. MRs practice F2F calls and conference presentations with digital Healthcare Professionals, receive multi-dimensional scoring, and track their improvement over time. Built on Azure PaaS services with i18n support for global deployment (China + Europe).
+An AI-powered digital human (avatar) platform built on Azure PaaS. It offers two interaction modes: an anonymous, no-login mode where the avatar answers visitor questions grounded in official website content indexed into Azure AI Foundry IQ, and a personalized, login-required mode where the avatar responds using CRM-derived user profile data (POC: Excel-based mapping, no live CRM integration) and remembers user preferences injected via system prompt/template. The platform supports Chinese, English, and Spanish, with a clean UI that shows only the digital human plus source document links — voice content and document display are kept visually separate.
 
-**Core Value:** MRs can practice realistic conversations with AI-powered digital HCPs and receive immediate, multi-dimensional feedback to improve their communication skills and product knowledge — anytime, without needing a real HCP or trainer.
+**Core Value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
 ### Constraints
 
-- **Cloud**: Azure PaaS only (no AWS) — Azure OpenAI, Speech, Avatar, Content Understanding, PostgreSQL
-- **i18n**: Must support Chinese + English from day 1, i18n framework required for European expansion
-- **Compliance**: Per-region deployment to satisfy data residency regulations (China, EU)
-- **Auth**: Simple user/admin for MVP, architecture must support Azure AD (Entra ID) later
+- **Cloud**: Azure PaaS only (no AWS) — Azure OpenAI, Speech, Avatar, AI Foundry (incl. Foundry IQ), PostgreSQL
+- **i18n**: Must support Chinese + English + Spanish
+- **Auth**: Anonymous mode requires no login; personalized mode requires login and CRM-derived profile lookup (POC: Excel mapping, no live CRM integration)
+- **Memory**: User preference injection via system prompt/template keyed by user id; deep automated memory extraction deferred post-POC (backend extraction or manual tagging only)
 - **Budget**: Azure AI Avatar is premium — implement as configurable option, fall back to Azure Speech TTS
 - **Frontend**: Must be responsive — same app works on desktop, tablet, mobile, and Teams Tab
 <!-- GSD:project-end -->

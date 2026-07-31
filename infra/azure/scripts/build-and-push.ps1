@@ -31,8 +31,8 @@ $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AzureRoot = Split-Path -Parent $ScriptRoot
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $AzureRoot)
 
-$backendImage = "ai-coach-backend:$ImageTag"
-$frontendImage = "ai-coach-frontend:$ImageTag"
+$backendImage = "ai-avatar-backend:$ImageTag"
+$frontendImage = "ai-avatar-frontend:$ImageTag"
 
 Write-Host "Building backend image in ACR..." -ForegroundColor Cyan
 Invoke-Az -FailureMessage "Backend ACR build failed." -Arguments @(

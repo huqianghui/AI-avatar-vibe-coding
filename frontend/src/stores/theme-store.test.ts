@@ -47,7 +47,7 @@ describe("theme-store", () => {
     });
 
     expect(result.current.mode).toBe("dark");
-    expect(localStorage.getItem("ai-coach-theme")).toBe("dark");
+    expect(localStorage.getItem("ai-avatar-theme")).toBe("dark");
   });
 
   it("setThemeMode('dark') adds dark class to documentElement", () => {
@@ -77,7 +77,7 @@ describe("theme-store", () => {
     });
 
     expect(result.current.accent).toBe("teal");
-    expect(localStorage.getItem("ai-coach-accent")).toBe("teal");
+    expect(localStorage.getItem("ai-avatar-accent")).toBe("teal");
   });
 
   it("setAccentColor('purple') adds theme-purple class to documentElement", () => {

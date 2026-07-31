@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A production AI coaching platform for BeiGene (百济神州) that trains Medical Representatives (MRs) through AI-simulated HCP interactions. MRs practice F2F calls and conference presentations with digital Healthcare Professionals, receive multi-dimensional scoring, and track their improvement over time. Built on Azure PaaS services with i18n support for global deployment (China + Europe).
+An AI-powered digital human (avatar) platform for BeiGene (百济神州), built on Azure PaaS. It provides an anonymous, no-login mode where the avatar answers questions grounded in official website content indexed into Azure AI Foundry IQ, and a personalized, login-required mode where the avatar responds using CRM-derived user profile data (POC: Excel-based mapping, no live CRM integration) and remembers user preferences injected via system prompt/template. Supports Chinese, English, and Spanish, with a clean UI showing only the digital human plus source document links.
 
 ## Core Value
 
-MRs can practice realistic conversations with AI-powered digital HCPs and receive immediate, multi-dimensional feedback to improve their communication skills and product knowledge — anytime, without needing a real HCP or trainer.
+Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
 ## Requirements
 

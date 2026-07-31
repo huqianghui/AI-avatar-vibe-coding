@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ai-coach-backend"
+name = "ai-avatar-backend"
 version = "0.1.0"
-description = "AI Coach Training Platform - Backend API"
+description = "AI Avatar Platform - Backend API"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
@@ -56,7 +56,7 @@ voice = [
     "azure-ai-voicelive[aiohttp]==1.3.0b1",
 ]
 all = [
-    "ai-coach-backend[dev,postgresql,voice]",
+    "ai-avatar-backend[dev,postgresql,voice]",
 ]
 
 [tool.setuptools.packages.find]

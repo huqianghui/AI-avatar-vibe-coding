@@ -151,7 +151,7 @@ async def optimize_prompt(
                 "params": {
                     "protocolVersion": "2025-03-26",
                     "capabilities": {},
-                    "clientInfo": {"name": "ai-coach-backend", "version": "0.1.0"},
+                    "clientInfo": {"name": "ai-avatar-backend", "version": "0.1.0"},
                 },
             },
         )

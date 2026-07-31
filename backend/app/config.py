@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # App
-    app_name: str = "AI Coach Platform"
+    app_name: str = "AI Avatar Platform"
     debug: bool = False
     api_prefix: str = "/api/v1"
 
