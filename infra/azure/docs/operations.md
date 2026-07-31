@@ -138,7 +138,7 @@ After deployment, use the printed values:
 
 ```powershell
 .\infra\azure\scripts\set-github-vars.ps1 `
-  -Repository "huqianghui/AI-Coach-vibe-coding" `
+  -Repository "huqianghui/AI-avatar-vibe-coding" `
   -AzureClientId "<AZURE_CLIENT_ID>" `
   -AzureTenantId "<AZURE_TENANT_ID>" `
   -AzureSubscriptionId "<AZURE_SUBSCRIPTION_ID>" `
@@ -153,7 +153,7 @@ For the private test environment, write variables to the GitHub Environment inst
 
 ```powershell
 .\infra\azure\scripts\set-github-vars.ps1 `
-  -Repository "huqianghui/AI-Coach-vibe-coding" `
+  -Repository "huqianghui/AI-avatar-vibe-coding" `
   -EnvironmentName "private" `
   -AzureClientId "<AZURE_CLIENT_ID>" `
   -AzureTenantId "<AZURE_TENANT_ID>" `

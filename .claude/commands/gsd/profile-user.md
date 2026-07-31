@@ -19,8 +19,8 @@ Routes to the profile-user workflow which orchestrates the full flow: consent ga
 </objective>
 
 <execution_context>
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/profile-user.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/references/ui-brand.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/profile-user.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/references/ui-brand.md
 </execution_context>
 
 <context>

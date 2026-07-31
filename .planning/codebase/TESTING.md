@@ -147,7 +147,7 @@ test.describe("Health Checks", () => {
 
   test("frontend loads", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/AI Coach/);
+    await expect(page).toHaveTitle(/AI Avatar/);
   });
 });
 ```

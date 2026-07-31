@@ -19,8 +19,8 @@ Output: Milestone archived (roadmap + requirements), PROJECT.md evolved, git tag
 <execution_context>
 **Load these files NOW (before proceeding):**
 
-- @/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/complete-milestone.md (main workflow)
-- @/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/templates/milestone-archive.md (archive template)
+- @/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/complete-milestone.md (main workflow)
+- @/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/templates/milestone-archive.md (archive template)
   </execution_context>
 
 <context>

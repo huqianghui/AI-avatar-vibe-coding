@@ -35,8 +35,8 @@ Output: Updated scoring_engine.py with strengthened prompt and post-validation l
 </objective>
 
 <execution_context>
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/execute-plan.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/templates/summary.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/execute-plan.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/templates/summary.md
 </execution_context>
 
 <context>
@@ -87,7 +87,7 @@ Output: Updated scoring_engine.py with strengthened prompt and post-validation l
        - Use the same mock/patch patterns as test_scoring_service.py (AsyncMock, patch for config_service and azure_auth)
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/backend && python -m pytest tests/test_scoring_engine_postvalidation.py -v --tb=short</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/backend && python -m pytest tests/test_scoring_engine_postvalidation.py -v --tb=short</automated>
   </verify>
   <done>
     - _enforce_scoring_rules() caps key_message to 30 when all messages undelivered

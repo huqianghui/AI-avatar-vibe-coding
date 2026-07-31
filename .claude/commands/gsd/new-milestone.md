@@ -25,11 +25,11 @@ Brownfield equivalent of new-project. Project exists, PROJECT.md has history. Ga
 </objective>
 
 <execution_context>
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/new-milestone.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/references/questioning.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/references/ui-brand.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/templates/project.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/templates/requirements.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/new-milestone.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/references/questioning.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/references/ui-brand.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/templates/project.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/templates/requirements.md
 </execution_context>
 
 <context>
@@ -39,6 +39,6 @@ Project and milestone context files are resolved inside the workflow (`init new-
 </context>
 
 <process>
-Execute the new-milestone workflow from @/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/new-milestone.md end-to-end.
+Execute the new-milestone workflow from @/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/new-milestone.md end-to-end.
 Preserve all workflow gates (validation, questioning, research, requirements, roadmap approval, commits).
 </process>

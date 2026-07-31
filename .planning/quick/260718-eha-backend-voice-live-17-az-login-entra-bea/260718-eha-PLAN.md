@@ -49,8 +49,8 @@ Output: 3 test files fixed; 0 failed across all Voice Live tests; ruff clean; no
 </objective>
 
 <execution_context>
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/execute-plan.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/templates/summary.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/execute-plan.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/templates/summary.md
 </execution_context>
 
 <context>
@@ -214,7 +214,7 @@ Category 3 -- stale assertions from service redesign (commit 22866fd) + missing 
     no new imports needed.
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/backend && .venv/bin/python3 -m pytest tests/test_voice_live.py -v 2>&1 | tail -40</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/backend && .venv/bin/python3 -m pytest tests/test_voice_live.py -v 2>&1 | tail -40</automated>
   </verify>
   <done>
     `test_connection_tester_voice_live_no_key` and `test_connection_tester_dispatch_voice_live` pass
@@ -278,7 +278,7 @@ Category 3 -- stale assertions from service redesign (commit 22866fd) + missing 
     intentional behavior of that file.
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/backend && .venv/bin/python3 -m pytest tests/test_voice_live_service.py -v 2>&1 | tail -60</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/backend && .venv/bin/python3 -m pytest tests/test_voice_live_service.py -v 2>&1 | tail -60</automated>
   </verify>
   <done>
     `test_raises_when_api_key_missing`, `test_status_both_available`, and
@@ -385,7 +385,7 @@ Category 3 -- stale assertions from service redesign (commit 22866fd) + missing 
     than introducing new production code paths.
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/backend && .venv/bin/python3 -m pytest tests/test_voice_live_websocket.py -v 2>&1 | tail -100</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/backend && .venv/bin/python3 -m pytest tests/test_voice_live_websocket.py -v 2>&1 | tail -100</automated>
   </verify>
   <done>
     All previously-failing tests in `test_voice_live_websocket.py` pass: the 3 classic-agent mock

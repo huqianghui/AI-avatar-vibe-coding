@@ -202,7 +202,7 @@
 - Priority: Medium -- add Vitest config and component testing utilities as components are created.
 
 **E2E Tests Cannot Currently Run:**
-- What's not tested: The Playwright config (`frontend/e2e/playwright.config.ts`) references starting the backend and frontend as web servers, but the frontend has no entry point to serve. The "frontend loads" test expects a title matching `/AI Coach/` but no HTML page exists.
+- What's not tested: The Playwright config (`frontend/e2e/playwright.config.ts`) references starting the backend and frontend as web servers, but the frontend has no entry point to serve. The "frontend loads" test expects a title matching `/AI Avatar/` but no HTML page exists.
 - Files: `frontend/e2e/playwright.config.ts`, `frontend/e2e/health.spec.ts`
 - Risk: The E2E safety net is non-functional. CI will fail at the e2e-test stage.
 - Priority: High -- fix once the frontend entry point is created.

@@ -69,7 +69,7 @@ An MR can select a scenario, have a text-based F2F conversation with an AI HCP t
 - `backend/app/api/auth.py` — Auth router pattern (follow for new API routers)
 
 ### Reference Material
-- `docs/capgemini-ai-coach-solution.md` — Reference solution architecture (Capgemini AI Coach for AWS, adapted to Azure)
+- `docs/capgemini-ai-coach-solution.md` — Reference solution architecture (Capgemini AI Avatar for AWS, adapted to Azure)
 
 </canonical_refs>
 

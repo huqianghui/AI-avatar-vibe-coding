@@ -156,7 +156,7 @@ All 16 requirement IDs from the phase are accounted for and satisfied.
 ### 2. Admin Sidebar Layout
 
 **Test:** Login with admin/admin123 credentials.
-**Expected:** Redirected to admin dashboard. Left sidebar with dark blue (#1E293B) background, 8 nav items with icons, AI Coach Admin header, collapse toggle. Clicking collapse narrows sidebar to icon-only (64px) with tooltips.
+**Expected:** Redirected to admin dashboard. Left sidebar with dark blue (#1E293B) background, 8 nav items with icons, AI Avatar Admin header, collapse toggle. Clicking collapse narrows sidebar to icon-only (64px) with tooltips.
 **Why human:** Sidebar collapse animation, dark theme rendering, tooltip positioning require visual inspection.
 
 ### 3. User Top-Nav Layout

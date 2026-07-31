@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Integrate Azure Voice Live Agent with Avatar into the AI Coach platform for real-time voice coaching with digital HCP avatar. All 7 Azure AI interaction modes are implemented through a unified Azure AI Foundry endpoint resource type. The reference implementation is the user's Voice-Live-Agent-With-Avadar repo. Plans 08-01 through 08-03 are complete — remaining work is container wiring, route registration, admin config card, transcript persistence, and comprehensive testing.
+Integrate Azure Voice Live Agent with Avatar into the AI Avatar platform for real-time voice coaching with digital HCP avatar. All 7 Azure AI interaction modes are implemented through a unified Azure AI Foundry endpoint resource type. The reference implementation is the user's Voice-Live-Agent-With-Avadar repo. Plans 08-01 through 08-03 are complete — remaining work is container wiring, route registration, admin config card, transcript persistence, and comprehensive testing.
 
 </domain>
 

@@ -1,4 +1,4 @@
-# Phase 19: AI Coach Skill Module - Research
+# Phase 19: AI Avatar Skill Module - Research
 
 **Researched:** 2026-04-11
 **Domain:** Skill lifecycle management, document-to-SOP conversion, Skill Hub UI, Scenario-Skill association
@@ -574,12 +574,12 @@ export function useCreateSkill() {
 
 ### Design Rationale
 
-AI Coach Skill 的核心价值是确保 MR 训练的标准化和高质量。一个 Skill 从材料自动提取后，必须经过评测验证其合理性和全面性，否则低质量 Skill 会导致：
+AI Avatar Skill 的核心价值是确保 MR 训练的标准化和高质量。一个 Skill 从材料自动提取后，必须经过评测验证其合理性和全面性，否则低质量 Skill 会导致：
 - SOP 步骤不完整 → MR 训练遗漏关键环节
 - 考核内容与源材料脱节 → 评分结果不可信
 - 知识点错误 → MR 学到错误信息
 
-参考：科大讯飞 SkillHub（https://iflytek.github.io/skillhub/）的多级审核工作流 + 安全扫描思路，结合 AI Coach 训练场景特点，设计三层评测体系（Phase 19 实现 Layer 1 + 2，Layer 3 Dry Run 模拟在 Phase 20 独立实现）。
+参考：科大讯飞 SkillHub（https://iflytek.github.io/skillhub/）的多级审核工作流 + 安全扫描思路，结合 AI Avatar 训练场景特点，设计三层评测体系（Phase 19 实现 Layer 1 + 2，Layer 3 Dry Run 模拟在 Phase 20 独立实现）。
 
 ### Layer 1: 自动结构检查（即时，Skill创建/导入后自动运行）
 
@@ -692,7 +692,7 @@ async def check_skill_structure(skill: Skill) -> StructureCheckResult:
 ```python
 # skill_evaluation_service.py — AI quality assessment
 
-SKILL_EVALUATION_PROMPT = """你是一位资深医药培训设计专家。请对以下 AI Coach 培训 Skill 进行全面质量评估。
+SKILL_EVALUATION_PROMPT = """你是一位资深医药培训设计专家。请对以下 AI Avatar 培训 Skill 进行全面质量评估。
 
 ## Skill 信息
 名称：{skill_name}
@@ -902,7 +902,7 @@ async def list_skill_feedbacks(skill_id: str, ...):
 
 ### Reference: Community Patterns
 
-- **科大讯飞 SkillHub** (https://iflytek.github.io/skillhub/): 多级审核工作流 + Skill Scanner 安全分析 + 评分/星标系统。我们借鉴其"发布前自动检查"和"质量分数可见"的设计，但评测维度针对 AI Coach 训练场景定制。
+- **科大讯飞 SkillHub** (https://iflytek.github.io/skillhub/): 多级审核工作流 + Skill Scanner 安全分析 + 评分/星标系统。我们借鉴其"发布前自动检查"和"质量分数可见"的设计，但评测维度针对 AI Avatar 训练场景定制。
 - **skills-hub** (https://github.com/qufei1993/skills-hub): Tauri+React 桌面应用，专注 Skill 管理和跨工具同步，无评测框架。其 Skill 存储和版本管理模式可参考。
 - **ClawHub** (https://clawhub.ai/skills): AI Agent Skill 的版本化注册中心（类 npm 模式）。借鉴其设计：
   - **版本管理**：类 semver 版本控制 + 回滚能力 → 我们的 SkillVersion 表

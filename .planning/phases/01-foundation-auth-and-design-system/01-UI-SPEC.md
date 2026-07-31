@@ -173,16 +173,16 @@ It is NOT used for: card borders, section backgrounds, badges (use `--secondary`
 | Viewport | 1440x900 desktop reference, responsive down to 375px mobile |
 | Background | Subtle gradient: light blue to white |
 | Card width | 480px centered, full-width on mobile with 16px horizontal padding |
-| Card content | Logo + "AI Coach" title, email input, password input (with show/hide toggle), "Remember me" checkbox, full-width "Sign In" button |
+| Card content | Logo + "AI Avatar" title, email input, password input (with show/hide toggle), "Remember me" checkbox, full-width "Sign In" button |
 | Language switcher | Bottom-right corner of viewport |
-| Footer | "2026 AI Coach Platform" centered below card |
+| Footer | "2026 AI Avatar Platform" centered below card |
 
 ### User Layout Shell
 
 | Property | Value |
 |----------|-------|
 | Top-nav height | 64px, white background, bottom shadow |
-| Top-nav left | Logo + "AI Coach" |
+| Top-nav left | Logo + "AI Avatar" |
 | Top-nav center | Nav links: Dashboard, Training, History, Reports |
 | Top-nav right | Language switcher, notification bell, user avatar + name dropdown |
 | Content area | Below nav, `#F8FAFC` background |
@@ -195,7 +195,7 @@ It is NOT used for: card borders, section backgrounds, badges (use `--secondary`
 |----------|-------|
 | Sidebar width | 240px, collapsed to ~64px (icon-only) |
 | Sidebar bg | `#1E293B` (dark blue) |
-| Sidebar top | Logo + "AI Coach Admin" |
+| Sidebar top | Logo + "AI Avatar Admin" |
 | Sidebar items | Dashboard, Users, HCP Profiles, Scenarios, Materials, Reports, Azure Services, Settings (each with lucide icon) |
 | Sidebar bottom | Collapse/expand toggle button |
 | Top-bar height | 56px, white background |
@@ -224,14 +224,14 @@ All copy is delivered via react-i18next translation keys. The table below define
 
 | Element | Key | English Copy | Chinese Copy |
 |---------|-----|-------------|--------------|
-| Page title | `auth.title` | AI Coach | AI 教练 |
+| Page title | `auth.title` | AI Avatar | AI 教练 |
 | Email label | `auth.email` | Email | 邮箱 |
 | Password label | `auth.password` | Password | 密码 |
 | Remember me | `auth.rememberMe` | Remember me | 记住我 |
 | **Primary CTA** | `auth.signIn` | **Sign In** | **登录** |
 | Loading state | `auth.signingIn` | Signing in... | 登录中... |
 | Login error | `auth.loginFailed` | Invalid username or password. Please try again. | 用户名或密码错误，请重试。 |
-| Footer | `auth.copyright` | 2026 AI Coach Platform | 2026 AI 教练平台 |
+| Footer | `auth.copyright` | 2026 AI Avatar Platform | 2026 AI 教练平台 |
 
 ### Navigation Namespace (`nav.json`)
 

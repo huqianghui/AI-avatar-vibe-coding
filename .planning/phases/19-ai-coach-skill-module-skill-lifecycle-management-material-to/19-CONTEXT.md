@@ -1,4 +1,4 @@
-# Phase 19: AI Coach Skill Module - Context
+# Phase 19: AI Avatar Skill Module - Context
 
 **Gathered:** 2026-04-11
 **Status:** Ready for planning
@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-构建 AI Coach Skill 模块，实现 Skill 全生命周期管理（创建、编辑、发布、归档）。用户可上传培训材料（文档、PPT等），系统自动将其转换为结构化的 SKILL.md 格式培训技能包（含 SOP、考核内容、知识点）。Skill Hub 集中展示所有可用 Skill。管理员可将 Skill 关联到 Scenario，训练过程中 HCP Agent 依据 Skill SOP 内容与 MR 用户交互。
+构建 AI Avatar Skill 模块，实现 Skill 全生命周期管理（创建、编辑、发布、归档）。用户可上传培训材料（文档、PPT等），系统自动将其转换为结构化的 SKILL.md 格式培训技能包（含 SOP、考核内容、知识点）。Skill Hub 集中展示所有可用 Skill。管理员可将 Skill 关联到 Scenario，训练过程中 HCP Agent 依据 Skill SOP 内容与 MR 用户交互。
 
 本阶段不包含 Dry Run 模拟测试（Phase 20）。
 

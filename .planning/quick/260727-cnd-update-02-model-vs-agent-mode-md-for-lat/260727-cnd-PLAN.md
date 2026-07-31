@@ -40,8 +40,8 @@ Output: Corrected doc 02 (accurate SDK version state + flattened-kwargs code exa
 </objective>
 
 <execution_context>
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/workflows/execute-plan.md
-@/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/templates/summary.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/workflows/execute-plan.md
+@/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/templates/summary.md
 </execution_context>
 
 <context>
@@ -174,7 +174,7 @@ connect(
     expected to remain).
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding && ! grep -q 'agent_config=agent_config' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && ! grep -q 'import connect, AgentSessionConfig' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q 'agent_name="Dr-Wang-Fang"' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q '1.3.0b1' docs/microsoft-agent-framework/02-model-vs-agent-mode.md</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding && ! grep -q 'agent_config=agent_config' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && ! grep -q 'import connect, AgentSessionConfig' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q 'agent_name="Dr-Wang-Fang"' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q '1.3.0b1' docs/microsoft-agent-framework/02-model-vs-agent-mode.md</automated>
   </verify>
   <done>
     Doc has a new version-state table near the top, every section-4 code block uses flattened agent_name=/
@@ -224,7 +224,7 @@ connect(
     not fire, record that as the real (negative) finding for Task 3 rather than softening it.
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/backend && .venv/bin/python3 ../docs/microsoft-agent-framework/tests/test_agent_foundry_iq_grounding.py</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/backend && .venv/bin/python3 ../docs/microsoft-agent-framework/tests/test_agent_foundry_iq_grounding.py</automated>
   </verify>
   <done>
     Script exists, imports only `connect` (no AgentSessionConfig), connects once via flattened agent_name=/
@@ -265,7 +265,7 @@ connect(
     section.
   </action>
   <verify>
-    <automated>cd /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding && grep -qE 'mcp_list_tools|mcp_call' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q '2026-07-27' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q 'omada-product-parameters-kb' docs/microsoft-agent-framework/02-model-vs-agent-mode.md</automated>
+    <automated>cd /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding && grep -qE 'mcp_list_tools|mcp_call' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q '2026-07-27' docs/microsoft-agent-framework/02-model-vs-agent-mode.md && grep -q 'omada-product-parameters-kb' docs/microsoft-agent-framework/02-model-vs-agent-mode.md</automated>
   </verify>
   <done>
     Doc 02 has a new section reporting real, observed grounding-test results (event types actually seen,

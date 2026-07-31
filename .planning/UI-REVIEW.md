@@ -186,7 +186,7 @@
 - Collapsible sidebars with chevron toggle
 - Left panel: Scenario Briefing, HCP Profile, Key Messages, Scoring Criteria
 - Center: Timer bar, avatar area (bg-slate-900, 240px), chat messages, input area
-- Right: AI Coach Hints (yellow-50), Message Tracker, Session Stats
+- Right: AI Avatar Hints (yellow-50), Message Tracker, Session Stats
 - Mic/Send circular buttons, input area border-top
 
 ### Discrepancies

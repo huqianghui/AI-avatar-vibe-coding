@@ -130,7 +130,7 @@
 7. Service interacts with ORM models in `backend/app/models/` via `AsyncSession`
 8. Response is serialized back through Pydantic schema and returned
 
-**AI Coaching Interaction Flow:**
+**AI Avataring Interaction Flow:**
 
 1. Client sends a coaching request (text or audio)
 2. Service layer constructs a `CoachRequest` with session context, HCP profile, and scoring criteria

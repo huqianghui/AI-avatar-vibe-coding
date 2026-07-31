@@ -222,7 +222,7 @@ Group headers: 11px uppercase text, muted foreground color, 16px top margin, 4px
 
 | Property | Value |
 |----------|-------|
-| Content | Centered lightbulb icon (existing app icon, 64px) + "AI Coach" text (24px, font-weight 500) + "BeiGene" subtitle (14px, muted foreground) |
+| Content | Centered lightbulb icon (existing app icon, 64px) + "AI Avatar" text (24px, font-weight 500) + "BeiGene" subtitle (14px, muted foreground) |
 | Background | Primary accent color gradient (subtle) |
 | Animation | Fade in 300ms, hold 1.2s, fade out 300ms |
 | Dismiss | Auto-dismiss after app finishes loading OR 1.8s total, whichever is later |

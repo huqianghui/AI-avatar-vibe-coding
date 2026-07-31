@@ -15,8 +15,8 @@
 
 ```bash
 # Clone
-git clone https://github.com/huqianghui/AI-Coach-vibe-coding.git
-cd AI-Coach-vibe-coding
+git clone https://github.com/huqianghui/AI-avatar-vibe-coding.git
+cd AI-avatar-vibe-coding
 
 # Backend
 cd backend

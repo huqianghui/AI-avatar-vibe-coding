@@ -79,7 +79,7 @@
 ## Monitoring & Observability
 
 **Health Checks:**
-- Backend: `GET /api/health` returns `{"status": "healthy", "service": "AI Coach Platform"}` (`backend/app/main.py`)
+- Backend: `GET /api/health` returns `{"status": "healthy", "service": "AI Avatar Platform"}` (`backend/app/main.py`)
 - Frontend (nginx): `GET /health` returns static JSON health response (`frontend/nginx.conf`)
 - Docker healthchecks: Both Dockerfiles include `HEALTHCHECK` instructions
 

@@ -36,7 +36,7 @@ Features that set this platform apart from competitors. Not expected by every us
 |---|---------|-------------------|------------|-------|
 | D-1 | **Azure AI Avatar (Digital Human)** | Visual avatar of the HCP speaking creates visceral realism that text/voice alone cannot match. Quantified.ai and most competitors do NOT have this. Capgemini reference highlights this as a key differentiator. | High | Azure AI Avatar service. Premium cost -- must be configurable (on/off, fall back to TTS-only). Budget constraint from PROJECT.md. |
 | D-2 | **Conference Presentation Mode (1-to-Many)** | Most competitors only do 1-on-1 role-play. A virtual department conference with multiple HCP audience members asking questions is a unique training modality. FR-3.x. | High | Multiple virtual HCPs in audience, questions queue, live transcription, presentation slides integration. This is a separate interaction paradigm from F2F. |
-| D-3 | **Real-time AI Coaching Hints** | During the conversation, the AI whispers coaching suggestions to the MR (e.g., "mention Phase III data now"). Competitors score AFTER the session; this coaches DURING. | Medium | Side panel with contextual hints. Requires secondary LLM call or prompt engineering to generate hints without disrupting the HCP conversation flow. FR-4.2. |
+| D-3 | **Real-time AI Avataring Hints** | During the conversation, the AI whispers coaching suggestions to the MR (e.g., "mention Phase III data now"). Competitors score AFTER the session; this coaches DURING. | Medium | Side panel with contextual hints. Requires secondary LLM call or prompt engineering to generate hints without disrupting the HCP conversation flow. FR-4.2. |
 | D-4 | **GPT Realtime Voice (WebSocket)** | Azure OpenAI Realtime model enables true conversational voice -- speak and hear responses with <1s latency. Most competitors use sequential STT -> LLM -> TTS pipeline with noticeable delay. | High | WebSocket-based. Significantly better UX than the traditional pipeline. Falls back to STT+LLM+TTS for cost or availability. |
 | D-5 | **Configurable Scoring Criteria per Scenario** | Admins set scoring dimension weights per scenario (e.g., product launch emphasizes key messages at 40%, objection-heavy scenario emphasizes handling at 35%). Competitors typically use fixed scoring models. | Medium | Weighted sliders totaling 100%, pass threshold per scenario. FR-6.3. |
 | D-6 | **Organization-level Analytics & Dashboards** | Aggregate training data across BUs, regions, time periods. Identify skill gaps org-wide. Managers see who needs coaching. | Medium | Admin dashboard with histograms, heatmaps, BU comparisons, skill gap analysis. FR-5.1 through FR-5.6. |
@@ -172,7 +172,7 @@ Prioritize (in order):
 - NO visual avatar, NO conference mode, NO real-time coaching hints
 - Targets pharma, medtech, finance, insurance
 
-### Capgemini AI Coach (Reference Solution Being Adapted)
+### Capgemini AI Avatar (Reference Solution Being Adapted)
 - AWS-based (we are re-platforming to Azure)
 - F2F + Conference modes both supported
 - Digital human technology highlighted as differentiator
@@ -192,7 +192,7 @@ Prioritize (in order):
 
 ## Sources
 
-- Capgemini AI Coach solution document (`docs/capgemini-ai-coach-solution.md`) -- HIGH confidence, primary reference
+- Capgemini AI Avatar solution document (`docs/capgemini-ai-coach-solution.md`) -- HIGH confidence, primary reference
 - BeiGene project requirements (`docs/requirements.md`) -- HIGH confidence, validated with client
 - Project context and constraints (`.planning/PROJECT.md`) -- HIGH confidence, team-defined
 - Figma design briefs (`docs/figma-design-brief.md`, `docs/figma-prompts/`) -- HIGH confidence, defines UI features

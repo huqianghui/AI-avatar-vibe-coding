@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Project:** AI Coach Platform (BeiGene MR Training)
+**Project:** AI Avatar Platform (BeiGene MR Training)
 **Researched:** 2026-03-24
 **Overall Confidence:** HIGH (official docs verified for all Azure services)
 

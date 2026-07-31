@@ -5,7 +5,7 @@
 ## Directory Layout
 
 ```
-AI-Coach-vibe-coding/
+AI-avatar-vibe-coding/
 ├── .claude/                # Claude Code agent configs and GSD tooling
 ├── .github/
 │   ├── scripts/            # Automation scripts (wiki gen, project sync)
@@ -259,7 +259,7 @@ AI-Coach-vibe-coding/
 - Create migration: `alembic revision --autogenerate -m "add sessions table"`
 - Write tests: `backend/tests/test_sessions.py`
 
-**New AI Coaching Adapter:**
+**New AI Avataring Adapter:**
 - Create adapter: `backend/app/services/agents/adapters/<provider>.py`
 - Implement `BaseCoachingAdapter` ABC (implement `execute()`, `is_available()`)
 - Register in application startup or via import-time registration using `registry.register()`

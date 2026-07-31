@@ -54,7 +54,7 @@ A running application with login, responsive layout shell, shared component libr
 ### Requirements & Architecture
 - `docs/requirements.md` — Full business requirements with acceptance criteria
 - `docs/best-practices.md` — Engineering patterns reference
-- `docs/capgemini-ai-coach-solution.md` — Reference solution overview (Capgemini AI Coach for AWS, adapted to Azure)
+- `docs/capgemini-ai-coach-solution.md` — Reference solution overview (Capgemini AI Avatar for AWS, adapted to Azure)
 
 ### Existing Code Patterns
 - `backend/app/services/agents/base.py` — BaseCoachingAdapter ABC, CoachRequest, CoachEvent (adapter pattern reference)

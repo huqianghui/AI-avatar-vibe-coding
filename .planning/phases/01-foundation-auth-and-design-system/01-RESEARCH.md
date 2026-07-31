@@ -646,14 +646,14 @@ export function clearAuth() {
 ```json
 // public/locales/en-US/auth.json
 {
-  "title": "AI Coach",
+  "title": "AI Avatar",
   "email": "Email",
   "password": "Password",
   "rememberMe": "Remember me",
   "signIn": "Sign In",
   "signingIn": "Signing in...",
   "loginFailed": "Invalid username or password",
-  "copyright": "2026 AI Coach Platform"
+  "copyright": "2026 AI Avatar Platform"
 }
 ```
 

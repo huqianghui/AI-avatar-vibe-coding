@@ -63,7 +63,7 @@
 
 ### Skill 规范与工具
 - `docs/microsoft-agent-framework/README.md` — 全目录索引 + 核心实测结论速查（**整个目录都是本 phase 的实测依据，文档 + unit test case 均可直接复用**）
-- `docs/microsoft-agent-framework/08-agent-skills-specification.md` — SKILL.md 格式规范、命名规则、渐进式加载、AI Coach 实现对照
+- `docs/microsoft-agent-framework/08-agent-skills-specification.md` — SKILL.md 格式规范、命名规则、渐进式加载、AI Avatar 实现对照
 - `docs/microsoft-agent-framework/07-agent-skill-creation-guide.md` — Agent 命名规则、SDK 创建流程、Meta Skill Agent 架构、常见陷阱
 - `docs/microsoft-agent-framework/06-agent-tools-and-knowledge-grounding.md` — 工具与知识挂载
 - `docs/microsoft-agent-framework/09-agent-api-version-evolution.md` — API 版本演进、新一代 Agent Service 差异

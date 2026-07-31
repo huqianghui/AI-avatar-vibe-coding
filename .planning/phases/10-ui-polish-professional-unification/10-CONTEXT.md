@@ -39,7 +39,7 @@ Comprehensive UI overhaul for professional appearance and consistency across all
 - **D-17:** All pages get equal polish — demo could visit any page
 - **D-18:** Polished demo seed data with real BeiGene products (Zanubrutinib/泽布替尼, Tislelizumab/替雷利珠单抗) and realistic HCP profiles for oncology/hematology
 - **D-19:** Loading and empty states match whatever patterns are in the Figma prompt docs for each page
-- **D-20:** Branded splash screen with BeiGene/AI Coach logo on app startup before content loads
+- **D-20:** Branded splash screen with BeiGene/AI Avatar logo on app startup before content loads
 - **D-21:** Polished Sonner toasts consistently across all pages with proper success/error/warning variants, themed with accent colors
 
 ### Responsive Polish

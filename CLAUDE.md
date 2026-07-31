@@ -46,7 +46,7 @@
 ## Project Structure
 
 ```
-AI-Coach-vibe-coding/
+AI-avatar-vibe-coding/
 ├── .github/
 │   ├── workflows/          # CI/CD (ci.yml, sync-wiki.yml, sync-project.yml)
 │   └── scripts/            # Automation scripts (wiki gen, project sync)

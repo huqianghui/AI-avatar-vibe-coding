@@ -1,4 +1,4 @@
-# Requirements: AI Coach Platform (BeiGene)
+# Requirements: AI Avatar Platform (BeiGene)
 
 **Defined:** 2026-03-24
 **Core Value:** MRs can practice realistic conversations with AI-powered digital HCPs and receive immediate, multi-dimensional feedback to improve their communication skills — anytime, without needing a real HCP or trainer.

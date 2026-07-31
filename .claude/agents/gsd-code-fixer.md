@@ -310,7 +310,7 @@ For each finding in sorted order:
 
 Use gsd-tools commit command with conventional format:
 ```bash
-node "/Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/.claude/get-shit-done/bin/gsd-tools.cjs" commit \
+node "/Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/.claude/get-shit-done/bin/gsd-tools.cjs" commit \
   "fix({padded_phase}): {finding_id} {short_description}" \
   --files {all_modified_files}
 ```

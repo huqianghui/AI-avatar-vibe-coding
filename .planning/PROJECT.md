@@ -1,4 +1,4 @@
-# AI Coach Platform — BeiGene
+# AI Avatar Platform — BeiGene
 
 ## What This Is
 
@@ -52,7 +52,7 @@ MRs can practice realistic conversations with AI-powered digital HCPs and receiv
 ## Context
 
 - **Client**: BeiGene (百济神州) — major biotech company, needs global deployment
-- **Reference**: Adapted from Capgemini AI Coach for AWS solution (see `docs/capgemini-ai-coach-solution.md`)
+- **Reference**: Adapted from Capgemini AI Avatar for AWS solution (see `docs/capgemini-ai-coach-solution.md`)
 - **Architecture patterns**: Reuse from two reference projects:
   - ragflow-skill-orchestrator-studio (Connection management, agent adapters)
   - yoga-guru-copilot-platform (ServiceConfig dual-layer, UI components, multi-provider agents)

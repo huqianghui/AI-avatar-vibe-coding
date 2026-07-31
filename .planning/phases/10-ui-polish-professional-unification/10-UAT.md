@@ -32,7 +32,7 @@ expected: Select a non-default theme (e.g., purple + dark mode). Refresh the pag
 result: pass
 
 ### 5. Branded Splash Screen
-expected: On fresh page load, a splash screen with the AI Coach lightbulb icon, app name, and "BeiGene" subtitle appears, then fades out smoothly (~1.5s).
+expected: On fresh page load, a splash screen with the AI Avatar lightbulb icon, app name, and "BeiGene" subtitle appears, then fades out smoothly (~1.5s).
 result: skipped
 reason: User switching to system-level functional testing
 

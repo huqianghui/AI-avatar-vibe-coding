@@ -1,4 +1,4 @@
-# Research Summary: AI Coach Platform (BeiGene MR Training)
+# Research Summary: AI Avatar Platform (BeiGene MR Training)
 
 **Domain:** AI-powered pharma Medical Representative training platform
 **Researched:** 2026-03-24
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The AI Coach Platform for BeiGene requires integrating five distinct Azure AI services (OpenAI, Speech, Avatar, Content Understanding, Voice Live) into an existing FastAPI + React skeleton. Research confirms all core services are GA and well-documented. The project deploys on Azure Global, where all required services (OpenAI, Speech, Avatar, Content Understanding) are available. Azure TTS Avatar is available in 7 regions -- region selection matters for co-locating services.
+The AI Avatar Platform for BeiGene requires integrating five distinct Azure AI services (OpenAI, Speech, Avatar, Content Understanding, Voice Live) into an existing FastAPI + React skeleton. Research confirms all core services are GA and well-documented. The project deploys on Azure Global, where all required services (OpenAI, Speech, Avatar, Content Understanding) are available. Azure TTS Avatar is available in 7 regions -- region selection matters for co-locating services.
 
 The existing codebase skeleton (FastAPI, React 18, SQLAlchemy async, Pydantic v2, Vite 6, TanStack Query v5) is well-chosen and should be kept as-is. The investment goes entirely into Azure AI service integrations and the domain-specific coaching features. The new Azure OpenAI v1 API (GA since August 2025) eliminates the previous pain of monthly api-version updates and allows using the standard `OpenAI()` client with an Azure base_url -- a significant developer experience improvement.
 

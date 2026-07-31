@@ -1,8 +1,8 @@
-# Roadmap: AI Coach Platform (BeiGene)
+# Roadmap: AI Avatar Platform (BeiGene)
 
 ## Overview
 
-This roadmap delivers the AI Coach Platform in 6 phases: foundation and architecture first, then F2F text coaching (the core value loop), scoring & assessment enhancements, dashboards & reporting, training material management, and conference presentation module. Each phase builds on the previous one and delivers a coherent, demonstrable capability. Architecture-first principle applies throughout -- pluggable adapters, config-driven features, and shared components are established in Phase 01 and extended by every subsequent phase.
+This roadmap delivers the AI Avatar Platform in 6 phases: foundation and architecture first, then F2F text coaching (the core value loop), scoring & assessment enhancements, dashboards & reporting, training material management, and conference presentation module. Each phase builds on the previous one and delivers a coherent, demonstrable capability. Architecture-first principle applies throughout -- pluggable adapters, config-driven features, and shared components are established in Phase 01 and extended by every subsequent phase.
 
 ## Phases
 
@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 05: Training Material Management** - Document upload, versioning, retention policies, AI knowledge base integration
 - [x] **Phase 06: Conference Presentation Module** - One-to-many simulation, live transcription, audience Q&A, presentation scoring (completed 2026-03-25)
 - [x] **Phase 07: Azure Service Integration** - Admin Azure config persistence, real connection testing, dynamic provider switching (mock → Azure OpenAI/Speech/Avatar) (completed 2026-03-27)
-- [x] **Phase 08: Voice & Avatar Demo Integration** - Integrate Azure Voice Live Agent with Avatar into the AI Coach platform for real-time voice coaching with digital HCP avatar (completed 2026-03-28)
+- [x] **Phase 08: Voice & Avatar Demo Integration** - Integrate Azure Voice Live Agent with Avatar into the AI Avatar platform for real-time voice coaching with digital HCP avatar (completed 2026-03-28)
 - [x] **Phase 09: Integration Testing with Real Azure Services** - Unified AI Foundry config, 7 interaction modes, agent mode runtime, integration tests, E2E demo validation (completed 2026-03-29)
 - [x] **Phase 10: UI Polish & Professional Unification** - Comprehensive UI overhaul for professional appearance, unified design language, polished visuals for BeiGene customer demo (completed 2026-03-29)
 - [x] **Phase 11: HCP Profile Agent Integration** - Auto-create AI Foundry agent when adding HCP profiles, bidirectional sync, table UI redesign (completed 2026-03-31)
@@ -224,7 +224,7 @@ Phases execute in numeric order: 01 -> 01.1 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 
 | 16. Voice Live Refactor — Modularize, Agent Mode, Sync | 4/4 | Complete   | 2026-04-10 |
 | 17. Agent Knowledge Base — Foundry IQ Integration | 3/3 | Complete   | 2026-04-10 |
 | 18. Training Material Download & Preview | 3/3 | Complete | 2026-04-10 |
-| 19. AI Coach Skill Module | 6/8 | In Progress|  |
+| 19. AI Avatar Skill Module | 6/8 | In Progress|  |
 | 20. Skill Dry Run Simulation | 5/5 | Complete   | 2026-04-26 |
 
 ### Phase 16: Voice Live Refactor — Modularize, Agent Mode, Sync
@@ -274,7 +274,7 @@ Plans:
 **UI hint**: yes
 
 ### Phase 08: Voice & Avatar Demo Integration
-**Goal**: Integrate the existing Voice-Live-Agent-With-Avatar demo (Azure Voice Live API + Avatar) into the AI Coach platform, enabling real-time voice-based coaching sessions where MRs talk to a digital HCP avatar with natural speech interaction
+**Goal**: Integrate the existing Voice-Live-Agent-With-Avatar demo (Azure Voice Live API + Avatar) into the AI Avatar platform, enabling real-time voice-based coaching sessions where MRs talk to a digital HCP avatar with natural speech interaction
 **Depends on**: Phase 07
 **Requirements**: COACH-04, COACH-05, COACH-07, EXT-04, PLAT-05
 **Success Criteria** (what must be TRUE):
@@ -479,9 +479,9 @@ Plans:
 
 **UI hint**: yes
 
-### Phase 19: AI Coach Skill Module — Skill lifecycle management, material-to-skill conversion, Skill Hub, and HCP Agent skill assignment for SOP-driven training
+### Phase 19: AI Avatar Skill Module — Skill lifecycle management, material-to-skill conversion, Skill Hub, and HCP Agent skill assignment for SOP-driven training
 
-**Goal:** 构建 AI Coach Skill 模块，实现 Skill 全生命周期管理（创建、编辑、发布、归档）。用户可上传一个或多个培训材料（文档、PPT等），系统自动将其转换为结构化的培训 Skill（包含 SOP、考核内容、知识点等）；也支持直接上传已打包的 Skill 压缩包。Skill Hub 集中展示所有可用 Skill 的名称和描述。管理员可将 Skill 按场景分配给 HCP Agent，训练过程中 HCP Agent 依据 SOP 内容与 MR 用户交互，确保考核内容的完整性和正确性。
+**Goal:** 构建 AI Avatar Skill 模块，实现 Skill 全生命周期管理（创建、编辑、发布、归档）。用户可上传一个或多个培训材料（文档、PPT等），系统自动将其转换为结构化的培训 Skill（包含 SOP、考核内容、知识点等）；也支持直接上传已打包的 Skill 压缩包。Skill Hub 集中展示所有可用 Skill 的名称和描述。管理员可将 Skill 按场景分配给 HCP Agent，训练过程中 HCP Agent 依据 SOP 内容与 MR 用户交互，确保考核内容的完整性和正确性。
 
 **Key deliverables:**
 - Skill 数据模型（Skill、SkillVersion、SkillMaterial、SkillAssignment）

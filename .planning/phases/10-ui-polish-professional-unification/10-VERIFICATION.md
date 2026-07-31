@@ -15,7 +15,7 @@ human_verification:
     expected: "150ms fade-in animation visible when switching between pages"
     why_human: "Animation timing and visual smoothness require human perception"
   - test: "Open app fresh with cleared localStorage and verify splash screen"
-    expected: "Splash screen appears with AI Coach branding and BeiGene subtitle, auto-dismisses after ~1.5 seconds"
+    expected: "Splash screen appears with AI Avatar branding and BeiGene subtitle, auto-dismisses after ~1.5 seconds"
     why_human: "Animation timing and branding appearance require human verification"
   - test: "View admin sidebar in both expanded and collapsed states"
     expected: "Expanded: 3 section headers (Configuration, Content, Analytics) with grouped nav items. Collapsed: separator lines between groups, tooltip on hover"
@@ -153,7 +153,7 @@ human_verification:
 ### 4. Splash Screen Appearance
 
 **Test:** Clear localStorage and reload the app fresh
-**Expected:** Splash screen appears with AI Coach branding (lightbulb icon, "AI Coach" text, "BeiGene" subtitle), auto-dismisses after approximately 1.5 seconds with fade-out
+**Expected:** Splash screen appears with AI Avatar branding (lightbulb icon, "AI Avatar" text, "BeiGene" subtitle), auto-dismisses after approximately 1.5 seconds with fade-out
 **Why human:** Animation timing and branding appearance require human verification
 
 ### 5. Admin Sidebar Grouping

@@ -250,8 +250,8 @@ AI Coach 是一个基于 **Azure AI Services** 的医药代表（MR）智能培�
 
 ```bash
 # Clone
-git clone https://github.com/huqianghui/AI-Coach-vibe-coding.git
-cd AI-Coach-vibe-coding
+git clone https://github.com/huqianghui/AI-avatar-vibe-coding.git
+cd AI-avatar-vibe-coding
 
 # Backend
 cd backend
@@ -431,7 +431,7 @@ az account show -o table
 ## Project Structure
 
 ```
-AI-Coach-vibe-coding/
+AI-avatar-vibe-coding/
 ├── backend/
 │   ├── app/
 │   │   ├── api/              # FastAPI routers (13 modules)

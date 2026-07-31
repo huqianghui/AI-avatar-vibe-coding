@@ -144,7 +144,7 @@ All values extracted from existing `frontend/src/styles/index.css` design tokens
 |---------|-------|----------------|
 | Avatar display area | `#0F172A` | `bg-slate-900` |
 | Avatar overlay badge | `rgba(30,41,59,0.8)` | `bg-slate-800/80` |
-| AI Coach hints card | `#FEFCE8` | `bg-yellow-50 border-yellow-200` |
+| AI Avatar hints card | `#FEFCE8` | `bg-yellow-50 border-yellow-200` |
 | HCP chat bubble | `#3B82F6` | `bg-blue-500` |
 | MR chat bubble | `#E2E8F0` | `bg-slate-200` |
 | Admin sidebar | `#1E293B` | `bg-[#1E293B]` (from Phase 1) |
@@ -244,7 +244,7 @@ Accent color (`#1E40AF` / `bg-primary` / `bg-blue-600`) is reserved exclusively 
 - Collapsed: `w-12 bg-slate-50 border-l border-slate-200 flex flex-col items-center pt-4`
 - Toggle: `Button variant="ghost" size="icon"` with ChevronRight
 - Sections:
-  1. AI Coach Hints: `Card className="mb-4 bg-yellow-50 border-yellow-200"`, hints `text-sm text-slate-700 leading-relaxed`
+  1. AI Avatar Hints: `Card className="mb-4 bg-yellow-50 border-yellow-200"`, hints `text-sm text-slate-700 leading-relaxed`
   2. Message Tracker: Status icons — delivered: `Check h-4 w-4 text-green-600`, in-progress: `div h-2 w-2 bg-blue-600 rounded-full`, pending: `Circle h-4 w-4 text-slate-400`. Text color: delivered=`text-green-700`, in-progress=`text-blue-700`, pending=`text-slate-500`
   3. Session Stats: Key-value pairs `flex justify-between text-sm`
 
@@ -438,7 +438,7 @@ All UI text MUST use i18n translation keys. Values below are the en-US defaults.
 | HCP profile title | HCP Profile | `coach.session.hcpProfile` |
 | Key messages title | Key Messages | `coach.session.keyMessages` |
 | Scoring criteria title | Scoring Criteria | `coach.session.scoringCriteria` |
-| AI coach hints title | AI Coach Hints | `coach.session.aiCoachHints` |
+| AI coach hints title | AI Avatar Hints | `coach.session.aiCoachHints` |
 | Message tracker title | Message Tracker | `coach.session.messageTracker` |
 | Session stats title | Session Stats | `coach.session.sessionStats` |
 | End session button | End Session | `coach.session.endSession` |

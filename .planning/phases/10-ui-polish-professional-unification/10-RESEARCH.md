@@ -35,7 +35,7 @@ The existing architecture is well-suited for this work. CSS custom properties (`
 - **D-17:** All pages get equal polish -- demo could visit any page
 - **D-18:** Polished demo seed data with real BeiGene products (Zanubrutinib, Tislelizumab) and realistic HCP profiles for oncology/hematology
 - **D-19:** Loading and empty states match whatever patterns are in the Figma prompt docs for each page
-- **D-20:** Branded splash screen with BeiGene/AI Coach logo on app startup before content loads
+- **D-20:** Branded splash screen with BeiGene/AI Avatar logo on app startup before content loads
 - **D-21:** Polished Sonner toasts consistently across all pages with proper success/error/warning variants, themed with accent colors
 - **D-22:** Desktop, tablet, and mobile all get equal attention -- demo could happen on any device
 - **D-23:** Mobile navigation follows behavior described in `docs/figma-prompts/01-login-and-layout.md`
@@ -354,7 +354,7 @@ const ACCENT_COLORS = [
 
 ```typescript
 // components/shared/splash-screen.tsx
-// Shows BeiGene/AI Coach logo centered with fade-in animation
+// Shows BeiGene/AI Avatar logo centered with fade-in animation
 // Auto-dismisses after 1.5s or when app finishes loading (whichever is later)
 // Uses CSS animation, not a library
 ```
@@ -416,9 +416,9 @@ Current seed data already references Zanubrutinib and Tislelizumab. Needs enhanc
 ## Open Questions
 
 1. **Splash screen asset: BeiGene logo**
-   - What we know: D-20 requires branded splash screen with BeiGene/AI Coach logo
+   - What we know: D-20 requires branded splash screen with BeiGene/AI Avatar logo
    - What's unclear: No BeiGene logo SVG/PNG exists in the repo. The current app uses a lightbulb SVG icon as a placeholder.
-   - Recommendation: Create a professional SVG logo combining a lightbulb icon with "AI Coach" text + "BeiGene" subtitle. Keep the existing icon style but make it larger and more refined for the splash screen.
+   - Recommendation: Create a professional SVG logo combining a lightbulb icon with "AI Avatar" text + "BeiGene" subtitle. Keep the existing icon style but make it larger and more refined for the splash screen.
 
 2. **Admin sidebar collapse behavior with grouped sections**
    - What we know: Sidebar currently has a collapse toggle that hides text, showing icons only

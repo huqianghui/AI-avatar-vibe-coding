@@ -1,4 +1,4 @@
-# Phase 19: AI Coach Skill Module - Discussion Log
+# Phase 19: AI Avatar Skill Module - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.

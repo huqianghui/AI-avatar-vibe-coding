@@ -45,7 +45,7 @@ Use `main.parameters.example.json` as a non-secret template only. Do not commit 
 | Parameter | Default |
 |---|---|
 | `githubOwner` | `huqianghui` |
-| `githubRepo` | `AI-Coach-vibe-coding` |
+| `githubRepo` | `AI-avatar-vibe-coding` |
 | `githubBranch` | `main` |
 | `githubEnvironmentName` | `environmentName` |
 

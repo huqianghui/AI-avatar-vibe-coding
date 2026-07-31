@@ -1,6 +1,6 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"grep -rn \\\"test\\\\(\\\\\\\"\\\\|test\\\\.describe\\\\|describe(\\\" /Users/huqianghui/Downloads/1.github/AI-Coach-vibe-coding/frontend/e2e/admin-navigation.spec.ts /Users/huqianghui/Downloads/1.github/...",
+  "tool_input_preview": "{\"command\":\"grep -rn \\\"test\\\\(\\\\\\\"\\\\|test\\\\.describe\\\\|describe(\\\" /Users/huqianghui/Downloads/1.github/AI-avatar-vibe-coding/frontend/e2e/admin-navigation.spec.ts /Users/huqianghui/Downloads/1.github/...",
   "error": "Exit code 2",
   "timestamp": "2026-05-25T09:51:53.214Z",
   "retry_count": 1

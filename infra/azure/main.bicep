@@ -156,7 +156,7 @@ param databaseAutoCreateTables bool = false
 param githubOwner string = 'huqianghui'
 
 @description('GitHub repository name for OIDC federation.')
-param githubRepo string = 'AI-Coach-vibe-coding'
+param githubRepo string = 'AI-avatar-vibe-coding'
 
 @description('GitHub branch allowed to deploy through OIDC.')
 param githubBranch string = 'main'

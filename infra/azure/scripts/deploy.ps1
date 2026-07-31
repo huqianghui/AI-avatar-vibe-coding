@@ -16,7 +16,7 @@ param(
     [ValidateSet("none", "azureAiSearch")]
     [string]$KnowledgeBaseMode = "none",
     [string]$GithubOwner = "huqianghui",
-    [string]$GithubRepo = "AI-Coach-vibe-coding",
+    [string]$GithubRepo = "AI-avatar-vibe-coding",
     [string]$GithubBranch = "main",
     [string]$ChatDeploymentName = "gpt-4o",
     [ValidateSet("Standard", "GlobalStandard", "DataZoneStandard")]

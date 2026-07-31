@@ -68,7 +68,7 @@ completed: 2026-03-28
 - 5 accent color themes (blue, teal, purple, rose, amber) with full light+dark CSS variable overrides for --primary, --sidebar-primary, --chart-1, --ring
 - Theme store with useSyncExternalStore pattern providing mode/accent state and setters with localStorage persistence
 - Synchronous flash prevention script in index.html prevents flash of wrong theme on page load
-- Branded splash screen with AI Coach lightbulb icon, app name, and BeiGene subtitle with fade-in/fade-out animation
+- Branded splash screen with AI Avatar lightbulb icon, app name, and BeiGene subtitle with fade-in/fade-out animation
 - Sonner toasts dynamically themed with light/dark mode from theme store
 - Page transition fadeIn keyframe animation defined and ready for use
 - i18n keys added for theme picker labels, empty states, and error states in both en-US and zh-CN
