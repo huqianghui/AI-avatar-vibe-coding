@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
-status: Defining requirements
-stopped_at: Milestone v2.0 started
+status: Roadmap created
+stopped_at: Roadmap created for v2.0 (Phases 32-35) — ready for /gsd-plan-phase 32
 last_updated: "2026-07-31T00:00:00.000Z"
 last_activity: 2026-07-31
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 32 - Anonymous Grounded Avatar Q&A (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-31 — Milestone v2.0 Avatar MVP started
+Status: Roadmap created, ready for planning
+Last activity: 2026-07-31 — v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped)
 
 ## Performance Metrics
 
@@ -338,6 +338,7 @@ None yet.
 - Phase 26 added: Add voice-live-webrtc transport option as alternative to WebSocket (preview feature, dropdown selector, preserve existing WS default)
 - Phase 28 added: 上传资料转成 SOP Skill 并注册到 AI Foundry；培训过程中将 Skill 挂给 HCP Agent 与用户对话
 - Phase 29 added: Voice Live API 重构与适配 — SDK 1.3.0 + GA 2026-07-15、双路径架构（文本直连 Agent / 语音 Voice Live→Agent）、删 monkey-patch 与 classic agent、VoiceLiveInstance 可选化、移除 HCP 内联 voice 字段、模型目录拆分、文档与测试全面更新
+- v2.0 milestone roadmap created 2026-07-31: Phase 32 (Anonymous Grounded Avatar Q&A: ANON-01..05), Phase 33 (Personalized CRM-Excel Avatar: PERS-01..03), Phase 34 (Spanish i18n: LANG-01..02), Phase 35 (Clean Avatar UI & Legacy Coach Hiding: AVUI-01..02) — continues numbering from v1.0 (ended Phase 31); coarse granularity per config.json
 
 ### Quick Tasks Completed
 
@@ -354,7 +355,7 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-07-31 - Milestone v2.0 Avatar MVP started (匿名官网知识问答 → 登录个性化 → 西语支持 → 清爽 UI)
+Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
 Last session: 2026-07-31
-Stopped at: Milestone v2.0 started — defining requirements
-Resume file: —
+Stopped at: Roadmap created — ready to run /gsd-plan-phase 32
+Resume file: .planning/ROADMAP.md

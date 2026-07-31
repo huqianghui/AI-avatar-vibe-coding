@@ -52,24 +52,24 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANON-01 | — | Pending |
-| ANON-02 | — | Pending |
-| ANON-03 | — | Pending |
-| ANON-04 | — | Pending |
-| ANON-05 | — | Pending |
-| PERS-01 | — | Pending |
-| PERS-02 | — | Pending |
-| PERS-03 | — | Pending |
-| LANG-01 | — | Pending |
-| LANG-02 | — | Pending |
-| AVUI-01 | — | Pending |
-| AVUI-02 | — | Pending |
+| ANON-01 | Phase 32 | Pending |
+| ANON-02 | Phase 32 | Pending |
+| ANON-03 | Phase 32 | Pending |
+| ANON-04 | Phase 32 | Pending |
+| ANON-05 | Phase 32 | Pending |
+| PERS-01 | Phase 33 | Pending |
+| PERS-02 | Phase 33 | Pending |
+| PERS-03 | Phase 33 | Pending |
+| LANG-01 | Phase 34 | Pending |
+| LANG-02 | Phase 34 | Pending |
+| AVUI-01 | Phase 35 | Pending |
+| AVUI-02 | Phase 35 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-31*
-*Last updated: 2026-07-31 — awaiting roadmap mapping*
+*Last updated: 2026-07-31 — roadmap created (Phases 32-35)*
