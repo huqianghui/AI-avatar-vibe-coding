@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 30 context gathered
-last_updated: "2026-07-20T07:00:45.793Z"
-last_activity: 2026-07-20
+milestone: v2.0
+milestone_name: Avatar MVP
+status: Defining requirements
+stopped_at: Milestone v2.0 started
+last_updated: "2026-07-31T00:00:00.000Z"
+last_activity: 2026-07-31
 progress:
-  total_phases: 33
-  completed_phases: 28
-  total_plans: 158
-  completed_plans: 148
-  percent: 94
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -20,17 +20,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-03-24)
 
-**Core value:** MRs can practice realistic conversations with AI-powered digital HCPs and receive immediate, multi-dimensional feedback to improve their communication skills -- anytime, without needing a real HCP or trainer.
-**Current focus:** Phase 29 (Voice Live API Refactor & Adaptation)
+**Core value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
+**Current focus:** Milestone v2.0 Avatar MVP — defining requirements
 
 ## Current Position
 
-Phase: 31
-Plan: Not started
-Phase: 26 (add-voice-live-webrtc-transport-option-as-alternative-to-web) — COMPLETE (3/3 plans)
-Phase: 24 (Skill Focus + CU Evaluation) — COMPLETE (5/5 plans)
-Phase: 25 (Refactor user training pages) — COMPLETE (2/2 plans)
-Phase: 26 (Scoring Architecture: LLM Content + CU Voice) — COMPLETE (1/1 plan)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-31 — Milestone v2.0 Avatar MVP started
 
 ## Performance Metrics
 
@@ -356,7 +354,7 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-07-31 - Completed quick task 260731-q3c: 项目重命名 AI-avatar-vibe-coding + 产品定位改写为 AI Avatar Platform
-Last session: 2026-07-20T02:06:16.608Z
-Stopped at: Phase 30 context gathered
-Resume file: .planning/phases/30-scenario-api-d10-voicelive-instance-propagation-fix/30-CONTEXT.md
+Last activity: 2026-07-31 - Milestone v2.0 Avatar MVP started (匿名官网知识问答 → 登录个性化 → 西语支持 → 清爽 UI)
+Last session: 2026-07-31
+Stopped at: Milestone v2.0 started — defining requirements
+Resume file: —

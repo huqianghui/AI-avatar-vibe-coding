@@ -8,6 +8,22 @@ An AI-powered digital human (avatar) platform for BeiGene (百济神州), built 
 
 Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
+## Current Milestone: v2.0 Avatar MVP
+
+**Goal:** 将平台从 MR 教练系统转型为 AI Avatar 助手 — 匿名用户可与数字人对话获取官网知识解答，登录用户获得基于 CRM 数据（Excel POC）的个性化回答，支持西班牙语，UI 只呈现数字人 + 文档来源链接。
+
+**Target features:**
+- 匿名官网知识问答 — 无需登录，数字人基于官网内容（Foundry IQ 索引）回答问题，回答附来源（page + document link）
+- 登录个性化 avatar — 基于 userid 的 CRM 知识（Excel 对应关系表 POC，不做 CRM 集成）+ 用户偏好注入（system prompt / prompt template），偏好由后台抽取或人工打标签
+- 西班牙语支持 — 在现有 zh-CN/en-US 基础上新增 es
+- 清爽 UI — 仅数字人 + 文档链接；语音内容与文档展示分离；隐藏旧 coach 功能入口（代码保留）
+
+**Key context:**
+- 最大化复用 v1.0 底座：Voice Live 数字人（SDK 1.3.0b1 双路径）、Foundry IQ 集成（Phase 17）、i18n 框架、JWT 认证
+- 旧 coach 功能本里程碑仅隐藏前端入口、保留代码；彻底删除留到后续里程碑
+- Phase 编号从 32 继续（v1.0 未正式归档，不重置编号）
+- 执行遵循 CLAUDE.md 最高优先级规则：逐个需求 实现 → 100% unit test → Playwright E2E → 全通过 → commit → push
+
 ## Requirements
 
 ### Validated
@@ -23,24 +39,36 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - ✓ React SPA with i18n (zh-CN/en-US), auth store, router with guards — Phase 1
 - ✓ Responsive layouts (user top-nav, admin sidebar), login page — Phase 1
 - ✓ Feature toggle config API and frontend ConfigProvider — Phase 1
+- ✓ F2F HCP coaching with chat and voice interaction — v1.0 (Phases 2, 8, 12)
+- ✓ Conference presentation mode with virtual HCP audience — v1.0 (Phase 6)
+- ✓ Multi-dimensional scoring and feedback system — v1.0 (Phases 3, 21, 26)
+- ✓ Training session lifecycle management — v1.0 (Phases 2, 23–25)
+- ✓ HCP profile configuration (personality, knowledge, interaction rules) — v1.0 (Phases 11–15)
+- ✓ Scenario management (products, key messages, scoring weights) — v1.0 (Phases 2, 22)
+- ✓ Training material management (upload, versioning, retention) — v1.0 (Phases 5, 18, 31)
+- ✓ Personal and organizational reports/dashboards — v1.0 (Phase 4)
+- ✓ Azure OpenAI integration (GPT-4o + Voice Live) — v1.0 (Phases 7–9, 29)
+- ✓ Azure Speech Services (STT/TTS) — v1.0 (Phases 6–8)
+- ✓ Azure AI Avatar (digital human) — v1.0 (Phases 8, 13, 29)
+- ✓ Azure Content Understanding (voice evaluation) — v1.0 (Phases 24, 26)
+- ✓ Azure service configuration UI — v1.0 (Phase 7)
+- ✓ Foundry IQ knowledge base integration — v1.0 (Phase 17)
 
 ### Active
 
-- [ ] F2F HCP coaching with chat and voice interaction
-- [ ] Conference presentation mode with virtual HCP audience
-- [ ] Multi-dimensional scoring and feedback system
-- [ ] Training session lifecycle management
-- [ ] HCP profile configuration (personality, knowledge, interaction rules)
-- [ ] Scenario management (products, key messages, scoring weights)
-- [ ] Training material management (upload, versioning, retention)
-- [ ] Personal and organizational reports/dashboards
-- [ ] Azure OpenAI integration (GPT-4o + Realtime model)
-- [ ] Azure Speech Services (STT/TTS)
-- [ ] Azure AI Avatar (digital human for HCP)
-- [ ] Azure Content Understanding (multimodal evaluation)
-- [ ] Azure service configuration UI
+- [ ] 匿名模式：无需登录，数字人基于官网内容（Foundry IQ）回答问题
+- [ ] 回答附来源展示：page + document link，与数字人语音内容分离
+- [ ] 登录个性化：基于 userid 的 CRM 知识（Excel 对应关系表 POC）
+- [ ] 用户偏好注入：system prompt / prompt template injection，偏好后台抽取或人工打标签
+- [ ] 西班牙语（es）i18n 支持
+- [ ] 清爽 UI：仅数字人 + 文档链接
+- [ ] 隐藏旧 coach 功能前端入口（代码保留）
 
 ### Out of Scope
+
+- CRM 系统集成 — POC 用 Excel 对应关系表，不做真实 CRM 对接
+- 深度 memory 机制 — 偏好由后台抽取或人工打标签，不做自动学习记忆
+- 彻底删除 coach 代码 — v2.0 仅隐藏入口，删除留到后续里程碑
 
 - Teams Bot integration — deferred to post-MVP, architecture should allow it
 - OAuth / Azure AD SSO — future, use simple auth for now
@@ -99,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-20 after Phase 30 completion — Scenario API D-10 VoiceLiveInstance propagation fix (scenario responses now nest hcp_profile.voice_live_instance instead of hardcoded flat avatar defaults, stray flat avatar_enabled removed from frontend HcpProfile type, voice/digital-human mode gating restored in training.tsx + scenario-group-run.tsx with new gating test matrix, verified 13/13 must-haves incl. real-browser avatar rendering check)*
+*Last updated: 2026-07-31 — Milestone v2.0 Avatar MVP started (匿名官网知识问答 → 登录个性化 → 西语支持 → 清爽 UI)*
