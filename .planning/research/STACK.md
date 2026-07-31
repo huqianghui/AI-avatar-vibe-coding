@@ -1,439 +1,118 @@
-# Technology Stack
+# Stack Research
 
-**Project:** AI Avatar Platform (BeiGene MR Training)
-**Researched:** 2026-03-24
-**Overall Confidence:** HIGH (official docs verified for all Azure services)
+**Domain:** Avatar MVP additions (anonymous Foundry IQ grounded Q&A + citations, CRM-Excel personalization, es-ES i18n, avatar-first UI) on top of the existing AI Avatar Platform
+**Researched:** 2026-07-31
+**Confidence:** MEDIUM-HIGH (citation architecture verified against Microsoft Learn docs updated 2026-07-21/24; index-schema availability of document URLs is an open question — see Gaps)
 
----
+> **Note:** This replaces the earlier (2026-03-24) version of this file, which researched the *original* v1.0 stack (Azure OpenAI Realtime, Speech Avatar, Content Understanding, etc.) before implementation. Those decisions are now **existing, validated capabilities** — see `.planning/PROJECT.md` — and are intentionally out of scope here per the milestone brief. This file is a **delta stack** for the four v2.0 Avatar MVP requirements only.
+
+The headline finding: **almost none of the four new capabilities need a new heavy dependency.** The real work is new *usage* of libraries already in `pyproject.toml`/`package.json`, plus one small, well-justified new dependency (`slowapi`) and one architectural pivot for how citations are obtained.
 
 ## Recommended Stack
 
-### Core Application Framework (Existing -- Keep As-Is)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| FastAPI | >=0.115.0 | Backend API framework | Already in skeleton. Async-native, WebSocket support for Realtime API proxying, excellent DI for service layer |
-| React | ^18.3.0 | Frontend UI | Already in skeleton. Hooks-based, broad ecosystem, mature |
-| SQLAlchemy 2.0 | >=2.0.35 (async) | ORM + database | Already in skeleton. Async session support, Alembic migrations |
-| Pydantic v2 | >=2.0 | Schema validation | Already in skeleton. Fast, `from_attributes` for ORM mapping |
-| Vite 6 | ^6.0.0 | Build tool | Already in skeleton. Fast HMR, native ESM |
-| TanStack Query v5 | ^5.60.0 | Server state | Already in skeleton. Caching, retry, mutation lifecycle |
-
-**Decision: Do NOT change the core framework.** The existing skeleton is well-chosen. Focus investment on Azure AI integrations.
-
----
-
-### Azure AI Services -- LLM & Conversation
-
-| Technology | Version/Model | Purpose | Why |
-|------------|---------------|---------|-----|
-| Azure OpenAI (v1 API) | `openai/v1` endpoint (no `api-version` param) | Chat completions, scoring, HCP persona simulation | New v1 API is GA since Aug 2025 -- simpler auth, no dated api-version params, cross-provider support. Use `OpenAI()` client directly with Azure base_url. |
-| GPT-4.1 | deployment: `gpt-4.1` | Primary LLM for text coaching, scoring prompts, HCP persona | Best price/performance for structured outputs, function calling. Successor to GPT-4o line. |
-| GPT-4.1-mini | deployment: `gpt-4.1-mini` | Bulk scoring, report generation, lighter tasks | Cost-efficient for high-volume operations like batch scoring |
-| Azure OpenAI Realtime API | `gpt-realtime` / `gpt-realtime-mini` model via WebSocket | Low-latency voice-to-voice conversation for F2F coaching | Native audio I/O, ~100ms latency via WebRTC, server VAD. Use `openai[realtime]` Python extra. |
-
-**Python SDK:**
-```bash
-pip install "openai>=2.29.0"
-pip install "openai[realtime]"     # For Realtime WebSocket support
-pip install azure-identity          # For Entra ID token auth
-```
-
-**TypeScript SDK:**
-```bash
-npm install openai                  # >=4.80.0
-npm install @azure/identity         # For keyless auth
-```
-
-**API Pattern (v1 -- RECOMMENDED):**
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    base_url="https://YOUR-RESOURCE.openai.azure.com/openai/v1/"
-)
-
-# Chat completions for scoring/HCP simulation
-response = client.chat.completions.create(
-    model="gpt-4.1",  # deployment name
-    messages=[...],
-)
-
-# Realtime for voice coaching
-async with client.realtime.connect(model="gpt-realtime") as conn:
-    # WebSocket session for voice interaction
-    ...
-```
-
-**Confidence:** HIGH -- verified from official Azure docs (updated 2026-03-20).
-
----
-
-### Azure AI Services -- Speech
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Azure Speech SDK (Python) | `azure-cognitiveservices-speech` (latest) | Server-side STT/TTS for fallback mode, batch transcription | Mature SDK, supports 140+ locales including `zh-CN`, `zh-TW`, `en-US` |
-| Azure Speech SDK (JavaScript) | `microsoft-cognitiveservices-speech-sdk` (latest) | Browser-side real-time STT, Avatar rendering via WebRTC | Required for real-time avatar synthesis in browser. WebRTC peer connection. |
-
-**Python SDK:**
-```bash
-pip install azure-cognitiveservices-speech
-```
-
-**TypeScript SDK:**
-```bash
-npm install microsoft-cognitiveservices-speech-sdk
-```
-
-**Key Voice Names for this project:**
-- Chinese: `zh-CN-XiaoxiaoNeural`, `zh-CN-YunxiNeural`
-- English: `en-US-AvaMultilingualNeural`, `en-US-AndrewMultilingualNeural`
-- HD Voices (low latency): `en-US-Ava:DragonHDLatestNeural`
-
-**Confidence:** HIGH -- verified from official Azure Speech docs.
-
----
-
-### Azure AI Services -- Avatar
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Azure TTS Avatar (Real-time) | Speech SDK (JS) + WebRTC | Visual digital HCP representation in F2F coaching | Photorealistic talking avatar synced with TTS. Real-time via WebRTC in browser. |
-| Azure TTS Avatar (Batch) | REST API `2024-04-15-preview` | Pre-rendered avatar videos for conference mode demos | Batch-synthesized video content, supports gestures |
-| Voice Live API | WebSocket `api-version=2025-10-01` | Unified voice agent with optional avatar | Single API combining STT + LLM + TTS + Avatar. Simplifies orchestration. Premium feature. |
-
-**Standard Avatar Characters (recommended for HCP personas):**
-- `lisa` (casual-sitting, technical-sitting) -- professional female, multiple styles
-- `harry` (business) -- professional male
-- `max` (business, formal) -- male with many gesture options
-- `meg` (business, formal) -- female with many gesture options
-- Photo avatars: `liwei`, `ling`, `sakura`, `ren` -- Asian-presenting characters for China market
-
-**Architecture Decision: Two-tier Avatar Strategy**
-1. **Primary (Premium):** Voice Live API -- single WebSocket, fully managed, avatar + voice + LLM
-2. **Fallback (Standard):** Azure Speech TTS only (no avatar video) -- cheaper, works everywhere
-
-**Avatar Region Constraints (CRITICAL):**
-Real-time avatar is only available in: `eastus2`, `northeurope`, `southcentralus`, `southeastasia`, `swedencentral`, `westeurope`, `westus2`
-
-For Asia-Pacific users, use `southeastasia` (avatar + speech + OpenAI all available).
-
-**Confidence:** HIGH -- verified from official Azure Speech regions page (updated 2026-03-17).
-
----
-
-### Azure AI Services -- Content Understanding
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Azure Content Understanding | GA API `2025-11-01` | Training material analysis (PDF/Word/audio/video), multimodal scoring evaluation | Extracts structured data from documents, transcribes audio, analyzes video -- replaces need for multiple separate services. Use for training material ingestion and multimodal session evaluation. |
-
-**Python SDK:**
-```bash
-pip install azure-ai-contentunderstanding
-pip install azure-identity
-```
-
-**Usage Pattern:**
-```python
-from azure.ai.contentunderstanding import ContentUnderstandingClient
-from azure.core.credentials import AzureKeyCredential
-
-client = ContentUnderstandingClient(
-    endpoint=endpoint,
-    credential=AzureKeyCredential(key)
-)
-
-# Analyze uploaded training materials
-poller = client.begin_analyze(
-    analyzer_id="prebuilt-invoice",  # or custom analyzer
-    inputs=[AnalysisInput(url=document_url)],
-)
-result = poller.result()
-```
-
-**Prebuilt Analyzers Relevant to This Project:**
-- `prebuilt-audioSearch` -- transcripts, summaries, speaker labels from coaching session recordings
-- `prebuilt-videoSearch` -- keyframes, transcripts from conference presentations
-- Custom analyzers -- define schema for extracting key messages, scoring criteria from training docs
-
-**Prerequisite Deployments Required:** GPT-4.1, GPT-4.1-mini, text-embedding-3-large (must be deployed in the same Foundry resource)
-
-**Confidence:** HIGH -- GA since 2025-11-01, verified from official docs (updated 2026-03-13).
-
----
-
-### Internationalization (i18n)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| react-i18next | ^15.0.0 | Frontend i18n framework | De facto standard for React i18n. TypeScript support, namespace lazy loading, Vite compatible. Built on i18next core. |
-| i18next | ^24.0.0 | i18n core library | Language detection, interpolation, plurals, context. Required by react-i18next. |
-| i18next-http-backend | ^3.0.0 | Lazy load translations | Load translation JSON files on demand per namespace/language. Reduces initial bundle. |
-| i18next-browser-languagedetector | ^8.0.0 | Auto-detect user language | Detects from browser settings, URL, cookie. Respects user preference. |
-
-**Installation:**
-```bash
-npm install react-i18next i18next i18next-http-backend i18next-browser-languagedetector
-```
-
-**Structure:**
-```
-frontend/src/
-  locales/
-    zh-CN/
-      common.json        # Shared UI strings
-      coaching.json       # F2F coaching domain
-      conference.json     # Conference mode
-      scoring.json        # Scoring and feedback
-      admin.json          # Admin panel
-    en/
-      common.json
-      coaching.json
-      conference.json
-      scoring.json
-      admin.json
-```
-
-**Setup Pattern:**
-```typescript
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import HttpBackend from 'i18next-http-backend';
-import LanguageDetector from 'i18next-browser-languagedetector';
-
-i18n
-  .use(HttpBackend)
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    fallbackLng: 'zh-CN',
-    supportedLngs: ['zh-CN', 'en'],
-    ns: ['common', 'coaching', 'conference', 'scoring', 'admin'],
-    defaultNS: 'common',
-    backend: {
-      loadPath: '/locales/{{lng}}/{{ns}}.json',
-    },
-    interpolation: { escapeValue: false },
-  });
-```
-
-**Confidence:** HIGH -- react-i18next is the overwhelmingly dominant React i18n solution. Verified Vite + TS compatibility.
-
----
-
-### Database & Storage
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Azure Database for PostgreSQL Flexible Server | v16 | Production database | Managed PostgreSQL, async via asyncpg driver, Alembic migrations. Already planned in CLAUDE.md |
-| aiosqlite | >=0.20.0 | Local dev database | Already in skeleton for SQLite dev mode |
-| asyncpg | >=0.29.0 | PostgreSQL async driver | Already in skeleton optional deps |
-| Azure Blob Storage | `azure-storage-blob` | Training material files, voice recordings, avatar videos | Scalable object storage with SAS token access, lifecycle policies for retention |
-
-**Python SDK (add to dependencies):**
-```bash
-pip install "azure-storage-blob>=12.20.0"
-pip install "azure-identity>=1.17.0"
-```
-
-**Confidence:** HIGH -- standard Azure PaaS choices, already partially defined in project skeleton.
-
----
-
-### Dashboard & Charting
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Recharts | ^2.13.0 | Scoring radar charts, progress dashboards, trend lines | React-native chart library, supports radar/spider charts (critical for multi-dimensional scoring), responsive, composable. Lightweight vs. alternatives. |
-
-**Installation:**
-```bash
-npm install recharts
-```
-
-**Why Recharts over alternatives:**
-- Recharts: Built for React, declarative, supports RadarChart natively. ~45KB gzipped.
-- Chart.js/react-chartjs-2: More setup overhead, canvas-based (harder to style with Tailwind).
-- Apache ECharts: Powerful but heavy (~300KB), overkill for this dashboard scope.
-- D3: Too low-level for our needs, requires significant custom code.
-
-**Confidence:** MEDIUM -- Recharts is well-established but verify radar chart customization meets the multi-dimensional scoring visual requirements during implementation.
-
----
-
-### Authentication
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| python-jose | >=3.3.0 | JWT token creation/validation | Already in skeleton. Simple JWT for MVP auth |
-| passlib[bcrypt] | >=1.7.4 | Password hashing | Already in skeleton |
-| azure-identity | >=1.17.0 | Azure service authentication (Entra ID) | Required for all Azure SDK calls, supports DefaultAzureCredential for local dev + managed identity in production |
-
-**MVP Auth:** Simple username/password with JWT tokens (already in skeleton).
-**Future:** Azure AD (Entra ID) SSO. Architecture must support swapping auth provider -- use dependency injection in FastAPI.
-
-**Confidence:** HIGH -- existing pattern is sound for MVP.
-
----
-
-### WebSocket & Real-time Communication
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| FastAPI WebSocket | built-in | Backend WebSocket for proxying Realtime API | FastAPI has native WebSocket route support. Backend acts as secure proxy between browser and Azure OpenAI/Voice Live. |
-| websockets | >=13.0 | Python WebSocket client | Already in skeleton. Used for connecting to Azure Realtime/Voice Live from backend. |
-
-**Architecture: Backend WebSocket Proxy Pattern**
-
-Browser cannot directly connect to Azure OpenAI Realtime or Voice Live (CORS, credentials). The backend acts as a WebSocket relay:
-
-```
-Browser <--WebSocket--> FastAPI Backend <--WebSocket--> Azure OpenAI Realtime / Voice Live
-              |
-              +-- Audio chunks (PCM 24kHz)
-              +-- Text messages
-              +-- Session events
-```
-
-For Avatar (using Speech SDK JS), the browser connects directly to Azure Speech via WebRTC (this is supported and expected).
-
-**Confidence:** HIGH -- standard pattern for Azure Realtime API integration.
-
----
-
-### Additional Frontend Dependencies (New)
-
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| recharts | ^2.13.0 | Multi-dimensional scoring charts | Radar charts for scoring dimensions |
-| react-i18next | ^15.0.0 | Internationalization | See i18n section above |
-| i18next | ^24.0.0 | i18n core | Required by react-i18next |
-| i18next-http-backend | ^3.0.0 | Translation lazy loading | On-demand translation file loading |
-| i18next-browser-languagedetector | ^8.0.0 | Language detection | Auto-detect user locale |
-| microsoft-cognitiveservices-speech-sdk | latest | Azure Speech + Avatar in browser | Required for real-time avatar WebRTC |
-
-### Additional Backend Dependencies (New)
-
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| openai[realtime] | >=2.29.0 | Azure OpenAI chat + realtime | v1 API, realtime WebSocket support |
-| azure-identity | >=1.17.0 | Azure auth (Entra ID / DefaultAzureCredential) | All Azure SDK authentication |
-| azure-cognitiveservices-speech | latest | Server-side STT/TTS | Fallback voice processing, batch transcription |
-| azure-ai-contentunderstanding | latest | Document/audio/video analysis | Training material ingestion, session evaluation |
-| azure-storage-blob | >=12.20.0 | Blob storage for files | Training materials, voice recordings |
-
----
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| LLM API style | v1 API (`/openai/v1/`) | Legacy dated API (`api-version=2024-xx-xx`) | v1 is GA, no more monthly version churn, simpler `OpenAI()` client |
-| Voice interaction | Voice Live API | DIY: Speech SDK STT + OpenAI + Speech SDK TTS | Voice Live is managed, lower latency, built-in echo cancellation + noise suppression. DIY requires complex orchestration. |
-| Avatar | Azure TTS Avatar (standard) | Custom avatar | Custom requires 10min video recording per character, separate training. Standard avatars (Lisa, Max, Liwei) are sufficient for MVP. |
-| i18n | react-i18next | react-intl (FormatJS) | react-i18next has better lazy loading, simpler API, stronger TypeScript support. react-intl is ICU-focused, heavier setup. |
-| Charts | Recharts | ECharts / Chart.js | Recharts is React-native, lightweight, built-in RadarChart. ECharts is heavy. Chart.js needs wrapper library. |
-| Document processing | Azure Content Understanding | Azure Document Intelligence + Azure Video Indexer separately | Content Understanding is the unified successor, handles all modalities (doc/audio/video) in one service. GA since Nov 2025. |
-| Database | PostgreSQL Flexible Server | Azure Cosmos DB | Relational data model fits training sessions, scoring, users. Cosmos adds complexity without benefit for this workload. |
-| File storage | Azure Blob Storage | Azure Files | Blob Storage is cheaper, better SDK support, lifecycle policies for retention. Azure Files is for SMB mount scenarios. |
-| Frontend state | TanStack Query (existing) | Redux / Zustand | Already in skeleton. TanStack Query handles server state. Auth store uses lightweight approach (no Redux needed). |
-| Voice SDK (browser) | Azure Speech SDK JS | Web Speech API | Web Speech API is browser-native but limited: no Chinese TTS, no avatar, inconsistent across browsers. Azure SDK is required for avatar. |
-
----
+### Core Technologies
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Azure AI Search **Knowledge Retrieval `retrieve` action** (REST, `api-version=2026-05-01-preview`) | n/a (REST endpoint, not a package) | Anonymous mode: get a grounded answer **and** a structured `references[]` array (docKey, sourceData, activitySource) in one call | This is the only Foundry IQ code path that returns machine-parseable citations. The `knowledge_base_retrieve` **MCP tool** used by the existing Agent+KB integration does **not** return a `references`/`activity` envelope — confirmed in MS Learn "Query Knowledge Base via API or MCP" (updated 2026-07-24): *"Unlike the retrieve action, the current MCP response doesn't return separate `activity` or `references` arrays, and it doesn't populate `resource` entries."* Anything built on the Agent+MCP path for the anonymous flow would have to scrape citations out of free-form LLM prose — unreliable and un-auditable, violating the "traceable knowledge source per response" requirement and the "source separation" UI requirement in CLAUDE.md. |
+| `httpx` (existing dep, `>=0.27.0`) | current | HTTP client to call the `retrieve` REST endpoint directly | Already the exact pattern used in `backend/app/services/knowledge_base_service.py::_get_knowledgebases` / `_search_auth_headers` for listing KBs. Reuse the same auth helper (API key first, Entra ID bearer fallback) instead of introducing a second HTTP client or a new preview SDK. |
+| `openpyxl` (existing dep, `>=3.1.0`, currently pinned `3.1.2`, latest `3.1.5`) | keep `>=3.1.0` (optionally bump to `>=3.1.2`) | **Read** the CRM Excel mapping table (user_id → profile/preference columns) into a DB table | Already a backend dependency, but today it is only used for **writing** exports (`export_service.py`). No new library needed — just a new read-path service. `openpyxl` handles `.xlsx` row/column iteration fine for a lookup table; no streaming/large-file concerns at POC scale (one mapping sheet, not a training-material corpus). |
+| `fastapi.security.OAuth2PasswordBearer(auto_error=False)` (built into existing FastAPI dep) | current | New `get_current_user_optional` dependency so one endpoint serves both anonymous and logged-in avatar sessions | No new package. Mirrors `get_current_user` in `backend/app/dependencies.py` but returns `None` instead of raising 401 when no/invalid token is present; the route then branches: no user → anonymous Foundry IQ retrieve path; user present → personalized CRM+preference path. |
+| `slowapi` (new dep, `0.1.10`, released 2026-06-13) | `>=0.1.10` | Rate limiting for the newly-public, unauthenticated Q&A endpoint | This is the one genuinely new capability gap: every other endpoint in this codebase sits behind `get_current_user`. An anonymous endpoint with no auth gate is a direct cost/abuse vector (each call burns Azure AI Search + Azure OpenAI tokens). `slowapi` is a thin Starlette/FastAPI middleware wrapping the `limits` library — small, actively maintained (last release 2026-06-13), integrates as a single dependency + decorator, no infra changes required for the POC. |
+| `i18next` / `react-i18next` (existing deps, `25.10.5` / `16.6.2`) | no version change needed | Add `es-ES` as a third supported language | Both libraries already handle arbitrary BCP-47 locale codes (including Spanish plural rules) out of the box — this is a **config + content** change, not a library upgrade. Add `"es-ES"` to `supportedLngs` in `frontend/src/i18n/index.ts` and create `frontend/public/locales/es-ES/*.json` mirroring the existing 14 namespaces under `en-US`/`zh-CN`. |
+
+### Supporting Libraries
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| `limits` (transitive dep of `slowapi`) | pulled automatically | In-memory (or Redis-backed) rate-limit storage | Default in-memory storage is fine for a single-replica POC container. If Azure Container Apps scales the backend to >1 replica, switch `limits`' storage backend to Redis (Azure Cache for Redis) so rate limits are shared across replicas — otherwise each replica gets its own independent quota. |
+| `azure-ai-projects` (existing dep, `>=2.3.0`) | unchanged | Personalized-mode chat still goes through the existing Foundry Agent (`agent_chat_service.py` / `agent_sync_service.py`) so CRM-derived preferences can be injected via the existing prompt-registry/system-prompt mechanism | Only for the **logged-in** path. Anonymous mode should bypass the Agent layer entirely (see Core Technologies) to get reliable citations and avoid per-session agent-sync overhead for users who were never going to be tied to an HCP profile anyway. |
+| `crypto.randomUUID()` (native browser API, no package) | n/a | Generate a client-side anonymous session id, stored in `localStorage`, sent as a header to correlate multi-turn anonymous conversation without a JWT | Supported in all evergreen desktop/mobile browsers and the Teams Tab WebView2 host required by this project's responsiveness constraint — no `uuid` npm package needed. |
+| Existing lightweight store pattern (`frontend/src/stores/auth-store.ts`) | n/a | Add a sibling `guest-session-store.ts` for anonymous session id + language, using the same custom store pattern already in the repo | Keeps state management consistent — this repo deliberately has **no Redux/Zustand**; don't introduce one just for a session id. |
+| `react-markdown` + `rehype-raw` (existing deps) | unchanged | Render the digital human's answer text | Already used for AI response rendering; reuse as-is for the avatar's text bubble. Citations must render as a **separate** component (plain list of `{title, url}` links), never interpolated into the markdown body — this is a UI composition rule, not a new dependency. |
+
+### Development Tools
+
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| `pytest` + `pytest-asyncio` (existing) | Unit tests for the new retrieve-call service, XLSX-mapping importer, optional-auth dependency, rate limiter | No config changes; keep the existing `--cov-fail-under` gate honest — these are net-new modules so they should each carry their own tests to avoid dragging the global coverage number down. |
+| `Playwright` (existing) | E2E: anonymous chat flow with visible citation links; logged-in personalized flow; language switch including `es-ES` | Add scenarios under `frontend/e2e/`; reuse `i18n-switching.spec.ts` as the template for the new locale, and reuse the existing avatar/voice E2E scaffolding (`avatar-view.tsx`/`voice-session.tsx`) for the "clean UI" layout regression check (only avatar + source links visible, coach nav hidden). |
 
 ## Installation
 
-### Backend (add to existing pyproject.toml dependencies)
 ```bash
-# New Azure AI dependencies
-pip install "openai[realtime]>=2.29.0"
-pip install azure-identity>=1.17.0
-pip install azure-cognitiveservices-speech
-pip install azure-ai-contentunderstanding
-pip install "azure-storage-blob>=12.20.0"
+# Backend — only one net-new package
+cd backend
+pip install "slowapi>=0.1.10"
+# openpyxl, httpx, azure-ai-projects, azure-identity are already installed dependencies —
+# no version bump strictly required (bump openpyxl to >=3.1.2 only if pinned lower).
+
+# Frontend — no new packages at all
+# (i18next/react-i18next already support additional locales; just add
+#  "es-ES" to supportedLngs and create frontend/public/locales/es-ES/*.json)
 ```
 
-### Frontend (add to existing package.json)
-```bash
-# i18n
-npm install react-i18next i18next i18next-http-backend i18next-browser-languagedetector
-
-# Charts
-npm install recharts
-
-# Azure Speech SDK (for Avatar + browser STT/TTS)
-npm install microsoft-cognitiveservices-speech-sdk
-
-# Types
-npm install -D @types/recharts
+```toml
+# backend/pyproject.toml — add to [project] dependencies
+"slowapi>=0.1.10",
 ```
 
----
+## Alternatives Considered
 
-## Azure Service Configuration Summary
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|--------------------------|
+| Direct Knowledge Base `retrieve` REST call via `httpx` for anonymous citations | Route anonymous chat through the existing Foundry Agent + `knowledge_base_retrieve` MCP tool (reuse `agent_chat_service.py` as-is) | Only if citations can be relaxed to "best-effort title mention in prose" rather than structured, clickable page/document links — not acceptable given the explicit "source separation" + "auditable" requirements in CLAUDE.md / `docs/requirements.md`. |
+| `httpx` REST calls to the Search `retrieve` endpoint | `azure-search-documents` SDK (`azure.search.documents.knowledgebases.KnowledgeBaseRetrievalClient`, preview `11.7.0b2`; not confirmed whether GA `12.0.0` includes this module) | If the team later wants strong typing over the retrieve request/response instead of raw JSON, and is comfortable tracking a preview-versioned Azure SDK (this repo's own comment in `pyproject.toml` about `azure-ai-projects`'s `create_from_package` being removed is a cautionary precedent for preview SDK churn). |
+| `openpyxl` for reading the CRM mapping XLSX | `pandas` (`pd.read_excel`) | Only if the mapping table grows beyond a simple flat lookup (e.g., needs joins/filters/aggregation before import) — unlikely for a POC "Excel-based mapping, no live CRM integration." |
+| `slowapi` for anonymous-endpoint rate limiting | Azure API Management / Azure Front Door WAF rate limiting at the infra layer | For production hardening post-POC, or if multiple public endpoints need centrally managed limits — but that's a new Azure resource, more setup than the demo timeline allows now. |
+| Custom lightweight store for guest session id | `zustand` | If anonymous-mode client state grows complex (multi-step wizards, cross-tab sync) beyond a session id + language — not the case here. |
 
-| Azure Service | Resource Type | Recommended Region | Pricing Tier |
-|---------------|---------------|-------------------|-------------|
-| Azure OpenAI | Foundry Resource | `swedencentral` or `eastus2` | Standard (pay-per-token) |
-| Azure Speech | Foundry Resource (shared) | `swedencentral` or `eastus2` | Standard S0 |
-| Azure TTS Avatar | Same Speech resource | `westus2` or `swedencentral` | Standard S0 (premium add-on) |
-| Azure Content Understanding | Foundry Resource (shared) | `eastus` or `westeurope` | Standard |
-| Azure Database for PostgreSQL | Flexible Server | Same region as app | Burstable B1ms (dev), GP D2s (prod) |
-| Azure Blob Storage | Storage Account (v2) | Same region as app | Hot tier |
-| Azure Container Apps | Container Apps Environment | Same region as app | Consumption plan |
+## What NOT to Use
 
-**Critical Region Constraint:** Avatar is only available in 7 regions. For maximum feature availability, use `swedencentral` (Europe) or `westus2` (US). Deploy all resources in the same region to minimize latency.
+| Avoid | Why | Use Instead |
+|-------|-----|--------------|
+| Building citation extraction by prompt-engineering the Agent to emit `[ref: doc.pdf p.3]`-style markers in its free-text answer | The `knowledge_base_retrieve` MCP tool result is unstructured JSON-in-text (`ref_id` + `title` only, no URL/page), and LLMs are unreliable at consistently emitting exact machine-parseable markers — this produces broken/missing citations in production, not just occasionally. Confirmed via MS Learn: the MCP path has no `references`/`activity` envelope at all. | Direct `retrieve` REST call with `includeReferences=true`, `includeReferenceSourceData=true` — get citations as structured data, not scraped text. |
+| `azure-search-documents` SDK just to make one `retrieve` call | Adds a second, preview-versioned Azure SDK to track for breaking changes, when the codebase has already standardized on raw `httpx` + REST for every other Search interaction (`knowledge_base_service.py`). Inconsistent patterns increase maintenance cost more than they save typing. | `httpx` against the documented REST endpoint, same auth helper already in `knowledge_base_service.py`. |
+| `pandas` / `xlrd` for the CRM mapping import | Unnecessary heavy dependency (pandas pulls in numpy) for reading one small lookup sheet; `xlrd` no longer supports `.xlsx` (legacy `.xls` only) and would be the wrong tool regardless. | `openpyxl` (already installed). |
+| Zustand/Redux for anonymous session state | Contradicts this repo's explicit "No Redux — use TanStack Query for server state, lightweight store for auth" convention; a session id + language preference doesn't need a state library. | Extend the existing custom store pattern (`frontend/src/stores/`). |
+| Skipping rate limiting on the anonymous endpoint entirely | It is the only unauthenticated, LLM/Search-backed endpoint in the app — leaving it unlimited is a direct cost and availability risk once the demo link is shared externally. | `slowapi`, even a generous limit (e.g., 20 req/min/IP) is enough to blunt accidental abuse for a POC. |
+| Assuming the Foundry IQ index's `sourceData`/semantic configuration already exposes a document URL and page number | Not verified in this pass — the retrieve action's `references[].sourceData` is only populated for whatever fields the underlying search index's semantic configuration and `sourceDataFields` actually project (see Gaps below). If the Phase 17 index doesn't include a blob URL / page field, citations will show titles but no working links. | Before implementing, inspect the actual index schema used by the existing Foundry IQ KB (Phase 17) and add a URL/page field to `sourceDataFields` if missing — this is an indexing-pipeline task, not a library choice. |
 
----
+## Stack Patterns by Variant
 
-## Environment Variables (New -- add to Settings)
+**If anonymous mode needs spoken (avatar) output, not just text:**
+- Do the `retrieve` call server-side first (with `outputMode: "answerSynthesis"` so Search's own LLM step produces one clean answer string), then feed that finished string into Azure Speech TTS / Voice Live for a single-shot utterance.
+- Don't route anonymous voice through Voice Live → Agent → MCP-tool-KB, for the same citation-loss reason as text mode.
 
-```python
-# Azure OpenAI v1 API
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4.1
-AZURE_OPENAI_CHAT_MINI_DEPLOYMENT=gpt-4.1-mini
-AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime
+**If personalized (logged-in) mode later needs its own KB citations too:**
+- Keep the existing Agent+MCP path for the conversational/CRM-injected behavior, but if citations become a requirement there as well, call `retrieve` in parallel (or first, then pass its `response` text into the Agent as context) rather than trying to extract citations from the Agent's own MCP-grounded reply.
 
-# Azure Speech
-AZURE_SPEECH_KEY=your-key
-AZURE_SPEECH_REGION=swedencentral
+**If Container Apps scales the backend beyond one replica:**
+- Switch `slowapi`/`limits` storage from the in-memory default to Redis (Azure Cache for Redis), otherwise per-replica rate limits are effectively multiplied by replica count.
 
-# Azure Content Understanding
-AZURE_CONTENT_UNDERSTANDING_ENDPOINT=https://your-resource.cognitiveservices.azure.com
-AZURE_CONTENT_UNDERSTANDING_KEY=your-key
+## Version Compatibility
 
-# Azure Blob Storage
-AZURE_STORAGE_CONNECTION_STRING=your-connection-string
-AZURE_STORAGE_CONTAINER_MATERIALS=training-materials
-AZURE_STORAGE_CONTAINER_RECORDINGS=voice-recordings
-
-# Voice Live (optional, premium)
-AZURE_VOICE_LIVE_ENDPOINT=wss://your-resource.services.ai.azure.com
-AZURE_VOICE_LIVE_MODEL=gpt-4.1
-
-# Feature Flags
-FEATURE_AVATAR_ENABLED=true
-FEATURE_VOICE_LIVE_ENABLED=false
-```
-
----
+| Package A | Compatible With | Notes |
+|-----------|------------------|-------|
+| `slowapi==0.1.10` | Python `>=3.7,<4.0`, Starlette-based FastAPI `>=0.115.0` | No conflict with existing pinned FastAPI/Starlette versions. |
+| `openpyxl>=3.1.2` (installed) / `3.1.5` (latest) | Python 3.11 | No breaking changes between 3.1.2→3.1.5 relevant to basic cell reads; safe to leave as-is or bump opportunistically. |
+| Knowledge Retrieval REST `api-version=2026-05-01-preview` | Same Azure AI Search resource already used for `SEARCH_API_VERSION` in `knowledge_base_service.py` | Reuse that existing constant rather than hardcoding a second literal — keeps the whole codebase on one Search API version and one place to bump it later. |
+| `i18next 25.10.5` / `react-i18next 16.6.2` | Adding `es-ES` locale | No version constraint; ensure the `ns` array in `frontend/src/i18n/index.ts` and the set of JSON files under `public/locales/es-ES/` stay in sync with `en-US`/`zh-CN` (14 namespaces today) — a missing namespace file silently falls back to `fallbackLng` (`en-US`) for that section only, which is easy to miss in review (see `.planning/debug/i18n-missing-zh-translations.md` for a prior instance of exactly this class of bug). |
 
 ## Sources
 
-- [Azure OpenAI v1 API docs](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle) -- updated 2026-03-20
-- [Azure OpenAI Realtime API](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/realtime-audio) -- gpt-realtime models, WebRTC/WebSocket
-- [Azure Speech TTS Avatar overview](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/what-is-text-to-speech-avatar) -- updated 2026-02-17
-- [Azure Speech TTS Avatar real-time synthesis](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/real-time-synthesis-avatar) -- WebRTC setup, JS SDK
-- [Azure Speech standard avatars](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/standard-avatars) -- character list
-- [Azure Speech regions](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions) -- avatar region constraints
-- [Voice Live API overview](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live) -- updated 2026-02-04
-- [Voice Live API how-to](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live-how-to) -- WebSocket events, avatar config
-- [Azure Content Understanding overview](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/overview) -- GA 2025-11-01
-- [Azure Content Understanding REST API quickstart](https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/quickstart/use-rest-api) -- Python SDK
-- [OpenAI Python package](https://pypi.org/project/openai/) -- v2.29.0, released 2026-03-17
-- [react-i18next](https://react.i18next.com/) -- React i18n framework
+- `backend/app/services/knowledge_base_service.py` (repo) — existing Search REST/httpx auth pattern, `SEARCH_API_VERSION` constant, `build_search_tools`/MCPTool wiring — HIGH confidence (read directly)
+- `backend/app/services/agent_chat_service.py` (repo) — existing Responses API `agent_reference` streaming pattern for the "text direct-to-Agent" path — HIGH confidence (read directly)
+- `backend/app/dependencies.py`, `backend/app/models/user.py`, `backend/app/services/material_service.py`, `backend/app/services/skill_text_extractor.py`, `frontend/src/i18n/index.ts`, `frontend/src/stores/auth-store.ts` (repo) — confirmed no existing optional-auth dependency, no XLSX read path, no citation code anywhere, i18n `supportedLngs` currently `["en-US","zh-CN"]` only — HIGH confidence (read directly)
+- [Agentic Retrieval Overview — Azure AI Search (Microsoft Learn, updated 2026-07-02)](https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-overview) — confirms Foundry IQ is built on Search's agentic retrieval pipeline, and that it "can return source references and an activity log" — HIGH confidence (official docs, current)
+- [Query Knowledge Base via API or MCP — Azure AI Search (Microsoft Learn, updated 2026-07-24)](https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-how-to-retrieve) — **critical finding**: the `retrieve` REST/SDK action returns `response`/`activity`/`references` (with `docKey`, `sourceData`, `activitySource`), but the MCP tool result used by Foundry Agents does **not** return `activity`/`references` — only `result.content[].text` as a JSON-encoded string with `ref_id`/`title` — HIGH confidence (official docs, dated within the last week)
+- PyPI: `slowapi` 0.1.10 (released 2026-06-13), `openpyxl` 3.1.5 (latest; 3.1.2 installed), `azure-search-documents` 12.0.0 GA / 11.7.0b2 preview (verified via `pip index versions` and `pypi.org` JSON API) — HIGH confidence (live registry query)
+
+## Gaps to Address (before implementation, not blocking research)
+
+- **Not verified:** whether the actual Foundry IQ knowledge base / search index created in v1.0 Phase 17 has `sourceDataFields`/semantic configuration that includes a document URL and page number. If not, the `retrieve` action's `references[].sourceData` will lack the fields needed to render a clickable "document link" — this needs a quick inspection of the live index schema (or a small indexer/skillset change) before the anonymous citation UI can be considered done, not just "returns something."
+- **Not verified:** whether `azure-search-documents` 12.0.0 GA has folded in the `knowledgebases` module (only confirmed present in `11.7.0b1`/`b2` preview via docs) — irrelevant to the recommended `httpx` approach, but worth a five-minute check if the team ever wants the typed SDK later.
+
+---
+*Stack research for: AI Avatar Platform v2.0 Avatar MVP (anonymous grounded Q&A + citations, CRM-Excel personalization, es-ES i18n, avatar-first UI)*
+*Researched: 2026-07-31*
