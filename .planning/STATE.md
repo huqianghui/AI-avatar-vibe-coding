@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Completed 34-07-PLAN.md
-last_updated: "2026-08-01T17:52:15.062Z"
+stopped_at: Completed 34-08-PLAN.md
+last_updated: "2026-08-01T18:01:05.228Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 23
-  completed_plans: 20
-  percent: 87
+  completed_plans: 21
+  percent: 91
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 34
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-08-01
 
@@ -150,6 +150,7 @@ Last activity: 2026-08-01
 | Phase 34 P04 | 35min | 2 tasks | 19 files |
 | Phase 34 P05 | 40min | 3 tasks | 4 files |
 | Phase 34 P07 | 20min | 2 tasks | 7 files |
+| Phase 34 P08 | 20min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -333,6 +334,7 @@ Recent decisions affecting current work:
 - [Phase 34]: Fixed pre-existing JSON syntax bug in zh-CN/session.json (unescaped quotes) that blocked the session-namespace parity test for all 5 locales
 - [Phase 34]: LANG-01 gate closed: full 65/65 parity suite green, settings.tsx extended to 5-option language Select, Playwright E2E (login route, not /) proves real translated UI + no missing-key warnings for es-ES/es-MX/es-US
 - [Phase 34]: 34-07: resolved i18n.language internally inside useAnonymousAvatarChat via useTranslation() (mirroring use-personalized-avatar-chat.ts) instead of the plan's literal object-shaped mutate() signature, to preserve avatar-page.tsx's shared chatMutation union type
+- [Phase 34]: 34-08: admin voice_map GET/PUT mirrors azure_config.py's singleton-config pattern; GET bundles override + DEFAULT_PUBLIC_VOICE_BY_LOCALE defaults; PUT accepts empty-string values for known locales per D-07
 
 ### Pending Todos
 
@@ -373,6 +375,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-01T17:52:15.059Z
-Stopped at: Completed 34-07-PLAN.md
+Last session: 2026-08-01T18:01:05.225Z
+Stopped at: Completed 34-08-PLAN.md
 Resume file: None
