@@ -69,7 +69,14 @@ class TestParseAndImportCrmExcel:
         await _seed_user(db_session, "bob@example.com", "bob")
         file_bytes = _build_workbook(
             [
-                ["user_email", "customer_name", "wrong_column", "role", "crm_notes", "contact_person"],
+                [
+                    "user_email",
+                    "customer_name",
+                    "wrong_column",
+                    "role",
+                    "crm_notes",
+                    "contact_person",
+                ],
                 ["bob@example.com", "Bob", "Acme", "Manager", "notes", "Carol"],
             ]
         )
@@ -77,9 +84,7 @@ class TestParseAndImportCrmExcel:
         with pytest.raises(CrmHeaderValidationError):
             await parse_and_import_crm_excel(db_session, file_bytes)
 
-        count = (
-            await db_session.execute(select(UserCrmContext))
-        ).scalars().all()
+        count = (await db_session.execute(select(UserCrmContext))).scalars().all()
         assert count == []
 
     @pytest.mark.asyncio
@@ -137,9 +142,7 @@ class TestParseAndImportCrmExcel:
         result = await parse_and_import_crm_excel(db_session, file_bytes)
 
         assert result.success_count == 1
-        row = (
-            await db_session.execute(select(UserCrmContext))
-        ).scalar_one()
+        row = (await db_session.execute(select(UserCrmContext))).scalar_one()
         assert "[PHONE_REDACTED]" in row.crm_notes
         assert "13812345678" not in row.crm_notes
 
@@ -172,7 +175,11 @@ class TestParseAndImportCrmExcel:
 
         assert result.success_count == 1
         rows = (
-            (await db_session.execute(select(UserCrmContext).where(UserCrmContext.user_id == user.id)))
+            (
+                await db_session.execute(
+                    select(UserCrmContext).where(UserCrmContext.user_id == user.id)
+                )
+            )
             .scalars()
             .all()
         )
