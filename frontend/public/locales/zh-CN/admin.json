@@ -703,5 +703,11 @@
       "focusArea": "关注领域",
       "languagePreference": "语言偏好"
     }
+  },
+  "voiceMap": {
+    "title": "各语言语音配置",
+    "helper": "留空则使用该语言的内置默认语音。",
+    "save": "保存语音设置",
+    "error": "出错了，语音配置未能保存，请检查后重试。"
   }
 }

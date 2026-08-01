@@ -703,5 +703,11 @@
       "focusArea": "Focus Area",
       "languagePreference": "Language Preference"
     }
+  },
+  "voiceMap": {
+    "title": "Voice per Language",
+    "helper": "Leave a field blank to use the built-in default voice for that language.",
+    "save": "Save Voice Settings",
+    "error": "Something went wrong. The voice configuration could not be saved. Please check the value and try again."
   }
 }
