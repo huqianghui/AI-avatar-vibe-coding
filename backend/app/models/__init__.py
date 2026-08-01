@@ -9,6 +9,7 @@ from app.models.hcp_profile import HcpProfile
 from app.models.material import MaterialVersion, TrainingMaterial
 from app.models.message import SessionMessage
 from app.models.meta_skill import MetaSkill
+from app.models.personalized_avatar_session import PersonalizedAvatarSession
 from app.models.prompt_optimization_run import PromptOptimizationRun
 from app.models.prompt_template import PromptTemplate
 from app.models.prompt_version import PromptVersion
@@ -38,6 +39,7 @@ __all__ = [
     "UserCrmContext",
     "AnonymousAvatarSession",
     "AvatarInteractionLog",
+    "PersonalizedAvatarSession",
     "CrmImportLog",
     "PublicKnowledgeConfig",
     "DryRun",

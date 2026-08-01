@@ -32,8 +32,11 @@ delegate registration to one shared instance.
 from typing import Any
 
 from fastapi import Request
+from jose import JWTError, jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+from app.config import get_settings
 
 
 def get_anon_session_key(request: Request) -> str:
@@ -41,6 +44,22 @@ def get_anon_session_key(request: Request) -> str:
     to remote IP only when the header is absent (e.g. the session-creation route
     itself, which has no session yet)."""
     return request.headers.get("X-Anon-Session", get_remote_address(request))
+
+
+def get_user_id_key(request: Request) -> str:
+    """Rate-limit key derived from the JWT `sub` claim, falling back to remote
+    IP when the Authorization header is absent/invalid. This is a best-effort
+    throttling bucket only -- the route's own `Depends(get_current_user)`
+    independently re-verifies the JWT signature and is the real auth gate."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        return get_remote_address(request)
+    settings = get_settings()
+    try:
+        payload = jwt.decode(auth_header[7:], settings.secret_key, algorithms=[settings.algorithm])
+        return str(payload.get("sub") or get_remote_address(request))
+    except JWTError:
+        return get_remote_address(request)
 
 
 class _KeyedLimiterProxy:
@@ -66,3 +85,4 @@ _shared_limiter = Limiter(key_func=get_remote_address)
 # on a route to get independently-enforced IP and session rate limits.
 limiter_ip = _shared_limiter
 limiter_session = _KeyedLimiterProxy(_shared_limiter, get_anon_session_key)
+limiter_user = _KeyedLimiterProxy(_shared_limiter, get_user_id_key)

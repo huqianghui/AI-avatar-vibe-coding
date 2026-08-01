@@ -18,6 +18,15 @@ class AvatarInteractionLog(Base, TimestampMixin):
         nullable=True,
         index=True,
     )
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    personalized_session_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("personalized_avatar_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     ip_address: Mapped[str] = mapped_column(String(64), default="")
     question: Mapped[str] = mapped_column(Text, default="")
     answer_summary: Mapped[str] = mapped_column(Text, default="")

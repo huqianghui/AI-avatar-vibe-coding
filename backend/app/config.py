@@ -143,6 +143,13 @@ class Settings(BaseSettings):
     crm_field_max_length: int = 500
     crm_notes_max_length: int = 2000
 
+    # Personalized Avatar (Phase 33, PERS-02, D-15): session TTL + user-id-keyed
+    # rate-limit thresholds. Looser than anonymous quotas -- identity is stable
+    # (JWT-authenticated), unlike anonymous's dual IP+session throttling.
+    personalized_session_ttl_minutes: int = 60
+    personalized_rate_limit_session_create: str = "20/minute"
+    personalized_rate_limit_chat_user: str = "120/hour"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
