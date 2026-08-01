@@ -144,10 +144,14 @@ class TestUpdateAndDeletePreference:
         resp = await client.delete(f"/api/v1/users/{target.id}/preferences/{pref.id}")
 
         assert resp.status_code == 204
-        remaining = await db_session.execute(select(UserPreference).where(UserPreference.id == pref.id))
+        remaining = await db_session.execute(
+            select(UserPreference).where(UserPreference.id == pref.id)
+        )
         assert remaining.scalar_one_or_none() is None
 
-    async def test_delete_with_wrong_user_id_returns_404_and_does_not_delete(self, client, db_session):
+    async def test_delete_with_wrong_user_id_returns_404_and_does_not_delete(
+        self, client, db_session
+    ):
         admin = await _seed_user(db_session, "admin")
         target = await _seed_user(db_session, "user")
         other_user = await _seed_user(db_session, "user")
@@ -160,5 +164,7 @@ class TestUpdateAndDeletePreference:
         resp = await client.delete(f"/api/v1/users/{other_user.id}/preferences/{pref.id}")
 
         assert resp.status_code == 404
-        remaining = await db_session.execute(select(UserPreference).where(UserPreference.id == pref.id))
+        remaining = await db_session.execute(
+            select(UserPreference).where(UserPreference.id == pref.id)
+        )
         assert remaining.scalar_one_or_none() is not None

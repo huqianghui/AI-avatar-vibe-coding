@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api import (
     admin_crm_router,
+    admin_user_preferences_router,
     admin_users_router,
     agent_foundation_models_router,
     analytics_router,
@@ -169,6 +170,7 @@ app.include_router(speech_router, prefix=settings.api_prefix)
 app.include_router(prompts_router, prefix=settings.api_prefix)
 app.include_router(admin_crm_router, prefix=settings.api_prefix)
 app.include_router(admin_users_router, prefix=settings.api_prefix)
+app.include_router(admin_user_preferences_router, prefix=settings.api_prefix)
 app.include_router(personalized_avatar_router, prefix=settings.api_prefix)
 app.include_router(system_enums_router, prefix=settings.api_prefix)
 app.include_router(internal_openai_proxy_router, prefix=settings.api_prefix)
