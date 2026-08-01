@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from fastapi import Depends
+from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
+from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.user import User
+from app.services.anonymous_session_service import verify_anonymous_token
 from app.utils.exceptions import AppException
 
 settings = get_settings()
@@ -51,4 +53,14 @@ def require_role(role: str) -> Callable:
     return role_checker
 
 
-__all__ = ["get_db", "get_current_user", "require_role"]
+async def get_anonymous_session(
+    x_anon_session: str = Header(..., alias="X-Anon-Session"),
+    db: AsyncSession = Depends(get_db),
+) -> AnonymousAvatarSession:
+    """Anonymous trust boundary dependency (Phase 32, ANON-01) — a NEW trust
+    boundary, not JWT auth made optional. Validates the `X-Anon-Session`
+    header against the live `AnonymousAvatarSession` row."""
+    return await verify_anonymous_token(db, x_anon_session)
+
+
+__all__ = ["get_db", "get_current_user", "require_role", "get_anonymous_session"]

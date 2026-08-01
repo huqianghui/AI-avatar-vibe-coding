@@ -31,9 +31,18 @@ class ScoringUnavailableException(AppException):
         super().__init__(503, "SCORING_UNAVAILABLE", message, details)
 
 
+class UnauthorizedException(AppException):
+    def __init__(self, message: str = "Unauthorized", details: Any = None):
+        super().__init__(401, "UNAUTHORIZED", message, details)
+
+
 def not_found(message: str = "Resource not found") -> NoReturn:
     raise NotFoundException(message)
 
 
 def bad_request(message: str = "Invalid request") -> NoReturn:
     raise ValidationException(message)
+
+
+def unauthorized(message: str = "Unauthorized") -> NoReturn:
+    raise UnauthorizedException(message)

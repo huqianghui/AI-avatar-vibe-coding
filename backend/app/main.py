@@ -22,6 +22,7 @@ from app.api import (
     materials_router,
     meta_skills_router,
     prompts_router,
+    public_avatar_router,
     rubrics_router,
     scenario_groups_router,
     scenarios_router,
@@ -170,3 +171,9 @@ app.include_router(internal_openai_proxy_router, prefix=settings.api_prefix)
 
 # Health check (standalone router, no api_prefix)
 app.include_router(health_router)
+
+# Anonymous public avatar surface (Phase 32, ANON-01/02): mounted with NO
+# api_prefix — this is an unauthenticated trust boundary, not a versioned
+# authenticated API surface (mirrors the /avatar-thumbnail/{character_id}
+# precedent of unauthenticated routes living outside /api/v1).
+app.include_router(public_avatar_router)
