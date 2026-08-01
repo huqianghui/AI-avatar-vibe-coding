@@ -1,0 +1,36 @@
+{
+  "title": "Presentación en Conferencia",
+  "startPresentation": "Iniciar Presentación",
+  "subState": {
+    "presenting": "Presentando",
+    "qa": "P&R"
+  },
+  "topicGuide": "Temas Clave",
+  "audience": "Audiencia",
+  "transcription": "Transcripción en Vivo",
+  "questionQueue": "Preguntas",
+  "respond": "Responder",
+  "voiceMode": "Entrada de Voz",
+  "avatarToggle": "Avatar de IA",
+  "status": {
+    "listening": "Escuchando",
+    "asking": "Preguntando",
+    "waiting": "Esperando"
+  },
+  "audienceCount": "{{count}} miembros de la audiencia HCP",
+  "ariaCollapseTopics": "Contraer guía de temas",
+  "ariaExpandTopics": "Expandir guía de temas",
+  "ariaCollapseTranscript": "Contraer transcripción",
+  "ariaExpandTranscript": "Expandir transcripción",
+  "emptyTranscription": "La transcripción aparecerá aquí en cuanto inicie la sesión.",
+  "noScenarios": "No hay escenarios de conferencia disponibles. Pídale a su administrador que cree uno.",
+  "endPresentation": "Finalizar Presentación",
+  "endConfirm": "¿Está seguro de que desea finalizar esta presentación de conferencia? Su sesión será calificada y la presentación no podrá reanudarse.",
+  "continuePresenting": "Continuar Presentando",
+  "error": {
+    "loadFailed": "No se pudo cargar la sesión de conferencia. Actualice la página e intente de nuevo.",
+    "endFailed": "No se pudo finalizar la conferencia. Intente de nuevo.",
+    "streamFailed": "Se perdió la conexión con la sesión. Intentando reconectar...",
+    "voiceUnavailable": "La entrada de voz no está disponible. Azure Speech no está configurado."
+  }
+}
