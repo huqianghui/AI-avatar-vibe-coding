@@ -6,11 +6,16 @@ knowledge base — if no `PublicKnowledgeConfig` row is marked `is_active`,
 this fails closed with a 404 rather than guessing which config to use.
 """
 
+import json
+import logging
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.utils.exceptions import not_found
+
+logger = logging.getLogger(__name__)
 
 
 async def get_active_public_config(db: AsyncSession) -> PublicKnowledgeConfig:
@@ -23,3 +28,20 @@ async def get_active_public_config(db: AsyncSession) -> PublicKnowledgeConfig:
     if config is None:
         not_found("No active public knowledge configuration")
     return config
+
+
+def parse_voice_map(config: PublicKnowledgeConfig) -> dict[str, str]:
+    """Safely parse `PublicKnowledgeConfig.voice_map` JSON text into a dict.
+
+    The column is a bare `Text` field with no DB-level JSON constraint and is
+    editable outside the validated PUT endpoint (DB tooling, migrations, seed
+    scripts). Falls back to `{}` on malformed JSON rather than letting a
+    `JSONDecodeError`/`TypeError` bubble up as an uncaught 500 -- this
+    resolver is on the anonymous public WebRTC path, so a bad DB value must
+    not take down that surface (WR-02).
+    """
+    try:
+        return json.loads(config.voice_map or "{}")
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("Malformed voice_map JSON on PublicKnowledgeConfig %s; using {}", config.id)
+        return {}

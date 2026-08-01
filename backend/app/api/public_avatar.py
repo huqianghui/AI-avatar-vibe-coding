@@ -6,8 +6,6 @@ codebase's existing precedent of unauthenticated routes (e.g.
 `/avatar-thumbnail/{character_id}`) living outside `/api/v1`.
 """
 
-import json
-
 from fastapi import APIRouter, Depends, Request, status
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +23,7 @@ from app.schemas.public_avatar import (
 )
 from app.services.anonymous_session_service import create_anonymous_session
 from app.services.avatar_service import handle_anonymous_turn
-from app.services.public_knowledge_config_service import get_active_public_config
+from app.services.public_knowledge_config_service import get_active_public_config, parse_voice_map
 from app.services.rate_limit import limiter_ip, limiter_session
 from app.services.voice_live_webrtc import create_public_webrtc_session_config
 
@@ -79,7 +77,7 @@ async def webrtc_session(
     `PublicKnowledgeConfig` row; `get_anonymous_session` runs before any
     Azure credential call is attempted (T-32-14)."""
     public_config = await get_active_public_config(db)
-    voice_map = json.loads(public_config.voice_map or "{}")
+    voice_map = parse_voice_map(public_config)
     voice = voice_map.get(body.locale, "")
     credential = await create_public_webrtc_session_config(
         db, agent_id=public_config.agent_id, voice_name=voice, locale=body.locale

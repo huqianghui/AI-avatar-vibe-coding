@@ -140,6 +140,40 @@ class TestWebrtcSessionSuccess:
         assert "agent_id=public-agent-1" in data["signaling_url"]
 
 
+class TestWebrtcSessionMalformedVoiceMap:
+    """WR-02: a malformed `voice_map` value on the active PublicKnowledgeConfig
+    row must not 500 the anonymous public WebRTC path -- it should be treated
+    as if no voice override was configured."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_malformed_voice_map_json_falls_back_instead_of_500(
+        self, mock_get_config, mock_config_svc, mock_exchange, client
+    ):
+        headers = await _anon_session_and_header(client)
+        config = _make_public_config()
+        config.voice_map = "{not valid json"
+        mock_get_config.return_value = config
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-fallback"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "zh-CN"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        # No admin-configured voice for zh-CN (parse failed) -> falls back to
+        # the built-in default voice, not a 500.
+        assert data["session_config"]["voice"]["name"] == "zh-CN-XiaoxiaoMultilingualNeural"
+
+
 class TestWebrtcSessionLocaleValidation:
     """LANG-02 (34-06, D-06/D-07): es-ES/es-MX/es-US must be accepted by the
     request schema (no 422), while unlisted locales remain rejected."""

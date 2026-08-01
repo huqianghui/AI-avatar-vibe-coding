@@ -11,7 +11,7 @@ from app.schemas.public_knowledge_config import (
     PublicKnowledgeConfigVoiceMapOut,
     PublicKnowledgeConfigVoiceMapUpdate,
 )
-from app.services.public_knowledge_config_service import get_active_public_config
+from app.services.public_knowledge_config_service import get_active_public_config, parse_voice_map
 from app.services.voice_live_webrtc import DEFAULT_PUBLIC_VOICE_BY_LOCALE
 
 router = APIRouter(prefix="/admin/public-knowledge-config", tags=["admin-public-knowledge-config"])
@@ -24,7 +24,7 @@ async def get_voice_map(
 ) -> PublicKnowledgeConfigVoiceMapOut:
     """Return the current admin-configured voice_map plus built-in defaults."""
     config = await get_active_public_config(db)
-    voice_map = json.loads(config.voice_map or "{}")
+    voice_map = parse_voice_map(config)
     return PublicKnowledgeConfigVoiceMapOut(
         voice_map=voice_map, defaults=DEFAULT_PUBLIC_VOICE_BY_LOCALE
     )
@@ -42,5 +42,5 @@ async def update_voice_map(
     await db.commit()
     await db.refresh(config)
     return PublicKnowledgeConfigVoiceMapOut(
-        voice_map=json.loads(config.voice_map), defaults=DEFAULT_PUBLIC_VOICE_BY_LOCALE
+        voice_map=parse_voice_map(config), defaults=DEFAULT_PUBLIC_VOICE_BY_LOCALE
     )
