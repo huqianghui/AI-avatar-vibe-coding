@@ -9,7 +9,7 @@
   "guidance": {
     "startTalking": "点击麦克风按钮开始说话",
     "switchModes": "您可以随时使用上方按钮切换模式",
-    "endSession": "完成后点击"结束会话"查看评分报告",
+    "endSession": "完成后点击“结束会话”查看评分报告",
     "micRequired": "语音模式需要麦克风权限",
     "dismiss": "关闭"
   },

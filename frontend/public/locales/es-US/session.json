@@ -1,0 +1,43 @@
+{
+  "title": "Sesión de Capacitación",
+  "mode": {
+    "text": "Texto",
+    "voice": "Voz",
+    "digitalHuman": "Humano Digital",
+    "switching": "Cambiando de modo..."
+  },
+  "guidance": {
+    "startTalking": "Haga clic en el botón del micrófono para empezar a hablar",
+    "switchModes": "Puede cambiar entre modos en cualquier momento con los botones de arriba",
+    "endSession": "Haga clic en 'Finalizar Sesión' cuando termine para ver su reporte de puntaje",
+    "micRequired": "Se requiere acceso al micrófono para el modo de voz",
+    "dismiss": "Descartar"
+  },
+  "textPanel": {
+    "hcpInfo": "Información del HCP",
+    "keyMessages": "Mensajes Clave",
+    "scenario": "Escenario",
+    "specialty": "Especialidad"
+  },
+  "voicePanel": {
+    "connecting": "Conectando con el servicio de voz...",
+    "connected": "Voz conectada",
+    "disconnected": "Voz desconectada",
+    "error": "Error de conexión"
+  },
+  "chat": {
+    "placeholder": "Escriba su mensaje..."
+  },
+  "loading": "Cargando sesión...",
+  "error": {
+    "loadFailed": "No se pudo cargar la sesión. Intente de nuevo."
+  },
+  "micDenied": "Permiso de micrófono denegado. Cambiando al modo de texto.",
+  "micDeniedDetail": "Puede habilitar el acceso al micrófono en la configuración de su navegador para usar el modo de voz.",
+  "endSession": "Finalizar Sesión",
+  "endSessionConfirm": "¿Está seguro de que desea finalizar esta sesión?",
+  "endSessionDescription": "Su conversación se calificará y el audio se analizará para evaluar la calidad de la voz.",
+  "uploadingAudio": "Subiendo la grabación de la sesión...",
+  "audioUploaded": "Grabación de la sesión subida correctamente",
+  "endSessionFailed": "No se pudo finalizar la sesión. Intente de nuevo."
+}

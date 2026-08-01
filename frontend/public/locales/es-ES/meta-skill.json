@@ -1,0 +1,60 @@
+{
+  "title": "Configuración de Meta Habilidades",
+  "description": "Configure los agentes de IA utilizados para la creación, evaluación y simulación de ensayo de Habilidades",
+  "tabs": {
+    "creator": "Creador de Habilidades",
+    "evaluator": "Evaluador de Habilidades",
+    "dryRunMr": "Simulación MR",
+    "dryRunHcp": "Simulación HCP",
+    "instructions": "Instrucciones del Agente",
+    "resources": "Recursos de la Habilidad"
+  },
+  "fields": {
+    "agentId": "ID del Agente",
+    "agentVersion": "Versión del Agente",
+    "model": "Modelo",
+    "templateLanguage": "Idioma de la Plantilla",
+    "lastSynced": "Última Sincronización",
+    "status": "Estado",
+    "template": "Instrucciones del Agente (Plantilla SKILL.md)",
+    "composedInstructions": "Instrucciones Compuestas (SKILL.md + Referencias)"
+  },
+  "status": {
+    "synced": "Sincronizado",
+    "notSynced": "No Sincronizado",
+    "active": "Activo",
+    "inactive": "Inactivo"
+  },
+  "actions": {
+    "save": "Guardar Configuración",
+    "sync": "Guardar y Sincronizar Agente",
+    "reset": "Restablecer Valores Predeterminados",
+    "test": "Probar Agente"
+  },
+  "messages": {
+    "saveSuccess": "Configuración guardada correctamente",
+    "syncSuccess": "Agente sincronizado con Azure AI Foundry",
+    "syncError": "No se pudo sincronizar el agente",
+    "resetSuccess": "Plantilla restablecida al valor predeterminado",
+    "resetConfirm": "¿Restablecer la plantilla al valor predeterminado incluido? Se perderán los cambios actuales.",
+    "noAgent": "Todavía no hay ningún agente sincronizado. Pulse Sincronizar para crear el agente en Azure AI Foundry."
+  },
+  "models": {
+    "gpt4o": "GPT-4o (modelo)",
+    "gpt4oMini": "GPT-4o mini"
+  },
+  "languages": {
+    "en": "Inglés",
+    "zh": "Chino"
+  },
+  "resources": {
+    "title": "Recursos de la Habilidad",
+    "description": "Explore las instrucciones de SKILL.md, los documentos de referencia y los scripts de validación incluidos con esta habilidad.",
+    "selectFile": "Seleccione un archivo para previsualizarlo",
+    "download": "Descargar",
+    "downloadPackage": "Descargar Paquete",
+    "downloadError": "La descarga falló",
+    "noResources": "No se encontraron recursos",
+    "type": "Tipo"
+  }
+}
