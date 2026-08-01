@@ -221,7 +221,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 32: Anonymous Grounded Avatar Q&A** - Visitors chat with the avatar without login and get Foundry-IQ-grounded, sourced, spoken answers, with rate limiting and audit logging (completed 2026-08-01)
 - [x] **Phase 33: Personalized CRM-Excel Avatar** - Logged-in users get avatar answers shaped by Excel-based CRM context and admin-managed preference tags (completed 2026-08-01)
-- [ ] **Phase 34: Spanish (es) i18n** - Full UI translation parity and Spanish neural voice for the avatar
+- [x] **Phase 34: Spanish (es) i18n** - Full UI translation parity and Spanish neural voice for the avatar (completed 2026-08-01)
 - [ ] **Phase 35: Clean Avatar UI & Legacy Coach Hiding** - Avatar page shows only digital human + source links; legacy coach nav hidden behind a feature flag
 
 ## Phase Details
@@ -263,7 +263,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can switch the UI language to Spanish and see fully translated text with no missing-key fallback gaps across all namespaces (verified by an automated key-parity check across zh-CN/en-US/es-ES/es-MX/es-US)
   2. User can select Spanish and hear the avatar respond using an es-* neural voice (mid-session language switch may rebuild the session rather than reconnect live, per MVP scope)
-**Plans:** 9/10 plans executed
+**Plans:** 10/10 plans complete
 Plans:
 - [x] 34-01-PLAN.md — i18n contract wave: supportedLngs to 5 locales (D-10), 5-option switcher, common.json translated, global locale-parity test + whitelist
 - [x] 34-02-PLAN.md — Translate admin.json, voice.json, avatar.json into es-ES/es-MX/es-US
@@ -274,8 +274,10 @@ Plans:
 - [x] 34-07-PLAN.md — Fix anonymous text-chat locale-forwarding gap end-to-end (backend ChatRequest.locale + frontend i18n.language threading)
 - [x] 34-08-PLAN.md — Admin voice_map backend API (GET/PUT, role-gated) + admin.json voiceMap.* i18n keys
 - [x] 34-09-PLAN.md — Admin voice_map frontend UI ("Voice per Language" Card in settings.tsx)
-- [ ] 34-10-PLAN.md — LANG-02 closing gate: es-* voice session E2E + full phase regression suite
+- [x] 34-10-PLAN.md — LANG-02 closing gate: es-* voice session E2E + full phase regression suite
 **UI hint**: yes
+
+**Requirement gate status:** LANG-01 Complete. **LANG-02 left OPEN** — es-* voice-session negotiation is implemented and E2E-proven (34-10 Task 1, 5/5 green), but the plan's explicit closing-gate rule ("mark LANG-02 complete only if the full regression gate, E2E included, is entirely green") was not met: the full Playwright suite reported 51 failures, all root-caused to pre-existing bugs unrelated to Phase 34 (see `.planning/phases/34-spanish-es-i18n/deferred-items.md`, entry "34-10"). All 10 plans are executed; LANG-02 requires a follow-up fix (see deferred-items.md) + a clean full-suite re-run before it can be marked complete in `REQUIREMENTS.md`.
 
 ### Phase 35: Clean Avatar UI & Legacy Coach Hiding
 **Goal**: The avatar experience presents a decluttered UI, and legacy coach navigation is hidden without breaking existing functionality or tests
@@ -298,6 +300,6 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 31. Training Material Retention Auto-Deletion | v1.0 | 0/? | Not started | - |
 | 32. Anonymous Grounded Avatar Q&A | v2.0 | 5/5 | Complete    | 2026-08-01 |
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
-| 34. Spanish (es) i18n | v2.0 | 9/10 | In Progress|  |
+| 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 0/? | Not started | - |
 </content>
