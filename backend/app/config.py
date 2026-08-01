@@ -137,6 +137,12 @@ class Settings(BaseSettings):
     anon_rate_limit_webrtc_ip: str = "10/minute"
     anon_rate_limit_webrtc_session: str = "30/hour"
 
+    # Personalized CRM Avatar (Phase 33, PERS-01): Excel upload limits + sanitization
+    # field caps. Config-driven -- never hardcode these at call sites.
+    crm_max_file_size_bytes: int = 4 * 1024 * 1024
+    crm_field_max_length: int = 500
+    crm_notes_max_length: int = 2000
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
