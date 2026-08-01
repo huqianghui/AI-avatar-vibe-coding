@@ -434,3 +434,53 @@ class TestWebRTCSessionSecurity:
         data = resp.json()
         assert data["auth_token"] == "safe-bearer-token"
         assert data["auth_token"] != secret_api_key
+
+
+class TestCreatePublicWebrtcSessionConfigLocaleFallback:
+    """LANG-02 (34-06, D-06/D-07): unconfigured voice_map locales must fall
+    back to that locale's own default neural voice, never en-US-AvaNeural."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_empty_voice_name_falls_back_to_locale_default(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-es-mx"
+
+        result = await create_public_webrtc_session_config(
+            db_session, agent_id="public-agent-1", voice_name="", locale="es-MX"
+        )
+
+        assert result.session_config["voice"]["name"] == "es-MX-DaliaNeural"
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_explicit_voice_name_wins_over_locale_fallback(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-override"
+
+        result = await create_public_webrtc_session_config(
+            db_session,
+            agent_id="public-agent-1",
+            voice_name="custom-voice-override",
+            locale="es-MX",
+        )
+
+        assert result.session_config["voice"]["name"] == "custom-voice-override"

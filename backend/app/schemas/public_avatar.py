@@ -48,7 +48,7 @@ class WebrtcSessionRequest(BaseModel):
     kb_name override field exists anywhere in this schema. Avatar identity is
     100% server-resolved from the active `PublicKnowledgeConfig` row."""
 
-    locale: str = Field(default="zh-CN", pattern="^(zh-CN|en-US)$")
+    locale: str = Field(default="zh-CN", pattern="^(zh-CN|en-US|es-ES|es-MX|es-US)$")
 
     model_config = ConfigDict(from_attributes=False)
 

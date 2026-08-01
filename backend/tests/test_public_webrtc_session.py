@@ -140,6 +140,43 @@ class TestWebrtcSessionSuccess:
         assert "agent_id=public-agent-1" in data["signaling_url"]
 
 
+class TestWebrtcSessionLocaleValidation:
+    """LANG-02 (34-06, D-06/D-07): es-ES/es-MX/es-US must be accepted by the
+    request schema (no 422), while unlisted locales remain rejected."""
+
+    @pytest.mark.parametrize("locale", ["es-ES", "es-MX", "es-US"])
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_es_locales_accepted(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, locale
+    ):
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-es"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": locale}, headers=headers
+        )
+
+        assert response.status_code == 200
+
+    async def test_unlisted_locale_rejected(self, client):
+        headers = await _anon_session_and_header(client)
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "fr-FR"}, headers=headers
+        )
+
+        assert response.status_code == 422
+
+
 class TestWebrtcSessionAuthGate:
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     async def test_missing_session_header_returns_401_before_azure_call(

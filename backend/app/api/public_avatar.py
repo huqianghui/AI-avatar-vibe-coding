@@ -80,6 +80,6 @@ async def webrtc_session(
     voice_map = json.loads(public_config.voice_map or "{}")
     voice = voice_map.get(body.locale, "")
     credential = await create_public_webrtc_session_config(
-        db, agent_id=public_config.agent_id, voice_name=voice
+        db, agent_id=public_config.agent_id, voice_name=voice, locale=body.locale
     )
     return WebrtcSessionResponse(**credential.model_dump())

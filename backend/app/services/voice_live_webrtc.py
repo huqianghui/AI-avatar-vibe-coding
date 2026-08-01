@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 
 AVATAR_WARNING = "Avatar (digital human) is not supported with WebRTC audio transport in preview."
 
+DEFAULT_PUBLIC_VOICE_BY_LOCALE: dict[str, str] = {
+    "zh-CN": "zh-CN-XiaoxiaoMultilingualNeural",
+    "en-US": "en-US-AvaNeural",
+    "es-ES": "es-ES-ElviraNeural",
+    "es-MX": "es-MX-DaliaNeural",
+    "es-US": "es-US-PalomaNeural",
+}
+
 
 async def create_webrtc_session_config(
     db: AsyncSession,
@@ -235,6 +243,7 @@ async def create_public_webrtc_session_config(
     *,
     agent_id: str,
     voice_name: str,
+    locale: str = "zh-CN",
 ) -> WebRTCSessionResponse:
     """Build a WebRTC ephemeral-credential session for the anonymous public
     avatar path (Phase 32, ANON-04).
@@ -281,7 +290,8 @@ async def create_public_webrtc_session_config(
 
     session_config: dict = {
         "voice": {
-            "name": voice_name or "en-US-AvaNeural",
+            "name": voice_name
+            or DEFAULT_PUBLIC_VOICE_BY_LOCALE.get(locale, DEFAULT_PUBLIC_VOICE_BY_LOCALE["zh-CN"]),
             "type": "azure-standard",
         },
         "turn_detection": {"type": "server_vad"},
