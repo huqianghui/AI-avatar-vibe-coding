@@ -16,6 +16,7 @@ import {
   Cloud,
   Radio,
   Settings,
+  Database,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -61,6 +62,7 @@ const sidebarGroups: SidebarGroup[] = [
       { path: "/admin/voice-live", labelKey: "voiceLive", icon: Radio },
       { path: "/admin/meta-skills", labelKey: "metaSkills", icon: Wand2 },
       { path: "/admin/settings", labelKey: "settings", icon: Settings },
+      { path: "/admin/crm-data", labelKey: "crmData", icon: Database },
     ],
   },
   {

@@ -31,6 +31,7 @@ const TrainingMaterialsPage = lazy(() => import("@/pages/admin/training-material
 const AdminReportsPage = lazy(() => import("@/pages/admin/reports"));
 const UserManagementPage = lazy(() => import("@/pages/admin/users"));
 const AdminSettingsPage = lazy(() => import("@/pages/admin/settings"));
+const CrmDataPage = lazy(() => import("@/pages/admin/crm-data"));
 const SkillHubPage = lazy(() => import("@/pages/admin/skill-hub"));
 const SkillEditorPage = lazy(() => import("@/pages/admin/skill-editor"));
 const MetaSkillsPage = lazy(() => import("@/pages/admin/meta-skills"));
@@ -132,6 +133,7 @@ export const router = createBrowserRouter([
               { path: "meta-skills", element: <SuspensePage><MetaSkillsPage /></SuspensePage> },
               { path: "system-enums", element: <SuspensePage><SystemEnumsPage /></SuspensePage> },
               { path: "settings", element: <SuspensePage><AdminSettingsPage /></SuspensePage> },
+              { path: "crm-data", element: <SuspensePage><CrmDataPage /></SuspensePage> },
             ],
           },
         ],
