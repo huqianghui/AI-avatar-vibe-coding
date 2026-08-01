@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe, Shield, Palette } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Globe, Shield, Palette, Languages } from "lucide-react";
+import { toast } from "sonner";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useUpdateVoiceMap, useVoiceMap } from "@/hooks/use-voice-map";
+
+/** Locale order for the 5-row Voice per Language card (matches the language switcher, D-09). */
+const VOICE_MAP_LOCALES = ["zh-CN", "en-US", "es-ES", "es-MX", "es-US"] as const;
+
+/** Flag emoji per locale -- mirrors language-switcher.tsx exactly (es-US shares en-US's flag by design, D-09). */
+const FLAGS: Record<string, string> = {
+  "zh-CN": "\u{1F1E8}\u{1F1F3}",
+  "en-US": "\u{1F1FA}\u{1F1F8}",
+  "es-ES": "\u{1F1EA}\u{1F1F8}",
+  "es-MX": "\u{1F1F2}\u{1F1FD}",
+  "es-US": "\u{1F1FA}\u{1F1F8}",
+};
+
+/** Maps locale code to its common.json `lang.*` sub-key. */
+const LOCALE_LABEL_KEY: Record<string, string> = {
+  "zh-CN": "zhCN",
+  "en-US": "enUS",
+  "es-ES": "esES",
+  "es-MX": "esMX",
+  "es-US": "esUS",
+};
 
 export default function AdminSettingsPage() {
   const { t } = useTranslation("admin");
@@ -21,6 +44,23 @@ export default function AdminSettingsPage() {
   const [retentionDays, setRetentionDays] = useState("90");
   const [darkMode, setDarkMode] = useState(false);
   const [orgName, setOrgName] = useState("BeiGene");
+
+  const voiceMapQuery = useVoiceMap();
+  const updateVoiceMapMutation = useUpdateVoiceMap();
+  const [voiceMapValues, setVoiceMapValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (voiceMapQuery.data?.voice_map) {
+      setVoiceMapValues(voiceMapQuery.data.voice_map);
+    }
+  }, [voiceMapQuery.data]);
+
+  const handleSaveVoiceMap = () => {
+    updateVoiceMapMutation.mutate(
+      { voice_map: voiceMapValues },
+      { onError: () => toast.error(t("voiceMap.error")) },
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -61,6 +101,39 @@ export default function AdminSettingsPage() {
               </Select>
             </div>
           </CardContent>
+        </Card>
+
+        {/* Voice per Language (D-06) */}
+        <Card className="bg-card rounded-lg border border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg font-medium">
+              <Languages className="size-5 text-primary" />
+              {t("voiceMap.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {VOICE_MAP_LOCALES.map((locale) => (
+              <div key={locale} className="flex items-center gap-3">
+                <Label className="min-w-[180px]">
+                  {FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
+                </Label>
+                <Input
+                  className="flex-1 min-w-0"
+                  value={voiceMapValues[locale] ?? ""}
+                  placeholder={voiceMapQuery.data?.defaults[locale] ?? ""}
+                  onChange={(e) =>
+                    setVoiceMapValues((prev) => ({ ...prev, [locale]: e.target.value }))
+                  }
+                />
+              </div>
+            ))}
+            <p className="text-sm text-muted-foreground">{t("voiceMap.helper")}</p>
+          </CardContent>
+          <CardFooter>
+            <Button disabled={updateVoiceMapMutation.isPending} onClick={handleSaveVoiceMap}>
+              {updateVoiceMapMutation.isPending ? tc("saving") : t("voiceMap.save")}
+            </Button>
+          </CardFooter>
         </Card>
 
         {/* Data Retention */}

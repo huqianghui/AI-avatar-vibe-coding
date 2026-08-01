@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { toast } from "sonner";
 import AdminSettingsPage from "./settings";
 
 vi.mock("react-i18next", async () => {
@@ -13,7 +14,58 @@ vi.mock("react-i18next", async () => {
   };
 });
 
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+const defaultVoiceMap: Record<string, string> = {
+  "zh-CN": "",
+  "en-US": "",
+  "es-ES": "es-ES-CustomNeural",
+  "es-MX": "",
+  "es-US": "",
+};
+
+const defaultVoiceDefaults: Record<string, string> = {
+  "zh-CN": "zh-CN-XiaoxiaoNeural",
+  "en-US": "en-US-AriaNeural",
+  "es-ES": "es-ES-ElviraNeural",
+  "es-MX": "es-MX-DaliaNeural",
+  "es-US": "es-US-PalomaNeural",
+};
+
+let mockVoiceMapReturn: {
+  data: { voice_map: Record<string, string>; defaults: Record<string, string> } | undefined;
+  isLoading: boolean;
+} = {
+  data: { voice_map: { ...defaultVoiceMap }, defaults: { ...defaultVoiceDefaults } },
+  isLoading: false,
+};
+
+const mockUpdateVoiceMapMutate = vi.fn();
+let mockUpdateVoiceMapReturn: { mutate: typeof mockUpdateVoiceMapMutate; isPending: boolean } = {
+  mutate: mockUpdateVoiceMapMutate,
+  isPending: false,
+};
+
+vi.mock("@/hooks/use-voice-map", () => ({
+  useVoiceMap: () => mockVoiceMapReturn,
+  useUpdateVoiceMap: () => mockUpdateVoiceMapReturn,
+}));
+
 describe("AdminSettingsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockVoiceMapReturn = {
+      data: { voice_map: { ...defaultVoiceMap }, defaults: { ...defaultVoiceDefaults } },
+      isLoading: false,
+    };
+    mockUpdateVoiceMapReturn = {
+      mutate: mockUpdateVoiceMapMutate,
+      isPending: false,
+    };
+  });
+
   it("renders the page title and description", () => {
     render(<AdminSettingsPage />);
     expect(screen.getByText("System Settings")).toBeInTheDocument();
@@ -106,5 +158,71 @@ describe("AdminSettingsPage", () => {
     expect(
       screen.getByRole("option", { name: "Español (EE. UU.)" }),
     ).toBeInTheDocument();
+  });
+
+  // ---- Voice per Language card ----
+
+  it("renders the Voice per Language card with 5 rows (flag+label) and an Input per locale", () => {
+    render(<AdminSettingsPage />);
+    expect(screen.getByText("Voice per Language")).toBeInTheDocument();
+    expect(screen.getByText("🇨🇳 Chinese")).toBeInTheDocument();
+    expect(screen.getByText("🇺🇸 English")).toBeInTheDocument();
+    expect(screen.getByText("🇪🇸 Español (España)")).toBeInTheDocument();
+    expect(screen.getByText("🇲🇽 Español (México)")).toBeInTheDocument();
+    expect(screen.getByText("🇺🇸 Español (EE. UU.)")).toBeInTheDocument();
+    // 5 editable Inputs, one per locale
+    expect(screen.getByDisplayValue("es-ES-CustomNeural")).toBeInTheDocument();
+  });
+
+  it("shows each locale's default voice as the Input placeholder", () => {
+    render(<AdminSettingsPage />);
+    expect(screen.getByPlaceholderText("zh-CN-XiaoxiaoNeural")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("en-US-AriaNeural")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("es-ES-ElviraNeural")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("es-MX-DaliaNeural")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("es-US-PalomaNeural")).toBeInTheDocument();
+  });
+
+  it("sends the full 5-locale voice_map (including unedited rows) when Save Voice Settings is clicked", async () => {
+    render(<AdminSettingsPage />);
+    const user = userEvent.setup();
+
+    const esMxInput = screen.getByPlaceholderText("es-MX-DaliaNeural");
+    await user.type(esMxInput, "es-MX-CustomNeural");
+
+    await user.click(screen.getByText("Save Voice Settings"));
+
+    expect(mockUpdateVoiceMapMutate).toHaveBeenCalledWith(
+      {
+        voice_map: {
+          "zh-CN": "",
+          "en-US": "",
+          "es-ES": "es-ES-CustomNeural",
+          "es-MX": "es-MX-CustomNeural",
+          "es-US": "",
+        },
+      },
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
+  });
+
+  it("shows an error toast when the voice_map save mutation fails", async () => {
+    render(<AdminSettingsPage />);
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Save Voice Settings"));
+
+    const call = mockUpdateVoiceMapMutate.mock.calls[0]!;
+    const callbacks = call[1] as { onError: () => void };
+    callbacks.onError();
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Something went wrong. The voice configuration could not be saved. Please check the value and try again.",
+    );
+  });
+
+  it("disables the Save Voice Settings button while the mutation is pending", () => {
+    mockUpdateVoiceMapReturn = { mutate: mockUpdateVoiceMapMutate, isPending: true };
+    render(<AdminSettingsPage />);
+    expect(screen.getByText("Saving...").closest("button")).toBeDisabled();
   });
 });
