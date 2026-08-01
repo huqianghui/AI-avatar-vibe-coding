@@ -53,13 +53,13 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - ✓ Azure Content Understanding (voice evaluation) — v1.0 (Phases 24, 26)
 - ✓ Azure service configuration UI — v1.0 (Phase 7)
 - ✓ Foundry IQ knowledge base integration — v1.0 (Phase 17)
+- ✓ 匿名模式：无需登录，数字人基于官网内容（Foundry IQ）回答问题，回答附来源展示（与语音分离），含限流与滥用防护 — v2.0 (Phase 32)
+- ✓ 登录个性化：Excel CRM 对应关系表上传解析入库（userid → CRM 知识/对口支持人）— v2.0 (Phase 33)
+- ✓ 用户偏好注入：chat-time system prompt 注入（CRM 上下文 + 偏好），含 prompt-injection/PII 双闸 sanitization — v2.0 (Phase 33)
+- ✓ 管理员偏好打标签：界面查看/编辑用户偏好标签（人工打标签）— v2.0 (Phase 33)
 
 ### Active
 
-- [ ] 匿名模式：无需登录，数字人基于官网内容（Foundry IQ）回答问题
-- [ ] 回答附来源展示：page + document link，与数字人语音内容分离
-- [ ] 登录个性化：基于 userid 的 CRM 知识（Excel 对应关系表 POC）
-- [ ] 用户偏好注入：system prompt / prompt template injection，偏好后台抽取或人工打标签
 - [ ] 西班牙语（es）i18n 支持
 - [ ] 清爽 UI：仅数字人 + 文档链接
 - [ ] 隐藏旧 coach 功能前端入口（代码保留）
@@ -127,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-31 — Milestone v2.0 Avatar MVP started (匿名官网知识问答 → 登录个性化 → 西语支持 → 清爽 UI)*
+*Last updated: 2026-08-01 — Phase 33 complete (登录个性化: Excel CRM 导入 + chat-time 注入 + 管理员偏好打标签)；下一阶段 Phase 34 西班牙语 i18n*
