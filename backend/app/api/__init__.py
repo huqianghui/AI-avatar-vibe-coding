@@ -1,3 +1,4 @@
+from app.api.admin_crm import router as admin_crm_router
 from app.api.admin_users import router as admin_users_router
 from app.api.agent_foundation_models import router as agent_foundation_models_router
 from app.api.analytics import router as analytics_router
@@ -24,6 +25,7 @@ from app.api.system_enums import router as system_enums_router
 from app.api.voice_live import router as voice_live_router
 
 __all__ = [
+    "admin_crm_router",
     "admin_users_router",
     "agent_foundation_models_router",
     "analytics_router",
