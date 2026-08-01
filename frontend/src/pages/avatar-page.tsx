@@ -42,6 +42,7 @@ import {
 } from "@/components/avatar/sources-panel";
 import { AvatarInputBar, type MicUiState } from "@/components/avatar/avatar-input-bar";
 import { MicPermissionDialog } from "@/components/avatar/mic-permission-dialog";
+import { useMe } from "@/hooks/use-auth";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAnonymousAvatarSession } from "@/hooks/use-anonymous-avatar-session";
 import { useAnonymousAvatarChat } from "@/hooks/use-anonymous-avatar-chat";
@@ -82,6 +83,16 @@ export default function AvatarPage() {
   const rateLimitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { isAuthenticated, user } = useAuthStore();
+
+  // `AvatarPage` is a public route (not `ProtectedRoute`-wrapped), so unlike
+  // guarded pages it never otherwise calls `useMe()` -- on a hard reload,
+  // the in-memory auth store hydrates `token` from localStorage but leaves
+  // `user` as `null` until something fetches `/auth/me`. Call it here
+  // (side-effect only, via `setAuth()` inside its queryFn) so a logged-in
+  // visitor's email is available for the personalization badge below even
+  // on a fresh load. No-op when there's no token (`useMe`'s query is
+  // `enabled: !!token`).
+  useMe();
 
   const { sessionToken, renewSession } = useAnonymousAvatarSession();
 

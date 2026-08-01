@@ -108,6 +108,14 @@ vi.mock("@/stores/auth-store", () => ({
   }),
 }));
 
+// AvatarPage calls useMe() purely for its /auth/me hydration side-effect
+// (see avatar-page.tsx docstring) -- it never consumes the return value, so
+// this stub only needs to exist to avoid requiring a real QueryClientProvider
+// in this hook-mocked composition test.
+vi.mock("@/hooks/use-auth", () => ({
+  useMe: () => ({ data: undefined, isLoading: false, error: null }),
+}));
+
 let mockPersonalizedSession: { session_id: string; expires_at: string } | null = null;
 const mockPersonalizedRenewSession = vi.fn();
 vi.mock("@/hooks/use-personalized-avatar-session", () => ({
