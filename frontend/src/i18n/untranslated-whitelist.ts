@@ -40,4 +40,8 @@ export const UNTRANSLATED_WHITELIST: readonly string[] = [
   "admin.azureConfig.aiFoundry.title",
   "admin.voiceLive.name",
   "admin.voiceLive.nav",
+  // voice.json (34-02): bare transport-protocol name, never localized (like
+  // "HTTP") -- unlike voice.transport.webrtc, which gained a translated
+  // "(Vista Previa)" qualifier and so differs from en-US legitimately.
+  "voice.transport.websocket",
 ];

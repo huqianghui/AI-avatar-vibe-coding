@@ -1,0 +1,155 @@
+{
+  "title": "Sesión de Formación por Voz",
+  "startSession": "Iniciar Sesión de Voz",
+  "mode": {
+    "text": "Texto",
+    "voice": "Voz",
+    "digitalHuman": "Humano Digital",
+    "voice_pipeline": "Voz (Pipeline)",
+    "digital_human_pipeline": "Humano Digital (Pipeline)",
+    "voice_realtime_model": "Voz (Tiempo Real)",
+    "digital_human_realtime_model": "Humano Digital (Tiempo Real)",
+    "voice_realtime_agent": "Voz (Agente)",
+    "digital_human_realtime_agent": "Humano Digital (Agente)"
+  },
+  "engine": {
+    "pipeline": "Canalización",
+    "realtime_model": "Tiempo Real",
+    "realtime_agent": "Agente"
+  },
+  "commType": {
+    "text": "Texto",
+    "voice": "Voz",
+    "digital_human": "Humano Digital"
+  },
+  "switchMode": "Cambiar Modo",
+  "switchModeConfirm": "¿Cambiar a {{mode}}?",
+  "modeSelector": "Modo de Sesión",
+  "engineSelector": "Motor",
+  "connect": "Conectar",
+  "disconnect": "Desconectar",
+  "mute": "Silenciar",
+  "unmute": "Activar Sonido",
+  "cameraOff": "Cámara Apagada",
+  "muted": "Silenciado",
+  "keyboardInput": "Escriba un mensaje",
+  "fullScreen": "Pantalla Completa",
+  "embeddedView": "Vista Incrustada",
+  "status": {
+    "connecting": "Conectando...",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "reconnecting": "Reconectando...",
+    "error": "Error de Conexión"
+  },
+  "listening": "Escuchando...",
+  "speaking": "Hablando...",
+  "idle": "Preparado",
+  "transcript": {
+    "user": "Usted",
+    "hcp": "Doctor(a) {{name}}"
+  },
+  "modeBadge": {
+    "text": "Modo Texto",
+    "voice_pipeline": "Voz por Pipeline",
+    "digital_human_pipeline": "Humano Digital por Pipeline",
+    "voice_realtime_model": "Voz en Tiempo Real",
+    "digital_human_realtime_model": "Humano Digital en Tiempo Real",
+    "voice_realtime_agent": "Voz por Agente",
+    "digital_human_realtime_agent": "Humano Digital por Agente"
+  },
+  "emptyTranscript": "Empiece a hablar para comenzar la conversación. Su transcripción aparecerá aquí.",
+  "emptyTranscriptText": "Escriba un mensaje para comenzar la conversación.",
+  "avatarPlaceholder": "El avatar aparecerá cuando se conecte.",
+  "notConfigured": "El modo de voz no está disponible. Contacte con su administrador para configurar la API de Azure Voice Live.",
+  "avatarNotConfigured": "El modo avatar no está disponible. Se usará el modo solo voz en su lugar.",
+  "pipelineNotConfigured": "El modo pipeline no está disponible. Los servicios STT/TTS no están configurados.",
+  "agentNotConfigured": "El modo agente no está disponible. Voice Live Agent no está configurado.",
+  "error": {
+    "connectionFailed": "Error al conectar con el servicio de voz. Compruebe su red e inténtelo de nuevo.",
+    "micDenied": "Se denegó el acceso al micrófono. Permita el acceso al micrófono en la configuración de su navegador.",
+    "avatarFailed": "Error de conexión del avatar. Cambiando al modo solo voz.",
+    "tokenExpired": "El token de sesión ha caducado. Reconectando...",
+    "regionUnsupported": "La API de Voice Live no está disponible en la región configurada. Consulte la documentación de Azure para conocer las regiones admitidas.",
+    "audioWorkletFailed": "Error al inicializar el sistema de audio. Actualice la página.",
+    "webrtcFailed": "Error en la conexión de vídeo. Cambiando al modo solo voz.",
+    "avatarFallback": "Avatar no disponible, cambiando al modo voz",
+    "voiceFallback": "Voz no disponible, cambiando al modo texto",
+    "loadFailed": "Error al cargar los datos de la sesión. Vuelva atrás e inténtelo de nuevo."
+  },
+  "modeStatus": {
+    "connected": "Conectado",
+    "degraded": "Degradado",
+    "disconnected": "Desconectado",
+    "ready": "Preparado"
+  },
+  "endSession": "Finalizar Sesión",
+  "endSessionTitle": "Finalizar Sesión de Voz",
+  "endSessionConfirm": "¿Está seguro de que desea finalizar esta sesión de formación por voz? Su conversación será puntuada y no podrá reanudarse.",
+  "continueSession": "Continuar Sesión",
+  "startButton": "Iniciar",
+  "startPrompt": "Haga clic en Iniciar para comenzar la sesión de voz",
+  "waitingForResponse": "Esperando el habla...",
+  "connectingAvatar": "Conectando humano digital...",
+  "connectingVoice": "Conectando llamada de voz...",
+  "micButton": {
+    "idle": "Empezar a hablar",
+    "listening": "Escuchando - pulse para silenciar",
+    "speaking": "La IA está hablando",
+    "muted": "Micrófono silenciado - pulse para activar",
+    "connecting": "Conectando...",
+    "disabled": "Micrófono no disponible"
+  },
+  "tabs": {
+    "transcript": "Transcripción",
+    "config": "Configuración"
+  },
+  "recording": {
+    "uploading": "Subiendo grabación de la sesión...",
+    "uploadFailed": "Error al guardar la grabación, pero la sesión se completó."
+  },
+  "transport": {
+    "label": "Transporte de Audio",
+    "websocket": "WebSocket",
+    "webrtc": "WebRTC (Vista Previa)",
+    "avatarUnavailable": "El avatar (humano digital) no está disponible con el transporte WebRTC en vista previa. Se usará el modo solo voz.",
+    "connectionFailed": "Error en la conexión WebRTC. Pruebe con el transporte WebSocket en su lugar.",
+    "reconnecting": "Conexión perdida. Reconectando... (intento {{attempt}}/3)"
+  },
+  "config": {
+    "title": "Configuración",
+    "speechInput": "Entrada de voz",
+    "language": "Idioma",
+    "selectLanguage": "Seleccionar idioma",
+    "autoDetect": "Detección automática",
+    "autoDetectDesc": "Detectar automáticamente el idioma hablado",
+    "speechOutput": "Salida de voz",
+    "voice": "Voz",
+    "voiceReadOnly": "La voz se configura por perfil de HCP",
+    "interimResponse": "Respuesta provisional",
+    "interimResponseDesc": "Mostrar respuestas parciales de la IA mientras se generan",
+    "proactiveEngagement": "Participación proactiva",
+    "proactiveEngagementDesc": "La IA inicia la conversación de forma proactiva",
+    "avatarStatus": "Avatar Digital",
+    "avatarEnabled": "Habilitado",
+    "avatarDisabled": "Deshabilitado",
+    "avatarDesc": "Estado del avatar digital para esta sesión",
+    "advancedSettings": "Ajustes avanzados",
+    "speechRecognitionManaged": "Los ajustes de reconocimiento de voz los gestiona el servidor.",
+    "voiceSynthesisManaged": "Los ajustes de síntesis de voz los gestiona el servidor.",
+    "defaultVoice": "Predeterminada",
+    "languages": {
+      "auto": "Detección automática",
+      "zh-CN": "Chino (simplificado)",
+      "en-US": "Inglés (EE. UU.)",
+      "en-GB": "Inglés (Reino Unido)",
+      "ja-JP": "Japonés",
+      "ko-KR": "Coreano",
+      "de-DE": "Alemán",
+      "fr-FR": "Francés",
+      "es-ES": "Español",
+      "it-IT": "Italiano",
+      "pt-BR": "Portugués (Brasil)"
+    }
+  }
+}

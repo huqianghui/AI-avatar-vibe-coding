@@ -1,0 +1,31 @@
+{
+  "sourcesPanel": {
+    "title": "Fuentes",
+    "emptyPreQuestion": {
+      "heading": "Aún no hay fuentes",
+      "body": "Haga una pregunta al avatar y sus fuentes aparecerán aquí"
+    },
+    "emptyNoMatch": {
+      "heading": "No hay ninguna fuente coincidente esta vez",
+      "body": "Intente reformular su pregunta"
+    },
+    "pageBadge": "Página {{n}}"
+  },
+  "input": {
+    "sendAriaLabel": "Preguntar",
+    "micIdleAriaLabel": "Empezar a hablar"
+  },
+  "micDialog": {
+    "title": "Se necesita acceso al micrófono para preguntar por voz",
+    "body": "Haga clic en Permitir y conceda el acceso al micrófono en el aviso de su navegador para preguntar al avatar por voz. También puede usar el campo de texto de abajo en su lugar.",
+    "retry": "Intentar de Nuevo",
+    "useTextInstead": "Usar Texto en su Lugar",
+    "stillDenied": "Sigue sin haber acceso al micrófono — compruebe la configuración de su sistema o navegador"
+  },
+  "rateLimited": "Límite de solicitudes alcanzado — vuelva a intentarlo en {{seconds}} s",
+  "toast": {
+    "rateLimited": "Demasiadas solicitudes — espere un momento, por favor."
+  },
+  "login": "Iniciar Sesión",
+  "personalizationBadge": "Personalizado"
+}
