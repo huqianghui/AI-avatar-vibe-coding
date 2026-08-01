@@ -29,6 +29,7 @@ from app.models.skill import Skill, SkillResource, SkillSourceMaterial, SkillVer
 from app.models.system_enum import SystemEnum
 from app.models.user import User
 from app.models.user_crm_context import UserCrmContext
+from app.models.user_preference import UserPreference
 from app.models.voice_live_instance import VoiceLiveInstance
 from app.models.voice_score import VoiceScore, VoiceScoreDetail
 
@@ -37,6 +38,7 @@ __all__ = [
     "TimestampMixin",
     "User",
     "UserCrmContext",
+    "UserPreference",
     "AnonymousAvatarSession",
     "AvatarInteractionLog",
     "PersonalizedAvatarSession",
