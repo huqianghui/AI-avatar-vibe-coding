@@ -12,6 +12,7 @@ from app.api.internal_openai_proxy import router as internal_openai_proxy_router
 from app.api.knowledge_base import router as knowledge_base_router
 from app.api.materials import router as materials_router
 from app.api.meta_skills import router as meta_skills_router
+from app.api.personalized_avatar import router as personalized_avatar_router
 from app.api.prompts import router as prompts_router
 from app.api.public_avatar import router as public_avatar_router
 from app.api.rubrics import router as rubrics_router
@@ -39,6 +40,7 @@ __all__ = [
     "knowledge_base_router",
     "materials_router",
     "meta_skills_router",
+    "personalized_avatar_router",
     "prompts_router",
     "public_avatar_router",
     "rubrics_router",

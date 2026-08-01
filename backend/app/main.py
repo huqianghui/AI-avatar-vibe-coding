@@ -22,6 +22,7 @@ from app.api import (
     knowledge_base_router,
     materials_router,
     meta_skills_router,
+    personalized_avatar_router,
     prompts_router,
     public_avatar_router,
     rubrics_router,
@@ -168,6 +169,7 @@ app.include_router(speech_router, prefix=settings.api_prefix)
 app.include_router(prompts_router, prefix=settings.api_prefix)
 app.include_router(admin_crm_router, prefix=settings.api_prefix)
 app.include_router(admin_users_router, prefix=settings.api_prefix)
+app.include_router(personalized_avatar_router, prefix=settings.api_prefix)
 app.include_router(system_enums_router, prefix=settings.api_prefix)
 app.include_router(internal_openai_proxy_router, prefix=settings.api_prefix)
 
