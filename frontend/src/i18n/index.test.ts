@@ -77,6 +77,7 @@ describe("i18n initialization", () => {
       "meta-skill",
       "session",
       "prompts",
+      "avatar",
     ]);
   });
 
