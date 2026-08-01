@@ -236,7 +236,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Each answer displays a separate, clickable source citation (document + page/link) rendered as a distinct UI element from the answer text, not merged into one bubble
   4. Visitor can also hear the answer spoken by the Voice Live digital human (not text-only)
   5. Anonymous requests are rate-limited/quota-capped (slowapi) and every interaction is written to an audit log — no endpoint accepts a client-supplied agent/profile identifier that could reach personalized or internal content
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 32-01-PLAN.md — DB models (anonymous session, interaction log, public knowledge config) + Alembic migration; slowapi dual-key rate limiter + structured 429 handler
+- [ ] 32-02-PLAN.md — Anonymous session token service + citation retrieval/dual-query orchestrator + POST /public/avatar/session and /public/avatar/chat
+- [ ] 32-03-PLAN.md — Anonymous-token-gated WebRTC ephemeral-credential endpoint + frontend useAnonymousVoiceLive hook
+- [ ] 32-04-PLAN.md — Anonymous session/chat TanStack Query hooks + sources-panel/input-bar/mic-dialog components + avatar-page composition and public route wiring
+- [ ] 32-05-PLAN.md — Playwright E2E (text Q&A, refusal, voice-connect) + backend audit-log completeness test + human voice-verification checkpoint
 **UI hint**: yes
 
 ### Phase 33: Personalized CRM-Excel Avatar
