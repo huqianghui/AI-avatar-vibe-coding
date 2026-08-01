@@ -257,13 +257,24 @@ Plans:
 **UI hint**: yes
 
 ### Phase 34: Spanish (es) i18n
-**Goal**: The platform fully supports Spanish across UI text and avatar voice, alongside existing zh-CN/en-US
+**Goal**: The platform fully supports Spanish across UI text and avatar voice, alongside existing zh-CN/en-US, shipped as three full locale variants (es-ES/es-MX/es-US)
 **Depends on**: Phase 32 (needs avatar UI shell to translate/voice)
 **Requirements**: LANG-01, LANG-02
 **Success Criteria** (what must be TRUE):
-  1. User can switch the UI language to Spanish and see fully translated text with no missing-key fallback gaps across all namespaces (verified by an automated key-parity check across zh-CN/en-US/es)
+  1. User can switch the UI language to Spanish and see fully translated text with no missing-key fallback gaps across all namespaces (verified by an automated key-parity check across zh-CN/en-US/es-ES/es-MX/es-US)
   2. User can select Spanish and hear the avatar respond using an es-* neural voice (mid-session language switch may rebuild the session rather than reconnect live, per MVP scope)
-**Plans**: TBD
+**Plans:** 10 plans
+Plans:
+- [ ] 34-01-PLAN.md — i18n contract wave: supportedLngs to 5 locales (D-10), 5-option switcher, common.json translated, global locale-parity test + whitelist
+- [ ] 34-02-PLAN.md — Translate admin.json, voice.json, avatar.json into es-ES/es-MX/es-US
+- [ ] 34-03-PLAN.md — Translate analytics.json, dashboard.json, nav.json, training.json, scoring.json, conference.json into es-ES/es-MX/es-US
+- [ ] 34-04-PLAN.md — Translate session.json, skill.json, meta-skill.json, auth.json, coach.json, prompts.json into es-ES/es-MX/es-US
+- [ ] 34-05-PLAN.md — LANG-01 closing gate: full parity suite green, settings.tsx 5-option Select, Playwright switcher E2E
+- [ ] 34-06-PLAN.md — Backend voice unblock: widen WebrtcSessionRequest.locale, locale-aware default-voice fallback, es-* REFUSAL_TEMPLATES
+- [ ] 34-07-PLAN.md — Fix anonymous text-chat locale-forwarding gap end-to-end (backend ChatRequest.locale + frontend i18n.language threading)
+- [ ] 34-08-PLAN.md — Admin voice_map backend API (GET/PUT, role-gated) + admin.json voiceMap.* i18n keys
+- [ ] 34-09-PLAN.md — Admin voice_map frontend UI ("Voice per Language" Card in settings.tsx)
+- [ ] 34-10-PLAN.md — LANG-02 closing gate: es-* voice session E2E + full phase regression suite
 **UI hint**: yes
 
 ### Phase 35: Clean Avatar UI & Legacy Coach Hiding
