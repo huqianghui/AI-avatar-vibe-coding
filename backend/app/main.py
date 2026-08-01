@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from app.api import (
     admin_users_router,
@@ -35,6 +36,7 @@ from app.api.health import router as health_router
 from app.config import get_settings
 from app.database import engine
 from app.middleware import RequestLoggingMiddleware
+from app.services.rate_limit import limiter_ip
 from app.startup import init_tables, load_service_configs, register_adapters, run_seed
 from app.utils.exceptions import AppException
 
@@ -77,6 +79,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# slowapi requires app.state.limiter for its internal request-scoped lookups.
+# limiter_ip and limiter_session (app.services.rate_limit) present independent
+# `.limit()` call sites but share one underlying Limiter instance by design --
+# see rate_limit.py module docstring for why that's required for correct
+# independent dual-key enforcement.
+app.state.limiter = limiter_ip
+
 # Middleware (order matters: CORS first, then logging)
 app.add_middleware(
     CORSMiddleware,
@@ -99,6 +108,20 @@ async def app_exception_handler(request: Request, exc: AppException):
             "details": exc.details,
         },
     )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    response = JSONResponse(
+        status_code=429,
+        content={
+            "code": "RATE_LIMITED",
+            "message": "Too many requests. Please wait and try again.",
+            "details": {"limit": str(exc.detail)},
+        },
+    )
+    response.headers["Retry-After"] = "60"
+    return response
 
 
 @app.exception_handler(Exception)

@@ -127,6 +127,16 @@ class Settings(BaseSettings):
     prompt_optimizer_proxy_secret: str = ""
     prompt_optimizer_proxy_api_version: str = "2024-06-01"
 
+    # Anonymous Avatar (Phase 32, ANON-01/ANON-05): session TTL + dual-key
+    # (IP + anonymous-session) rate-limit thresholds. Config-driven — never
+    # hardcode these limits at call sites.
+    anon_session_ttl_minutes: int = 30
+    anon_rate_limit_session_create: str = "10/minute"
+    anon_rate_limit_chat_ip: str = "20/minute"
+    anon_rate_limit_chat_session: str = "60/hour"
+    anon_rate_limit_webrtc_ip: str = "10/minute"
+    anon_rate_limit_webrtc_session: str = "30/hour"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
