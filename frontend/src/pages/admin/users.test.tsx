@@ -58,6 +58,17 @@ vi.mock("@/hooks/use-users", () => ({
   useUpdateUser: () => ({ mutate: vi.fn() }),
 }));
 
+vi.mock("@/hooks/use-user-preferences", () => ({
+  usePersonalizationSummary: () => ({ data: undefined }),
+  useCreatePreference: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeletePreference: () => ({ mutate: vi.fn(), isPending: false }),
+  CATEGORY_OPTIONS: [
+    { value: "communication_style", labelKey: "personalization.category.communicationStyle" },
+    { value: "focus_area", labelKey: "personalization.category.focusArea" },
+    { value: "language_preference", labelKey: "personalization.category.languagePreference" },
+  ],
+}));
+
 describe("UserManagementPage", () => {
   beforeEach(() => vi.clearAllMocks());
 

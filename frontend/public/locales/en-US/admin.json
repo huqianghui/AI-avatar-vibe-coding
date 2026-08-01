@@ -684,5 +684,24 @@
     "deleteConfirm": "Are you sure you want to deactivate \"{{name}}\"? They will no longer be able to access the platform.",
     "cancel": "Cancel",
     "confirmDelete": "Deactivate"
+  },
+  "personalization": {
+    "title": "Personalization",
+    "crmMatched": "CRM data matched",
+    "crmUnmatched": "No CRM data matched",
+    "emptyTitle": "No preference tags yet",
+    "emptyBody": "Add the first tag below",
+    "categoryPlaceholder": "Select category",
+    "valuePlaceholder": "Enter preference value",
+    "add": "Add",
+    "adding": "Adding…",
+    "deleteTag": "Delete tag",
+    "deleteToast": "Deleted tag \"{{label}}\"",
+    "undo": "Undo",
+    "category": {
+      "communicationStyle": "Communication Style",
+      "focusArea": "Focus Area",
+      "languagePreference": "Language Preference"
+    }
   }
 }

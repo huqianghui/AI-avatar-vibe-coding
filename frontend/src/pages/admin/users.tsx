@@ -5,6 +5,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  UserCog,
 } from "lucide-react";
 import {
   Button,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUsers, useDeleteUser, useUpdateUser } from "@/hooks/use-users";
+import { UserPersonalizationDialog } from "@/components/admin/user-personalization-dialog";
 import type { AdminUser } from "@/api/users";
 
 // ---------------------------------------------------------------------------
@@ -114,6 +116,9 @@ export default function UserManagementPage() {
 
   // Delete dialog
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<AdminUser | null>(null);
+
+  // Personalization dialog
+  const [personalizationUser, setPersonalizationUser] = useState<AdminUser | null>(null);
 
   // API hooks
   const { data, isLoading } = useUsers({
@@ -344,6 +349,10 @@ export default function UserManagementPage() {
                               ? t("users.deactivate")
                               : t("users.activate")}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPersonalizationUser(user)}>
+                            <UserCog className="size-4" />
+                            {t("personalization.title")}
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => setDeleteConfirmUser(user)}
@@ -425,6 +434,13 @@ export default function UserManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Personalization Dialog */}
+      <UserPersonalizationDialog
+        user={personalizationUser}
+        open={!!personalizationUser}
+        onOpenChange={(open) => !open && setPersonalizationUser(null)}
+      />
     </div>
   );
 }

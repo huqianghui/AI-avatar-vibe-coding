@@ -684,5 +684,24 @@
     "deleteConfirm": "确定要停用「{{name}}」吗？该用户将无法继续访问平台。",
     "cancel": "取消",
     "confirmDelete": "确认停用"
+  },
+  "personalization": {
+    "title": "个性化",
+    "crmMatched": "已匹配 CRM 数据",
+    "crmUnmatched": "未匹配 CRM 数据",
+    "emptyTitle": "暂无偏好标签",
+    "emptyBody": "在下方添加第一个标签",
+    "categoryPlaceholder": "选择分类",
+    "valuePlaceholder": "输入偏好内容",
+    "add": "添加",
+    "adding": "添加中…",
+    "deleteTag": "删除标签",
+    "deleteToast": "已删除标签「{{label}}」",
+    "undo": "撤销",
+    "category": {
+      "communicationStyle": "沟通风格",
+      "focusArea": "关注领域",
+      "languagePreference": "语言偏好"
+    }
   }
 }
