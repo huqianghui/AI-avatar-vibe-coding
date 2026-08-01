@@ -283,7 +283,11 @@ locale: str = Field(default="zh-CN", pattern="^(zh-CN|en-US|es-ES|es-MX|es-US)$"
 | A2 | No admin UI/API exists for `PublicKnowledgeConfig.voice_map` today, and building one is out of scope unless the planner/user decides otherwise (POC-acceptable to seed/edit via a script or direct DB write) | §Open Questions | If D-06's "Admin 可编辑" is a hard requirement for this phase, a net-new admin page (agent_id/connection/index_name/avatar_character/avatar_style/voice_map — a meaningfully sized CRUD page) needs its own plan; this could significantly change phase scope/sizing |
 | A3 | `es-ES-ElviraNeural` / `es-MX-DaliaNeural` / `es-US-PalomaNeural` remain live, current Azure voice names at execution time | §Azure Voice Names | Azure occasionally deprecates/renames preview voices; low risk since these are long-standing GA standard voices per Microsoft Learn, but not re-verified at execution time |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Both questions were resolved by the orchestrator under the user's full-autonomy grant (2026-08-01):
+> **Q1 RESOLVED:** D-06 is a locked hard deliverable — the admin voice_map editing UI is IN SCOPE, delivered by plans 34-08 (backend API) + 34-09 (frontend Card form).
+> **Q2 RESOLVED:** IN SCOPE — the anonymous text-chat locale-forwarding gap is fixed by plan 34-07, flagged as an explicit scope addition per the recommendation below.
 
 1. **Does Phase 34 need to build an admin editing UI for `PublicKnowledgeConfig.voice_map`, or is direct DB/seed-script editing acceptable for this POC?**
    - What we know: No such admin page or admin API endpoint exists anywhere in the codebase today (verified by exhaustive grep across `frontend/src/pages/admin/` and `backend/app/api/`); Phase 32's own CONTEXT.md mentioned building one but none of its 5 executed plans did.

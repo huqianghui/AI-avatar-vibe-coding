@@ -1,10 +1,11 @@
 ---
 phase: 34
 slug: spanish-es-i18n
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-01
+updated: 2026-08-01
 ---
 
 # Phase 34 — Validation Strategy
@@ -38,14 +39,14 @@ created: 2026-08-01
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 34-xx | TBD | TBD | LANG-01 | — | 5-locale key parity + non-empty + interpolation + untranslated (whitelist) across 16 namespaces | unit | `npx vitest run src/i18n/locale-parity.test.ts` | ❌ W0 | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-01 | — | supportedLngs = 5 locales in D-10 order | unit | `npx vitest run src/i18n/index.test.ts` | ✅ (update) | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-01 | — | switcher renders 5 options | unit | `npx vitest run src/components/shared/language-switcher.test.tsx` | ❌ W0 | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-01 | — | es-* switch renders translated UI, no missing-key fallback | e2e | `npm run test:e2e -- language-switcher-es.spec.ts` | ❌ W0 | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-02 | — | WebrtcSessionRequest accepts es-ES/es-MX/es-US (no 422) | unit | `pytest tests/test_public_webrtc_session.py -x` | ✅ (add cases) | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-02 | — | REFUSAL_TEMPLATES es-* entries returned per locale | unit | `pytest tests/test_avatar_service.py tests/test_personalized_avatar_service.py -x` | ✅ (add cases) | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-02 | — | D-07 locale-aware voice fallback (not en-US-AvaNeural) | unit | `pytest tests/test_public_webrtc_session.py -x` | ✅/partial | ⬜ pending |
-| 34-xx | TBD | TBD | LANG-02 | — | es-* voice session negotiation E2E (mocked) | e2e | `npm run test:e2e -- anonymous-avatar-voice-es.spec.ts` | ❌ W0 | ⬜ pending |
+| 34-01 | 34-01 | 1 | LANG-01 | — | 5-locale key parity + non-empty + interpolation + untranslated (whitelist) across 16 namespaces | unit | `npx vitest run src/i18n/locale-parity.test.ts` | ❌ W0 (created by 34-01) | ⬜ pending |
+| 34-01 | 34-01 | 1 | LANG-01 | — | supportedLngs = 5 locales in D-10 order | unit | `npx vitest run src/i18n/index.test.ts` | ✅ (update) | ⬜ pending |
+| 34-01 | 34-01 | 1 | LANG-01 | — | switcher renders 5 options | unit | `npx vitest run src/components/shared/language-switcher.test.tsx` | ❌ W0 (created by 34-01) | ⬜ pending |
+| 34-05 | 34-05 | 3 | LANG-01 | — | es-* switch renders translated UI, no missing-key fallback | e2e | `npm run test:e2e -- language-switcher-es.spec.ts` | ❌ W0 (created by 34-05) | ⬜ pending |
+| 34-06 | 34-06 | 4 | LANG-02 | — | WebrtcSessionRequest accepts es-ES/es-MX/es-US (no 422) | unit | `pytest tests/test_public_webrtc_session.py -x` | ✅ (add cases) | ⬜ pending |
+| 34-06 | 34-06 | 4 | LANG-02 | — | REFUSAL_TEMPLATES es-* entries returned per locale | unit | `pytest tests/test_avatar_service.py tests/test_personalized_avatar_service.py -x` | ✅ (add cases) | ⬜ pending |
+| 34-06 | 34-06 | 4 | LANG-02 | — | D-07 locale-aware voice fallback (not en-US-AvaNeural) | unit | `pytest tests/test_voice_live_webrtc.py tests/test_public_webrtc_session.py -x` | ✅ (add cases) | ⬜ pending |
+| 34-10 | 34-10 | 6 | LANG-02 | — | es-* voice session negotiation E2E (mocked) | e2e | `npm run test:e2e -- anonymous-avatar-voice-es.spec.ts` | ❌ W0 (created by 34-10) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -71,11 +72,11 @@ created: 2026-08-01
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 180s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (gsd-plan-checker: 100% of tasks in 34-01..34-10 have `<automated>` commands)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (trivially satisfied — every task has automated verify)
+- [x] Wave 0 covers all MISSING references (no MISSING markers remain; W0 test files are created by their owning plans 34-01/34-05/34-10)
+- [x] No watch-mode flags
+- [x] Feedback latency < 180s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** APPROVED (plan-checker Nyquist checks 8a–8d pass, 2026-08-01)
