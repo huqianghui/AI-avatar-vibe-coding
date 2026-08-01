@@ -23,5 +23,8 @@
     "stillDenied": "仍未获得麦克风权限，请检查系统/浏览器设置"
   },
   "rateLimited": "请求过多，请 {{seconds}}s 后重试",
+  "toast": {
+    "rateLimited": "请求过于频繁，请稍候再试"
+  },
   "login": "登录"
 }

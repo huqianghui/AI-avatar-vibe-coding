@@ -36,6 +36,15 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      // Anonymous public-avatar routes (frontend/src/api/public-avatar.ts)
+      // are mounted bare (no /api/v1 prefix) on the backend -- see that
+      // file's module docstring. Without this entry, dev-server requests to
+      // /public/avatar/* 404 instead of reaching the backend.
+      "/public": {
+        target: process.env.VITE_PROXY_TARGET ?? "http://localhost:8000",
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 });

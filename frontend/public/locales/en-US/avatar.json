@@ -23,5 +23,8 @@
     "stillDenied": "Still no microphone access — check your OS/browser settings"
   },
   "rateLimited": "Rate limited — retry in {{seconds}}s",
+  "toast": {
+    "rateLimited": "Too many requests — please wait a moment."
+  },
   "login": "Login"
 }

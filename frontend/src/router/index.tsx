@@ -41,6 +41,7 @@ const SystemEnumsPage = lazy(() => import("@/pages/admin/system-enums"));
 const DryRunReportPage = lazy(() => import("@/pages/admin/dry-run-report"));
 
 const NotFound = lazy(() => import("@/pages/not-found"));
+const AvatarPage = lazy(() => import("@/pages/avatar-page"));
 
 function SuspensePage({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<LoadingFallback />}>{children}</Suspense>;
@@ -137,6 +138,9 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "/", element: <Navigate to="/login" replace /> },
+  // Public, no-login anonymous avatar Q&A landing page (Phase 32, ANON-04).
+  // Mounted OUTSIDE ProtectedRoute/GuestRoute -- anonymous visitors never
+  // authenticate, so this route must not sit behind either guard.
+  { path: "/", element: <SuspensePage><AvatarPage /></SuspensePage> },
   { path: "*", element: <SuspensePage><NotFound /></SuspensePage> },
 ]);
