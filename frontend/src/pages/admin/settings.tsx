@@ -54,6 +54,9 @@ export default function AdminSettingsPage() {
                 <SelectContent>
                   <SelectItem value="zh-CN">{tc("lang.zhCN")}</SelectItem>
                   <SelectItem value="en-US">{tc("lang.enUS")}</SelectItem>
+                  <SelectItem value="es-ES">{tc("lang.esES")}</SelectItem>
+                  <SelectItem value="es-MX">{tc("lang.esMX")}</SelectItem>
+                  <SelectItem value="es-US">{tc("lang.esUS")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

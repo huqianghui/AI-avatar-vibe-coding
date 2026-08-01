@@ -90,4 +90,21 @@ describe("AdminSettingsPage", () => {
       screen.getByText("Chinese"),
     ).toBeInTheDocument();
   });
+
+  it("renders all 5 language options including es-ES, es-MX, and es-US", async () => {
+    render(<AdminSettingsPage />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox"));
+    const options = await screen.findAllByRole("option");
+    expect(options).toHaveLength(5);
+    expect(
+      screen.getByRole("option", { name: "Español (España)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Español (México)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Español (EE. UU.)" }),
+    ).toBeInTheDocument();
+  });
 });
