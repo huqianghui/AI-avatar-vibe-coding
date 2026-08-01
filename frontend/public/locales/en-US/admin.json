@@ -467,6 +467,27 @@
     "updateSuccess": "Material updated successfully",
     "derivedSkills": "Derived Skills"
   },
+  "crmData": {
+    "title": "CRM Data",
+    "description": "Upload an Excel CRM mapping table to manage user personalization context",
+    "uploadSectionTitle": "Upload CRM Mapping Table",
+    "resultSectionTitle": "Last Import Result",
+    "uploadCta": "Upload CRM Data",
+    "downloadTemplate": "Download Template",
+    "uploadButton": "Upload",
+    "uploading": "Parsing…",
+    "dropzoneHint": "Drag and drop or click to upload a .xlsx file",
+    "resultSummary": "{{success}} rows imported · {{skipped}} skipped · {{unmatched}} unmatched",
+    "emptyTitle": "No CRM data uploaded yet",
+    "emptyBody": "Upload an Excel file to see the import result here",
+    "headerErrorTitle": "Invalid header format",
+    "headerErrorBody": "Download the standard template, refill it, and re-upload",
+    "skippedToggle": "Skipped Details",
+    "unmatchedToggle": "Unmatched Details",
+    "skippedRowLine": "Row {{row}} — {{reason}}",
+    "unmatchedRowLine": "{{email}} — {{reason}}",
+    "uploadSuccessToast": "CRM data import complete"
+  },
   "scenarioMode": {
     "conference": "Conference"
   },
@@ -480,7 +501,8 @@
     "connectionTestFailed": "Connection test failed. Verify the endpoint and API key are correct.",
     "rubricSaveFailed": "Could not save rubric. Check required fields and try again.",
     "materialUploadFailed": "Could not upload material. Check the file and try again.",
-    "materialUpdateFailed": "Could not update material. Check required fields and try again."
+    "materialUpdateFailed": "Could not update material. Check required fields and try again.",
+    "crmUploadFailed": "Failed to upload CRM data"
   },
   "voiceLive": {
     "name": "Azure Voice Live API",

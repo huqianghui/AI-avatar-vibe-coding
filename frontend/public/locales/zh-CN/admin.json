@@ -467,6 +467,27 @@
     "updateSuccess": "资料更新成功",
     "derivedSkills": "关联技能"
   },
+  "crmData": {
+    "title": "CRM 数据",
+    "description": "上传 Excel CRM 映射表，管理用户个性化上下文数据",
+    "uploadSectionTitle": "上传 CRM 映射表",
+    "resultSectionTitle": "上次导入结果",
+    "uploadCta": "上传 CRM 数据",
+    "downloadTemplate": "下载模板",
+    "uploadButton": "上传",
+    "uploading": "解析中…",
+    "dropzoneHint": "拖拽或点击上传 .xlsx 文件",
+    "resultSummary": "成功导入 {{success}} 行 · 跳过 {{skipped}} 行 · 未匹配 {{unmatched}} 行",
+    "emptyTitle": "尚未上传 CRM 数据",
+    "emptyBody": "上传 Excel 文件后，导入结果将显示在这里",
+    "headerErrorTitle": "表头格式不正确",
+    "headerErrorBody": "请下载标准模板后重新填写并上传",
+    "skippedToggle": "跳过详情",
+    "unmatchedToggle": "未匹配详情",
+    "skippedRowLine": "第 {{row}} 行 — {{reason}}",
+    "unmatchedRowLine": "{{email}} — {{reason}}",
+    "uploadSuccessToast": "CRM 数据导入完成"
+  },
   "scenarioMode": {
     "conference": "会议演讲"
   },
@@ -480,7 +501,8 @@
     "connectionTestFailed": "连接测试失败。请验证端点和 API 密钥是否正确。",
     "rubricSaveFailed": "无法保存评分标准，请检查必填字段后重试。",
     "materialUploadFailed": "无法上传资料，请检查文件后重试。",
-    "materialUpdateFailed": "无法更新资料，请检查必填字段后重试。"
+    "materialUpdateFailed": "无法更新资料，请检查必填字段后重试。",
+    "crmUploadFailed": "CRM 数据上传失败"
   },
   "voiceLive": {
     "name": "Azure Voice Live API",
