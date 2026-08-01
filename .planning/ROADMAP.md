@@ -263,9 +263,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can switch the UI language to Spanish and see fully translated text with no missing-key fallback gaps across all namespaces (verified by an automated key-parity check across zh-CN/en-US/es-ES/es-MX/es-US)
   2. User can select Spanish and hear the avatar respond using an es-* neural voice (mid-session language switch may rebuild the session rather than reconnect live, per MVP scope)
-**Plans:** 10 plans
+**Plans:** 1/10 plans executed
 Plans:
-- [ ] 34-01-PLAN.md — i18n contract wave: supportedLngs to 5 locales (D-10), 5-option switcher, common.json translated, global locale-parity test + whitelist
+- [x] 34-01-PLAN.md — i18n contract wave: supportedLngs to 5 locales (D-10), 5-option switcher, common.json translated, global locale-parity test + whitelist
 - [ ] 34-02-PLAN.md — Translate admin.json, voice.json, avatar.json into es-ES/es-MX/es-US
 - [ ] 34-03-PLAN.md — Translate analytics.json, dashboard.json, nav.json, training.json, scoring.json, conference.json into es-ES/es-MX/es-US
 - [ ] 34-04-PLAN.md — Translate session.json, skill.json, meta-skill.json, auth.json, coach.json, prompts.json into es-ES/es-MX/es-US
@@ -298,6 +298,6 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 31. Training Material Retention Auto-Deletion | v1.0 | 0/? | Not started | - |
 | 32. Anonymous Grounded Avatar Q&A | v2.0 | 5/5 | Complete    | 2026-08-01 |
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
-| 34. Spanish (es) i18n | v2.0 | 0/? | Not started | - |
+| 34. Spanish (es) i18n | v2.0 | 1/10 | In Progress|  |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 0/? | Not started | - |
 </content>

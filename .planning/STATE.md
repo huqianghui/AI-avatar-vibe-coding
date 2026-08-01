@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Phase 33 UI-SPEC approved
-last_updated: "2026-08-01T15:55:08.099Z"
-last_activity: 2026-08-01 -- Phase 34 planning complete
+stopped_at: Completed 34-01-PLAN.md
+last_updated: "2026-08-01T16:05:41.173Z"
+last_activity: 2026-08-01
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 23
-  completed_plans: 13
-  percent: 57
+  completed_plans: 14
+  percent: 61
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 34
-Plan: Not started
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-08-01 -- Phase 34 planning complete
+Last activity: 2026-08-01
 
 ## Performance Metrics
 
@@ -144,6 +144,7 @@ Last activity: 2026-08-01 -- Phase 34 planning complete
 | Phase 29 P08 | 9min | 2 tasks | 15 files |
 | Phase 29 P09 | 55min | 3 tasks | 12 files |
 | Phase 29 P10 | 5h | 3 tasks | 8 files |
+| Phase 34 P01 | 4min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -318,10 +319,12 @@ Recent decisions affecting current work:
 - [Phase 29]: D-11: voice mode availability derived solely from VL Instance assignment (Boolean(vlInstanceId)); no independent voiceModeEnabled state
 - [Phase 29]: 29-08: Used local useState fallback for Foundation Model dropdown (voice_live_model not on HcpFormValues per Plan 07)
 - [Phase 29]: docs(29-09): unified docs/voice-live-avatar into flat 17-file tree, deleted README/ subtree, corrected stale api-version/classic-agent/inline-field references, added dual-path architecture diagram
+- [Phase 34]: supportedLngs ordered es-ES before es-MX/es-US to satisfy D-10 prefix-match resolution for bare 'es'/unlisted es-* variants
+- [Phase 34]: locale-parity.test.ts enumerates namespaces via fs.readdirSync (not hardcoded array) so future namespace additions are auto-covered
 
 ### Pending Todos
 
-None yet.
+- LANG-01 requirement (REQUIREMENTS.md) intentionally NOT marked complete after 34-01: it spans plans 34-01 through 34-05 (per each plan's `requirements:` frontmatter) and only the `common` namespace + switcher + parity-test infra is done so far (1/16 namespaces translated). Mark complete only after 34-05 lands.
 
 ### Roadmap Evolution
 
@@ -358,6 +361,6 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-01T08:52:53.812Z
-Stopped at: Phase 33 UI-SPEC approved
-Resume file: .planning/phases/33-personalized-crm-excel-avatar/33-UI-SPEC.md
+Last session: 2026-08-01T16:05:11.709Z
+Stopped at: Completed 34-01-PLAN.md
+Resume file: None
