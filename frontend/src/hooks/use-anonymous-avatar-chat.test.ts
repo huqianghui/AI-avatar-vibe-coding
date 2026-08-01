@@ -7,6 +7,10 @@ vi.mock("@/api/public-avatar", () => ({
   sendAnonymousChat: vi.fn(),
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ i18n: { language: "es-MX" } }),
+}));
+
 import { sendAnonymousChat } from "@/api/public-avatar";
 import { useAnonymousAvatarChat } from "@/hooks/use-anonymous-avatar-chat";
 
@@ -40,7 +44,11 @@ describe("useAnonymousAvatarChat", () => {
       await result.current.mutateAsync("What is the capital of France?");
     });
 
-    expect(sendAnonymousChat).toHaveBeenCalledWith("tok-1", "What is the capital of France?");
+    expect(sendAnonymousChat).toHaveBeenCalledWith(
+      "tok-1",
+      "What is the capital of France?",
+      "es-MX",
+    );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({
       answer: "Paris is the capital of France.",

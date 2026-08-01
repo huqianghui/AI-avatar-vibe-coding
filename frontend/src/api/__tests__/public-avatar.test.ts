@@ -63,7 +63,7 @@ describe("public-avatar API client", () => {
         }),
       );
 
-      const result = await sendAnonymousChat("tok-1", "hello");
+      const result = await sendAnonymousChat("tok-1", "hello", "es-MX");
 
       expect(fetch).toHaveBeenCalledWith("/public/avatar/chat", {
         method: "POST",
@@ -71,7 +71,7 @@ describe("public-avatar API client", () => {
           "Content-Type": "application/json",
           "X-Anon-Session": "tok-1",
         },
-        body: JSON.stringify({ message: "hello" }),
+        body: JSON.stringify({ message: "hello", locale: "es-MX" }),
       });
       expect(result).toEqual({ answer: "hi", citations: [], is_refusal: false });
     });
@@ -82,7 +82,7 @@ describe("public-avatar API client", () => {
       );
 
       try {
-        await sendAnonymousChat("tok-1", "hello");
+        await sendAnonymousChat("tok-1", "hello", "en-US");
         throw new Error("expected rejection");
       } catch (err) {
         expect(err).toBeInstanceOf(AnonymousApiError);
@@ -97,7 +97,7 @@ describe("public-avatar API client", () => {
       vi.mocked(fetch).mockResolvedValueOnce(mockFetchResponse({ ok: false, status: 401 }));
 
       try {
-        await sendAnonymousChat("tok-1", "hello");
+        await sendAnonymousChat("tok-1", "hello", "en-US");
         throw new Error("expected rejection");
       } catch (err) {
         expect(err).toBeInstanceOf(AnonymousApiError);
@@ -111,7 +111,7 @@ describe("public-avatar API client", () => {
       );
 
       try {
-        await sendAnonymousChat("tok-1", "hello");
+        await sendAnonymousChat("tok-1", "hello", "en-US");
         throw new Error("expected rejection");
       } catch (err) {
         expect(err).toBeInstanceOf(AnonymousApiError);

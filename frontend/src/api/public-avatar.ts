@@ -92,10 +92,16 @@ export async function createAnonymousSession(): Promise<AnonymousSessionResponse
   return parseOrThrow<AnonymousSessionResponse>(res, "create anonymous session");
 }
 
-/** POST /public/avatar/chat — X-Anon-Session header only, no JWT bearer header. */
+/**
+ * POST /public/avatar/chat — X-Anon-Session header only, no JWT bearer
+ * header. `locale` (Phase 34-07, LANG-02) is forwarded so the backend's
+ * grounded/refusal response tracks the active UI language instead of always
+ * defaulting to zh-CN.
+ */
 export async function sendAnonymousChat(
   sessionToken: string,
   message: string,
+  locale: string,
 ): Promise<ChatResponse> {
   const res = await fetch("/public/avatar/chat", {
     method: "POST",
@@ -103,7 +109,7 @@ export async function sendAnonymousChat(
       "Content-Type": "application/json",
       "X-Anon-Session": sessionToken,
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, locale }),
   });
   return parseOrThrow<ChatResponse>(res, "send anonymous chat message");
 }
