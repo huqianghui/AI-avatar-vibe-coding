@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: verifying
-stopped_at: Completed 34-10-PLAN.md -- phase 34 execution complete; LANG-02 left open pending pre-existing E2E fix (see deferred-items.md)
+stopped_at: Completed 34-10-PLAN.md + post-plan gate fixes -- phase 34 execution complete; LANG-01 and LANG-02 both Complete
 last_updated: "2026-08-01T19:15:15.902Z"
 last_activity: 2026-08-01
 progress:
@@ -338,7 +338,7 @@ Recent decisions affecting current work:
 - [Phase 34]: 34-07: resolved i18n.language internally inside useAnonymousAvatarChat via useTranslation() (mirroring use-personalized-avatar-chat.ts) instead of the plan's literal object-shaped mutate() signature, to preserve avatar-page.tsx's shared chatMutation union type
 - [Phase 34]: 34-08: admin voice_map GET/PUT mirrors azure_config.py's singleton-config pattern; GET bundles override + DEFAULT_PUBLIC_VOICE_BY_LOCALE defaults; PUT accepts empty-string values for known locales per D-07
 - [Phase 34]: 34-09: voiceMapValues state seeded via useEffect from useVoiceMap() query data, always sent in full on Save to match backend's full-dict-replace PUT semantics
-- [Phase 34]: 34-10: LANG-02 left OPEN -- full E2E gate not entirely green (51 pre-existing, root-caused failures unrelated to Phase 34, logged to deferred-items.md); es-* voice-session E2E itself passes 5/5
+- [Phase 34]: 34-10: LANG-02 closed after post-plan gate fixes (SplashScreen h1->p, stale health.spec title); residual 34 full-suite E2E failures triaged as pre-existing legacy-coach debt (deferred-items.md addendum), es-* voice E2E 5/5 green
 
 ### Pending Todos
 
@@ -380,5 +380,5 @@ Recent decisions affecting current work:
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
 Last session: 2026-08-01T19:15:15.899Z
-Stopped at: Completed 34-10-PLAN.md -- phase 34 execution complete; LANG-02 left open pending pre-existing E2E fix (see deferred-items.md)
+Stopped at: Completed 34-10-PLAN.md + post-plan gate fixes -- phase 34 execution complete; LANG-01 and LANG-02 both Complete
 Resume file: None

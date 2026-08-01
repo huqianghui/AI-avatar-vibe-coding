@@ -54,10 +54,11 @@ export function SplashScreen() {
         </svg>
       </div>
 
-      {/* App name */}
-      <h1 className="text-2xl font-medium text-primary-foreground">
+      {/* Decorative loading overlay — must not be an h1: unscoped page.locator("h1")
+          E2E assertions collide with it under Playwright strict mode */}
+      <p className="text-2xl font-medium text-primary-foreground">
         {t("appName")}
-      </h1>
+      </p>
 
       {/* Powered by */}
       <p className="mt-2 text-sm text-primary-foreground/70">

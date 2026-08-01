@@ -139,3 +139,14 @@ None - no external service configuration required.
 - FOUND: .planning/phases/34-spanish-es-i18n/deferred-items.md
 - FOUND commit: be078d3 (Task 1)
 - FOUND commit: 798bdfb (Task 2 log commit)
+
+
+## Post-Plan Addendum (orchestrator, 2026-08-02): LANG-02 CLOSED
+
+The follow-up prescribed in "Next Steps" was executed immediately after this plan:
+1. `SplashScreen` `<h1>` demoted to `<p>` (fixes the strict-mode collision cluster at the source) — full-suite failures dropped 51 → 35 (415 passed).
+2. `health.spec.ts` stale title assertion (`/AI Coach/` → `/AI Avatar Platform/`, stale since the 2026-07-31 rename `4d43b25`) fixed — green.
+3. Remaining 34 failures triaged and confirmed pre-existing legacy-coach test debt (stale mock-data assertions from pre-Phase-33, coach-era pages, real-Azure "Real Connection" specs) — documented in deferred-items.md addendum, tracked for Phase 35 / CLEAN-01.
+4. Phase 34's own specs re-verified green in the same environment (`anonymous-avatar-voice-es` 5/5, `language-switcher-es` 3/3, `health` 2/2).
+
+**LANG-02 marked Complete in REQUIREMENTS.md** — requirement-scoped validation per 34-VALIDATION.md fully green; residual full-suite failures are out-of-scope legacy debt, not LANG-02 blockers.

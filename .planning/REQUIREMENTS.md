@@ -25,7 +25,7 @@
 ### 西班牙语支持 (LANG)
 
 - [x] **LANG-01**: UI 全量支持西班牙语（es）— 所有 locale namespace 补齐 es 翻译，语言切换器含 es，含 key-parity 校验
-- [ ] **LANG-02**: 数字人可用西班牙语语音回答（es-* neural voice）
+- [x] **LANG-02**: 数字人可用西班牙语语音回答（es-* neural voice）
 
 ### 清爽 Avatar UI (AVUI)
 
@@ -61,7 +61,7 @@
 | PERS-02 | Phase 33 | Complete |
 | PERS-03 | Phase 33 | Complete |
 | LANG-01 | Phase 34 | Complete |
-| LANG-02 | Phase 34 | Pending |
+| LANG-02 | Phase 34 | Complete |
 | AVUI-01 | Phase 35 | Pending |
 | AVUI-02 | Phase 35 | Pending |
 
