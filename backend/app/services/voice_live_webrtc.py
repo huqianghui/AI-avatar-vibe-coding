@@ -228,3 +228,82 @@ async def create_webrtc_session_config(
         project_name=project_name_val,
         avatar_warning=AVATAR_WARNING,
     )
+
+
+async def create_public_webrtc_session_config(
+    db: AsyncSession,
+    *,
+    agent_id: str,
+    voice_name: str,
+) -> WebRTCSessionResponse:
+    """Build a WebRTC ephemeral-credential session for the anonymous public
+    avatar path (Phase 32, ANON-04).
+
+    Reuses the same Azure Voice Live config resolution, agent-mode signaling
+    URL construction, and bearer-token exchange as
+    `create_webrtc_session_config`'s authenticated agent-mode path, but
+    resolves identity from an explicit `agent_id` (sourced server-side from
+    the active `PublicKnowledgeConfig` row) instead of an HCP profile — the
+    caller never supplies a character/style/voice override.
+    """
+    vl_config = await config_service.get_config(db, "azure_voice_live")
+    if not vl_config or not vl_config.is_active:
+        raise ValueError("Voice Live not configured or inactive")
+
+    api_key = await config_service.get_effective_key(db, "azure_voice_live")
+    if not api_key:
+        raise ValueError("Voice Live API key not set")
+
+    raw_endpoint = await config_service.get_effective_endpoint(db, "azure_voice_live")
+    if not raw_endpoint:
+        raise ValueError("Voice Live endpoint not configured")
+
+    effective_endpoint = to_cognitive_services_endpoint(raw_endpoint)
+    _api_version = get_settings().voice_live_api_version
+
+    master = await config_service.get_master_config(db)
+    project_name_val = master.default_project if master else ""
+    if not str(project_name_val or "").strip():
+        raise AppException(
+            status_code=409,
+            code="AGENT_PROJECT_MISSING",
+            message="Voice Live Agent project is not configured",
+        )
+
+    parsed = urlparse(effective_endpoint)
+    endpoint_host = parsed.hostname or parsed.netloc
+    query = urlencode(
+        {"api-version": _api_version, "agent_id": agent_id, "project_id": project_name_val}
+    )
+    signaling_url = f"wss://{endpoint_host}/voice-live/realtime/calls?{query}"
+
+    bearer_token = await _exchange_api_key_for_bearer_token(effective_endpoint, api_key)
+
+    session_config: dict = {
+        "voice": {
+            "name": voice_name or "en-US-AvaNeural",
+            "type": "azure-standard",
+        },
+        "turn_detection": {"type": "server_vad"},
+        "input_audio_noise_reduction": False,
+        "input_audio_echo_cancellation": False,
+    }
+
+    logger.info(
+        "Public WebRTC session created: agent=%s, host=%s",
+        agent_id,
+        endpoint_host,
+    )
+
+    return WebRTCSessionResponse(
+        signaling_url=signaling_url,
+        auth_token=bearer_token,
+        auth_type="bearer",
+        model="",
+        mode="agent",
+        session_config=session_config,
+        agent_id=agent_id,
+        agent_version=None,
+        project_name=project_name_val,
+        avatar_warning=AVATAR_WARNING,
+    )

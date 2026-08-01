@@ -1,8 +1,10 @@
-"""Public anonymous avatar request/response schemas (Phase 32, ANON-01/ANON-02/ANON-03)."""
+"""Public anonymous avatar request/response schemas (Phase 32, ANON-01..04)."""
 
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.voice_live import WebRTCSessionResponse
 
 
 class AnonymousSessionResponse(BaseModel):
@@ -38,3 +40,20 @@ class ChatResponse(BaseModel):
     is_refusal: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class WebrtcSessionRequest(BaseModel):
+    """Request for POST /public/avatar/webrtc/session — locale is the only
+    client-suppliable field (T-32-12): no character/style/voice/agent_id/
+    kb_name override field exists anywhere in this schema. Avatar identity is
+    100% server-resolved from the active `PublicKnowledgeConfig` row."""
+
+    locale: str = Field(default="zh-CN", pattern="^(zh-CN|en-US)$")
+
+    model_config = ConfigDict(from_attributes=False)
+
+
+class WebrtcSessionResponse(WebRTCSessionResponse):
+    """Mirrors the exact field set of the authenticated `/voice-live/webrtc/session`
+    response (`WebRTCSessionResponse`) verbatim — same shape, anonymous trust
+    boundary only."""
