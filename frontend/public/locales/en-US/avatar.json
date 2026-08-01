@@ -1,0 +1,27 @@
+{
+  "sourcesPanel": {
+    "title": "Sources",
+    "emptyPreQuestion": {
+      "heading": "No sources yet",
+      "body": "Ask the avatar a question and its sources will appear here"
+    },
+    "emptyNoMatch": {
+      "heading": "No matching source this time",
+      "body": "Try rephrasing your question"
+    },
+    "pageBadge": "Page {{n}}"
+  },
+  "input": {
+    "sendAriaLabel": "Ask",
+    "micIdleAriaLabel": "Start speaking"
+  },
+  "micDialog": {
+    "title": "Microphone access needed to ask by voice",
+    "body": "Click Allow and grant microphone access in your browser's prompt to ask the avatar by voice. You can also use the text input below instead.",
+    "retry": "Try Again",
+    "useTextInstead": "Use Text Instead",
+    "stillDenied": "Still no microphone access — check your OS/browser settings"
+  },
+  "rateLimited": "Rate limited — retry in {{seconds}}s",
+  "login": "Login"
+}

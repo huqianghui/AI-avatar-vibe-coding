@@ -1,0 +1,27 @@
+{
+  "sourcesPanel": {
+    "title": "参考来源",
+    "emptyPreQuestion": {
+      "heading": "暂无参考来源",
+      "body": "向数字人提问后，相关内容来源会显示在这里"
+    },
+    "emptyNoMatch": {
+      "heading": "本次未找到匹配来源",
+      "body": "请尝试换一种问题的表述方式"
+    },
+    "pageBadge": "第 {{n}} 页"
+  },
+  "input": {
+    "sendAriaLabel": "发送提问",
+    "micIdleAriaLabel": "开始说话"
+  },
+  "micDialog": {
+    "title": "需要麦克风权限才能语音提问",
+    "body": "点击「允许」并在浏览器弹窗中授予麦克风权限，即可通过语音向数字人提问。您也可以直接使用文字输入框提问。",
+    "retry": "重试授权",
+    "useTextInstead": "改用文字输入",
+    "stillDenied": "仍未获得麦克风权限，请检查系统/浏览器设置"
+  },
+  "rateLimited": "请求过多，请 {{seconds}}s 后重试",
+  "login": "登录"
+}
