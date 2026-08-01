@@ -245,6 +245,167 @@ async def test_stream_agent_response_uses_exact_reference_and_orders_events():
 
 
 @pytest.mark.asyncio
+async def test_stream_agent_response_without_personalization_context_is_unchanged():
+    """Regression guard (Phase 33, PERS-02): omitting personalization_context
+    must produce the exact same single-item `input` as before this change."""
+    from app.services.agent_chat_service import stream_agent_response
+
+    completed = MagicMock(type="response.completed")
+    completed.response.id = "resp_no_context"
+    mock_stream = MagicMock()
+    mock_stream.__iter__.return_value = iter([completed])
+    mock_openai_client = MagicMock()
+    mock_openai_client.responses.create.return_value = mock_stream
+    mock_project_client = MagicMock()
+    mock_project_client.get_openai_client.return_value = mock_openai_client
+
+    with (
+        patch(
+            "app.services.agent_chat_service.agent_sync_service.get_project_endpoint",
+            new_callable=AsyncMock,
+            return_value=("https://foundry.test/api/projects/test-prj", "test-key"),
+        ),
+        patch(
+            "app.services.agent_chat_service.agent_sync_service._get_project_client",
+            return_value=mock_project_client,
+        ),
+        _patch_config_service(),
+    ):
+        async for _ in stream_agent_response(AsyncMock(), "Dr-Exact", "1", "Hello there"):
+            pass
+
+    call_kwargs = mock_openai_client.responses.create.call_args.kwargs
+    assert call_kwargs["input"] == [{"role": "user", "content": "Hello there"}]
+
+
+@pytest.mark.asyncio
+async def test_stream_agent_response_prepends_developer_role_personalization_context():
+    """A non-empty personalization_context is prepended as a `developer`-role
+    input item ahead of the user's message (D-05 structural segregation)."""
+    from app.services.agent_chat_service import stream_agent_response
+
+    completed = MagicMock(type="response.completed")
+    completed.response.id = "resp_with_context"
+    mock_stream = MagicMock()
+    mock_stream.__iter__.return_value = iter([completed])
+    mock_openai_client = MagicMock()
+    mock_openai_client.responses.create.return_value = mock_stream
+    mock_project_client = MagicMock()
+    mock_project_client.get_openai_client.return_value = mock_openai_client
+
+    with (
+        patch(
+            "app.services.agent_chat_service.agent_sync_service.get_project_endpoint",
+            new_callable=AsyncMock,
+            return_value=("https://foundry.test/api/projects/test-prj", "test-key"),
+        ),
+        patch(
+            "app.services.agent_chat_service.agent_sync_service._get_project_client",
+            return_value=mock_project_client,
+        ),
+        _patch_config_service(),
+    ):
+        async for _ in stream_agent_response(
+            AsyncMock(),
+            "Dr-Exact",
+            "1",
+            "Hello there",
+            personalization_context="## User Background\nCustomer: X",
+        ):
+            pass
+
+    call_kwargs = mock_openai_client.responses.create.call_args.kwargs
+    assert call_kwargs["input"] == [
+        {"role": "developer", "content": "## User Background\nCustomer: X"},
+        {"role": "user", "content": "Hello there"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_stream_agent_response_empty_string_personalization_context_adds_nothing():
+    """An empty-string personalization_context (D-08 silent fallback) must
+    never add a blank input item -- same single-item `input` as the no-arg
+    case."""
+    from app.services.agent_chat_service import stream_agent_response
+
+    completed = MagicMock(type="response.completed")
+    completed.response.id = "resp_empty_context"
+    mock_stream = MagicMock()
+    mock_stream.__iter__.return_value = iter([completed])
+    mock_openai_client = MagicMock()
+    mock_openai_client.responses.create.return_value = mock_stream
+    mock_project_client = MagicMock()
+    mock_project_client.get_openai_client.return_value = mock_openai_client
+
+    with (
+        patch(
+            "app.services.agent_chat_service.agent_sync_service.get_project_endpoint",
+            new_callable=AsyncMock,
+            return_value=("https://foundry.test/api/projects/test-prj", "test-key"),
+        ),
+        patch(
+            "app.services.agent_chat_service.agent_sync_service._get_project_client",
+            return_value=mock_project_client,
+        ),
+        _patch_config_service(),
+    ):
+        async for _ in stream_agent_response(
+            AsyncMock(), "Dr-Exact", "1", "Hello there", personalization_context=""
+        ):
+            pass
+
+    call_kwargs = mock_openai_client.responses.create.call_args.kwargs
+    assert call_kwargs["input"] == [{"role": "user", "content": "Hello there"}]
+
+
+@pytest.mark.asyncio
+async def test_chat_with_agent_forwards_personalization_context():
+    """chat_with_agent passes personalization_context through to
+    _build_openai_request, mirroring test_chat_with_agent_mock's structure."""
+    from app.services.agent_chat_service import chat_with_agent
+
+    mock_response = MagicMock()
+    mock_response.output_text = "Personalized answer."
+    mock_response.id = "resp_personalized_001"
+
+    mock_openai_client = MagicMock()
+    mock_openai_client.responses.create.return_value = mock_response
+
+    mock_project_client = MagicMock()
+    mock_project_client.get_openai_client.return_value = mock_openai_client
+
+    mock_db = AsyncMock()
+
+    with (
+        patch(
+            "app.services.agent_chat_service.agent_sync_service.get_project_endpoint",
+            new_callable=AsyncMock,
+            return_value=("https://foundry.test/api/projects/test-prj", "test-key"),
+        ),
+        patch(
+            "app.services.agent_chat_service.agent_sync_service._get_project_client",
+            return_value=mock_project_client,
+        ),
+        _patch_config_service(),
+    ):
+        result = await chat_with_agent(
+            mock_db,
+            agent_name="Dr-Chen-Wei",
+            agent_version="1",
+            message="Tell me about your practice.",
+            personalization_context="## User Background\nCustomer: Y",
+        )
+
+    assert result["response_text"] == "Personalized answer."
+
+    call_kwargs = mock_openai_client.responses.create.call_args[1]
+    assert call_kwargs["input"] == [
+        {"role": "developer", "content": "## User Background\nCustomer: Y"},
+        {"role": "user", "content": "Tell me about your practice."},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_stream_agent_response_translates_upstream_failure_without_completion():
     """An iterator failure is surfaced once and cannot fabricate completion."""
     from app.services.agent_chat_service import AgentChatError, stream_agent_response

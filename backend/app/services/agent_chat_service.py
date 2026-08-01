@@ -50,8 +50,16 @@ async def _build_openai_request(
     agent_version: str,
     message: str,
     previous_response_id: str | None,
+    personalization_context: str | None = None,
 ) -> tuple[object, dict, str]:
-    """Resolve the configured client/model and construct exact Responses kwargs."""
+    """Resolve the configured client/model and construct exact Responses kwargs.
+
+    `personalization_context`, when non-empty, is prepended as a `developer`-
+    role input item ahead of the user's message (Phase 33, PERS-02, D-05) --
+    a second, clearly-labeled turn segment, never a rewrite of the hosted
+    Agent's own configured instructions. Empty/None leaves `input` exactly as
+    it is today (D-08 silent fallback, and the required regression guard for
+    the existing anonymous-flow tests)."""
     from app.config import get_settings
     from app.services import config_service
 
@@ -60,9 +68,13 @@ async def _build_openai_request(
     client = agent_sync_service._get_project_client(project_endpoint, api_key)
     master = await config_service.get_master_config(db)
     model = master.model_or_deployment if master else get_settings().voice_live_default_model
+    input_items: list[dict] = []
+    if personalization_context:
+        input_items.append({"role": "developer", "content": personalization_context})
+    input_items.append({"role": "user", "content": message})
     kwargs: dict = {
         "model": model,
-        "input": [{"role": "user", "content": message}],
+        "input": input_items,
         "extra_body": {
             "agent_reference": {
                 "name": name,
@@ -82,6 +94,7 @@ async def chat_with_agent(
     agent_version: str,
     message: str,
     previous_response_id: str | None = None,
+    personalization_context: str | None = None,
 ) -> dict:
     """Send a message to an AI Foundry Agent and return the response.
 
@@ -97,12 +110,14 @@ async def chat_with_agent(
         agent_version: The agent version string.
         message: User message to send.
         previous_response_id: Optional response ID for multi-turn conversation.
+        personalization_context: Optional developer-role prompt segment
+            prepended ahead of the user's message (Phase 33, PERS-02, D-05).
 
     Returns:
         Dict with response_text, response_id (for multi-turn), and agent info.
     """
     openai_client, kwargs, project_endpoint = await _build_openai_request(
-        db, agent_name, agent_version, message, previous_response_id
+        db, agent_name, agent_version, message, previous_response_id, personalization_context
     )
 
     logger.info(
@@ -133,10 +148,11 @@ async def stream_agent_response(
     agent_version: str,
     message: str,
     previous_response_id: str | None = None,
+    personalization_context: str | None = None,
 ) -> AsyncIterator[AgentResponseEvent]:
     """Stream an exact Foundry Prompt Agent response without blocking the event loop."""
     openai_client, kwargs, _ = await _build_openai_request(
-        db, agent_name, agent_version, message, previous_response_id
+        db, agent_name, agent_version, message, previous_response_id, personalization_context
     )
     kwargs["stream"] = True
     queue: asyncio.Queue[AgentResponseEvent | BaseException | None] = asyncio.Queue()
