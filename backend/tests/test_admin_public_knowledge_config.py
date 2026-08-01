@@ -141,6 +141,47 @@ class TestUpdateVoiceMap:
         assert response.status_code == 200
         assert response.json()["voice_map"] == {"es-MX": ""}
 
+    async def test_invalid_voice_name_value_returns_422(self, client):
+        """WR-01: a voice-name value that isn't a well-formed Azure neural
+        voice name (and isn't the D-07 empty-string sentinel) is rejected."""
+        await _create_active_config()
+        _, token = await _create_admin_and_token()
+
+        response = await client.put(
+            "/api/v1/admin/public-knowledge-config/voice-map",
+            json={"voice_map": {"es-ES": "<script>alert(1)</script>"}},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_overlong_voice_name_value_returns_422(self, client):
+        """WR-01: a voice-name value exceeding the max length is rejected."""
+        await _create_active_config()
+        _, token = await _create_admin_and_token()
+
+        response = await client.put(
+            "/api/v1/admin/public-knowledge-config/voice-map",
+            json={"voice_map": {"es-ES": "es-ES-" + "A" * 200 + "Neural"}},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_wellformed_voice_name_value_is_accepted(self, client):
+        """WR-01: a well-formed Azure neural voice name still passes validation."""
+        await _create_active_config()
+        _, token = await _create_admin_and_token()
+
+        response = await client.put(
+            "/api/v1/admin/public-knowledge-config/voice-map",
+            json={"voice_map": {"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["voice_map"] == {"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}
+
     async def test_non_admin_put_returns_403(self, client):
         await _create_active_config()
         _, token = await _create_user_and_token()
