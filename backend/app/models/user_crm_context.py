@@ -15,7 +15,11 @@ class UserCrmContext(Base, TimestampMixin):
     __tablename__ = "user_crm_contexts"
 
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
     )
     customer_name: Mapped[str] = mapped_column(String(200), default="")
     company: Mapped[str] = mapped_column(String(200), default="")
