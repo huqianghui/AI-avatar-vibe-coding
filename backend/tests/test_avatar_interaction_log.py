@@ -57,9 +57,7 @@ def _make_public_config() -> PublicKnowledgeConfig:
 
 
 class TestAuditLogCompletenessAcrossThreeTurns:
-    async def test_success_refusal_and_agent_error_each_write_exactly_one_row(
-        self, db_session
-    ):
+    async def test_success_refusal_and_agent_error_each_write_exactly_one_row(self, db_session):
         session = await _make_session(db_session)
         public_config = _make_public_config()
 
@@ -74,9 +72,7 @@ class TestAuditLogCompletenessAcrossThreeTurns:
             ),
             patch(
                 "app.services.avatar_service.retrieve_citations",
-                AsyncMock(
-                    return_value=[{"title": "T1", "url": "https://a", "page": 1}]
-                ),
+                AsyncMock(return_value=[{"title": "T1", "url": "https://a", "page": 1}]),
             ),
         ):
             success_result = await handle_anonymous_turn(
@@ -109,9 +105,7 @@ class TestAuditLogCompletenessAcrossThreeTurns:
             ),
             patch(
                 "app.services.avatar_service.retrieve_citations",
-                AsyncMock(
-                    return_value=[{"title": "T2", "url": "https://b", "page": 2}]
-                ),
+                AsyncMock(return_value=[{"title": "T2", "url": "https://b", "page": 2}]),
             ),
         ):
             error_result = await handle_anonymous_turn(
@@ -123,11 +117,7 @@ class TestAuditLogCompletenessAcrossThreeTurns:
         assert error_result["is_refusal"] is True
         assert error_result["citations"] == []
 
-        rows = (
-            (await db_session.execute(select(AvatarInteractionLog)))
-            .scalars()
-            .all()
-        )
+        rows = (await db_session.execute(select(AvatarInteractionLog))).scalars().all()
         assert len(rows) == 3
 
         by_response_id = {row.response_id: row for row in rows}
