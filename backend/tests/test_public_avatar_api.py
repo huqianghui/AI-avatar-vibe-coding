@@ -18,6 +18,7 @@ from app.services.anonymous_session_service import (
     touch_session,
     verify_anonymous_token,
 )
+from app.services.avatar_service import REFUSAL_TEMPLATES
 from app.services.rate_limit import limiter_ip
 
 settings = get_settings()
@@ -274,3 +275,77 @@ class TestChatEndpoint:
 
         assert statuses[-1] == 429
         assert response.json()["code"] == "RATE_LIMITED"
+
+
+class TestChatEndpointLocale:
+    """POST /public/avatar/chat locale forwarding (Phase 34-07, LANG-02)."""
+
+    async def test_es_mx_locale_forwards_to_handle_anonymous_turn_and_returns_refusal(self, client):
+        """A supplied `locale=es-MX` is forwarded to `handle_anonymous_turn` as
+        the `locale` kwarg, and the es-MX `REFUSAL_TEMPLATES` string is what
+        comes back through the response body."""
+        headers = await _anon_session_and_header(client)
+        result = {
+            "answer": REFUSAL_TEMPLATES["es-MX"],
+            "citations": [],
+            "is_refusal": True,
+            "response_id": "",
+        }
+        mock_turn = AsyncMock(return_value=result)
+
+        with (
+            patch(
+                "app.api.public_avatar.get_active_public_config",
+                AsyncMock(return_value=_make_public_config()),
+            ),
+            patch("app.api.public_avatar.handle_anonymous_turn", mock_turn),
+        ):
+            response = await client.post(
+                "/public/avatar/chat",
+                json={"message": "What is the weather today?", "locale": "es-MX"},
+                headers=headers,
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["answer"] == REFUSAL_TEMPLATES["es-MX"]
+        assert body["is_refusal"] is True
+        assert mock_turn.call_args.kwargs["locale"] == "es-MX"
+
+    async def test_no_locale_field_defaults_to_zh_cn(self, client):
+        """Backward compatibility: omitting `locale` still returns 200 and
+        forwards the zh-CN default to `handle_anonymous_turn`."""
+        headers = await _anon_session_and_header(client)
+        result = {
+            "answer": REFUSAL_TEMPLATES["zh-CN"],
+            "citations": [],
+            "is_refusal": True,
+            "response_id": "",
+        }
+        mock_turn = AsyncMock(return_value=result)
+
+        with (
+            patch(
+                "app.api.public_avatar.get_active_public_config",
+                AsyncMock(return_value=_make_public_config()),
+            ),
+            patch("app.api.public_avatar.handle_anonymous_turn", mock_turn),
+        ):
+            response = await client.post(
+                "/public/avatar/chat", json={"message": "Hello"}, headers=headers
+            )
+
+        assert response.status_code == 200
+        assert response.json()["answer"] == REFUSAL_TEMPLATES["zh-CN"]
+        assert mock_turn.call_args.kwargs["locale"] == "zh-CN"
+
+    async def test_unsupported_locale_returns_422(self, client):
+        headers = await _anon_session_and_header(client)
+
+        response = await client.post(
+            "/public/avatar/chat",
+            json={"message": "Bonjour", "locale": "fr-FR"},
+            headers=headers,
+        )
+
+        assert response.status_code == 422

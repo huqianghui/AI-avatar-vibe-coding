@@ -59,7 +59,9 @@ async def chat(
     resolved server-side via `get_active_public_config()`; no client-suppliable
     identifier exists anywhere in `ChatRequest` (T-32-05)."""
     public_config = await get_active_public_config(db)
-    result = await handle_anonymous_turn(db, session, body.message, public_config)
+    result = await handle_anonymous_turn(
+        db, session, body.message, public_config, locale=body.locale
+    )
     return ChatResponse(**result)
 
 

@@ -17,11 +17,14 @@ class AnonymousSessionResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """Request for POST /public/avatar/chat — exactly one field (T-32-05): no
+    """Request for POST /public/avatar/chat — `message` plus `locale` (T-32-05): no
     agent_id/kb_name/hcp_profile_id or any other client-suppliable identifier
-    exists anywhere in this schema."""
+    exists anywhere in this schema. `locale` drives which language the
+    grounded/refusal response is generated in (LANG-02); it is pattern-constrained
+    to the same 5-entry closed allowlist as `WebrtcSessionRequest.locale`."""
 
     message: str = Field(..., min_length=1, max_length=2000)
+    locale: str = Field(default="zh-CN", pattern="^(zh-CN|en-US|es-ES|es-MX|es-US)$")
 
     model_config = ConfigDict(from_attributes=False)
 
