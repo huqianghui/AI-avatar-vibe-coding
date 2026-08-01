@@ -40,7 +40,7 @@ describe("useAnonymousAvatarSession", () => {
     await waitFor(() => expect(result.current.sessionToken).toBe("tok-2"));
 
     expect(localStorage.getItem("tok-2")).toBeNull();
-    expect(Object.keys(localStorage)).toHaveLength(0);
+    expect(localStorage.length).toBe(0);
   });
 
   it("renewSession() calls createAnonymousSession again and replaces the stored token", async () => {

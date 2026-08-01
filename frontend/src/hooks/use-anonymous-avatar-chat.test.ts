@@ -89,7 +89,7 @@ describe("useAnonymousAvatarChat", () => {
     });
 
     expect(onUnauthorized).not.toHaveBeenCalled();
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it("rejects immediately with no network call when sessionToken is null", async () => {
@@ -106,6 +106,6 @@ describe("useAnonymousAvatarChat", () => {
     });
 
     expect(sendAnonymousChat).not.toHaveBeenCalled();
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });
