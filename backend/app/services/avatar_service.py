@@ -33,6 +33,18 @@ REFUSAL_TEMPLATES = {
     "en-US": (
         "Sorry, I can currently only answer questions related to the official website content."
     ),
+    "es-ES": (
+        "Lo siento, actualmente solo puedo responder preguntas relacionadas con el "
+        "contenido del sitio web oficial."
+    ),
+    "es-MX": (
+        "Lo siento, actualmente solo puedo responder preguntas relacionadas con el "
+        "contenido del sitio web oficial."
+    ),
+    "es-US": (
+        "Lo siento, actualmente solo puedo responder preguntas relacionadas con el "
+        "contenido del sitio web oficial."
+    ),
 }
 
 
@@ -65,9 +77,7 @@ async def handle_anonymous_turn(
     try:
         (answer_text, response_id), citations = await asyncio.gather(
             collect_agent_text(),
-            retrieve_citations(
-                public_config.connection_target, public_config.index_name, message
-            ),
+            retrieve_citations(public_config.connection_target, public_config.index_name, message),
         )
     except Exception:
         # Agent stream or citation retrieval failed -- degrade to the fixed

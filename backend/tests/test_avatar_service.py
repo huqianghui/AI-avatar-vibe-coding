@@ -156,6 +156,85 @@ class TestHandleAnonymousTurnSuccess:
         assert rows[0].is_refusal is False
 
 
+class TestRefusalTemplatesLocaleCoverage:
+    """LANG-02 (34-06, D-08): REFUSAL_TEMPLATES must cover all 5 locales,
+    and handle_anonymous_turn must return the exact per-locale string."""
+
+    def test_all_five_locale_keys_present_and_non_empty(self):
+        for key in ("zh-CN", "en-US", "es-ES", "es-MX", "es-US"):
+            assert key in REFUSAL_TEMPLATES
+            assert REFUSAL_TEMPLATES[key].strip() != ""
+
+    async def test_handle_anonymous_turn_returns_es_es_refusal_verbatim(self, db_session):
+        session = await _make_session(db_session)
+        public_config = _make_public_config()
+
+        with (
+            patch(
+                "app.services.avatar_service.stream_agent_response",
+                return_value=_agent_events(
+                    AgentResponseEvent(kind="completed", response_id="resp-es-es"),
+                ),
+            ),
+            patch(
+                "app.services.avatar_service.retrieve_citations",
+                AsyncMock(return_value=[]),
+            ),
+        ):
+            result = await handle_anonymous_turn(
+                db_session, session, "Off-topic question", public_config, locale="es-ES"
+            )
+
+        assert result["is_refusal"] is True
+        assert result["answer"] == REFUSAL_TEMPLATES["es-ES"]
+
+    async def test_handle_anonymous_turn_returns_es_mx_refusal_verbatim(self, db_session):
+        session = await _make_session(db_session)
+        public_config = _make_public_config()
+
+        with (
+            patch(
+                "app.services.avatar_service.stream_agent_response",
+                return_value=_agent_events(
+                    AgentResponseEvent(kind="completed", response_id="resp-es-mx"),
+                ),
+            ),
+            patch(
+                "app.services.avatar_service.retrieve_citations",
+                AsyncMock(return_value=[]),
+            ),
+        ):
+            result = await handle_anonymous_turn(
+                db_session, session, "Off-topic question", public_config, locale="es-MX"
+            )
+
+        assert result["is_refusal"] is True
+        assert result["answer"] == REFUSAL_TEMPLATES["es-MX"]
+
+    async def test_handle_anonymous_turn_returns_es_us_refusal_verbatim(self, db_session):
+        session = await _make_session(db_session)
+        public_config = _make_public_config()
+
+        with (
+            patch(
+                "app.services.avatar_service.stream_agent_response",
+                return_value=_agent_events(
+                    AgentResponseEvent(kind="completed", response_id="resp-es-us"),
+                ),
+            ),
+            patch(
+                "app.services.avatar_service.retrieve_citations",
+                AsyncMock(return_value=[]),
+            ),
+        ):
+            result = await handle_anonymous_turn(
+                db_session, session, "Off-topic question", public_config, locale="es-US"
+            )
+
+        assert result["is_refusal"] is True
+        assert result["answer"] == REFUSAL_TEMPLATES["es-US"]
+
+
 class TestHandleAnonymousTurnNoClientOverride:
     async def test_never_passes_request_supplied_agent_or_kb_identifiers(self, db_session):
         """handle_anonymous_turn only ever reads agent_id/index_name from the

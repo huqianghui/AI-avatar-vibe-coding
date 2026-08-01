@@ -205,6 +205,37 @@ class TestHandlePersonalizedTurnRefusal:
         assert result["citations"] == []
         assert result["answer"] == REFUSAL_TEMPLATES["zh-CN"]
 
+    async def test_refusal_template_returns_es_us_verbatim(self, db_session):
+        """LANG-02 (34-06, D-08): the personalized refusal path reuses the
+        same shared REFUSAL_TEMPLATES dict, so es-* coverage added there is
+        automatically available here."""
+        user = await _make_user(db_session)
+        session = await _make_session(db_session, user)
+        public_config = _make_public_config()
+
+        with (
+            patch(
+                "app.services.personalized_avatar_service.stream_agent_response",
+                return_value=_agent_events(
+                    AgentResponseEvent(kind="completed", response_id="resp-es-us"),
+                ),
+            ),
+            patch(
+                "app.services.personalized_avatar_service.retrieve_citations",
+                AsyncMock(return_value=[]),
+            ),
+            patch(
+                "app.services.personalized_avatar_service.build_personalization_context",
+                AsyncMock(return_value=""),
+            ),
+        ):
+            result = await handle_personalized_turn(
+                db_session, session, user, "Off-topic question", public_config, locale="es-US"
+            )
+
+        assert result["is_refusal"] is True
+        assert result["answer"] == REFUSAL_TEMPLATES["es-US"]
+
     async def test_agent_or_citation_failure_degrades_to_refusal_and_still_audits(self, db_session):
         user = await _make_user(db_session)
         session = await _make_session(db_session, user)
