@@ -55,8 +55,15 @@ describe("i18n initialization", () => {
   it("should configure fallback language and supported languages", () => {
     const config = initCalls[0]![0] as Record<string, unknown>;
     expect(config["fallbackLng"]).toBe("en-US");
-    expect(config["supportedLngs"]).toEqual(["en-US", "zh-CN"]);
+    expect(config["supportedLngs"]).toEqual(["en-US", "zh-CN", "es-ES", "es-MX", "es-US"]);
     expect(config["defaultNS"]).toBe("common");
+  });
+
+  it("orders es-ES before es-MX and es-US (D-10 prefix-match requirement)", () => {
+    const config = initCalls[0]![0] as Record<string, unknown>;
+    const supported = config["supportedLngs"] as string[];
+    expect(supported.indexOf("es-ES")).toBeLessThan(supported.indexOf("es-MX"));
+    expect(supported.indexOf("es-ES")).toBeLessThan(supported.indexOf("es-US"));
   });
 
   it("should configure the correct namespaces", () => {
