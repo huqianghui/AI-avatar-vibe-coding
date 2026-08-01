@@ -220,7 +220,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Milestone Goal:** 将平台从 MR 教练系统转型为 AI Avatar 助手 — 匿名用户可与数字人对话获取官网知识解答（附来源引用），登录用户获得基于 CRM 数据（Excel POC）的个性化回答，支持西班牙语，UI 只呈现数字人 + 文档来源链接，旧 coach 功能入口隐藏。
 
 - [x] **Phase 32: Anonymous Grounded Avatar Q&A** - Visitors chat with the avatar without login and get Foundry-IQ-grounded, sourced, spoken answers, with rate limiting and audit logging (completed 2026-08-01)
-- [ ] **Phase 33: Personalized CRM-Excel Avatar** - Logged-in users get avatar answers shaped by Excel-based CRM context and admin-managed preference tags
+- [x] **Phase 33: Personalized CRM-Excel Avatar** - Logged-in users get avatar answers shaped by Excel-based CRM context and admin-managed preference tags (completed 2026-08-01)
 - [ ] **Phase 34: Spanish (es) i18n** - Full UI translation parity and Spanish neural voice for the avatar
 - [ ] **Phase 35: Clean Avatar UI & Legacy Coach Hiding** - Avatar page shows only digital human + source links; legacy coach nav hidden behind a feature flag
 
@@ -286,7 +286,7 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 1-30 | v1.0 | — | Complete | see PROJECT.md |
 | 31. Training Material Retention Auto-Deletion | v1.0 | 0/? | Not started | - |
 | 32. Anonymous Grounded Avatar Q&A | v2.0 | 5/5 | Complete    | 2026-08-01 |
-| 33. Personalized CRM-Excel Avatar | v2.0 | 0/? | Not started | - |
+| 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 0/? | Not started | - |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 0/? | Not started | - |
 </content>

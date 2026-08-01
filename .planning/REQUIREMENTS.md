@@ -18,9 +18,9 @@
 
 ### 登录个性化 (PERS)
 
-- [ ] **PERS-01**: 管理员可上传 Excel CRM 对应关系表（userid → CRM 知识 / 对口支持人），系统解析入库
-- [ ] **PERS-02**: 登录用户提问时，系统按 userid 将 CRM 上下文与用户偏好注入 system prompt / prompt template（chat-time 注入，含 prompt-injection/PII sanitization）
-- [ ] **PERS-03**: 管理员可通过界面查看和手动编辑用户偏好标签（人工打标签）
+- [x] **PERS-01**: 管理员可上传 Excel CRM 对应关系表（userid → CRM 知识 / 对口支持人），系统解析入库
+- [x] **PERS-02**: 登录用户提问时，系统按 userid 将 CRM 上下文与用户偏好注入 system prompt / prompt template（chat-time 注入，含 prompt-injection/PII sanitization）
+- [x] **PERS-03**: 管理员可通过界面查看和手动编辑用户偏好标签（人工打标签）
 
 ### 西班牙语支持 (LANG)
 
@@ -57,9 +57,9 @@
 | ANON-03 | Phase 32 | Complete |
 | ANON-04 | Phase 32 | Complete |
 | ANON-05 | Phase 32 | Complete |
-| PERS-01 | Phase 33 | Pending |
-| PERS-02 | Phase 33 | Pending |
-| PERS-03 | Phase 33 | Pending |
+| PERS-01 | Phase 33 | Complete |
+| PERS-02 | Phase 33 | Complete |
+| PERS-03 | Phase 33 | Complete |
 | LANG-01 | Phase 34 | Pending |
 | LANG-02 | Phase 34 | Pending |
 | AVUI-01 | Phase 35 | Pending |
