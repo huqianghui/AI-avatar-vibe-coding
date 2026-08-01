@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { toast } from "sonner";
 import AdminSettingsPage from "./settings";
@@ -218,6 +218,29 @@ describe("AdminSettingsPage", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "Something went wrong. The voice configuration could not be saved. Please check the value and try again.",
     );
+  });
+
+  it("WR-03: does not overwrite unsaved edits when the voice_map query data changes (background refetch)", async () => {
+    const { rerender } = render(<AdminSettingsPage />);
+    const user = userEvent.setup();
+
+    const esMxInput = screen.getByPlaceholderText("es-MX-DaliaNeural");
+    await user.type(esMxInput, "es-MX-UnsavedEdit");
+    expect(esMxInput).toHaveValue("es-MX-UnsavedEdit");
+
+    // Simulate a TanStack Query background refetch (e.g. refetchOnWindowFocus
+    // after staleTime elapses) that returns a *new* object reference for the
+    // server's last-saved data -- which does not include the admin's
+    // in-progress, unsaved edit.
+    mockVoiceMapReturn = {
+      data: { voice_map: { ...defaultVoiceMap }, defaults: { ...defaultVoiceDefaults } },
+      isLoading: false,
+    };
+    await act(async () => {
+      rerender(<AdminSettingsPage />);
+    });
+
+    expect(screen.getByPlaceholderText("es-MX-DaliaNeural")).toHaveValue("es-MX-UnsavedEdit");
   });
 
   it("disables the Save Voice Settings button while the mutation is pending", () => {

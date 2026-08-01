@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Globe, Shield, Palette, Languages } from "lucide-react";
 import { toast } from "sonner";
@@ -48,10 +48,16 @@ export default function AdminSettingsPage() {
   const voiceMapQuery = useVoiceMap();
   const updateVoiceMapMutation = useUpdateVoiceMap();
   const [voiceMapValues, setVoiceMapValues] = useState<Record<string, string>>({});
+  // WR-03: only seed local edit state from the query on the *first* successful
+  // load. Without this guard, a background refetch (e.g. TanStack Query's
+  // default refetchOnWindowFocus after staleTime elapses) would silently
+  // overwrite any in-progress, unsaved admin edits.
+  const hasInitializedVoiceMap = useRef(false);
 
   useEffect(() => {
-    if (voiceMapQuery.data?.voice_map) {
+    if (!hasInitializedVoiceMap.current && voiceMapQuery.data?.voice_map) {
       setVoiceMapValues(voiceMapQuery.data.voice_map);
+      hasInitializedVoiceMap.current = true;
     }
   }, [voiceMapQuery.data]);
 
