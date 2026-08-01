@@ -10,11 +10,10 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string | number>) => {
       if (opts) {
-        const interpolated = Object.entries(opts).reduce(
-          (acc, [k, v]) => acc.replace(`{{${k}}}`, String(v)),
-          key,
-        );
-        return interpolated;
+        const suffix = Object.entries(opts)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(",");
+        return `${key}(${suffix})`;
       }
       return key;
     },
@@ -61,7 +60,8 @@ describe("SourcesPanel", () => {
     }
 
     expect(screen.getByText("Product Guide")).toBeInTheDocument();
-    expect(screen.getByText("sourcesPanel.pageBadge")).toBeInTheDocument();
+    expect(screen.getByText("sourcesPanel.pageBadge(n=3)")).toBeInTheDocument();
+    expect(screen.getByText("sourcesPanel.pageBadge(n=7)")).toBeInTheDocument();
   });
 
   it('status="empty-pre-question" renders the no-sources-yet heading with no destructive styling', () => {
@@ -105,7 +105,7 @@ describe("AvatarInputBar", () => {
         rateLimitSeconds={12}
       />,
     );
-    expect(screen.getByText("Rate limited — retry in 12s")).toBeInTheDocument();
+    expect(screen.getByText("rateLimited(seconds=12)")).toBeInTheDocument();
     expect(container.querySelector("textarea")).not.toBeDisabled();
     const sendButton = container.querySelector(".h-11.w-11");
     expect(sendButton).toHaveClass("pointer-events-none");
