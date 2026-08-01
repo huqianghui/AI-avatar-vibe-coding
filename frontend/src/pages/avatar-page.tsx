@@ -1,8 +1,20 @@
 /**
- * AvatarPage (Phase 32, ANON-04) -- the anonymous, no-login landing page at
- * `/`. Composes the anonymous session/chat hooks (Wave 3/4) with the
- * `SourcesPanel` / `AvatarInputBar` / `MicPermissionDialog` components
- * (Task 2) into the full grounded-Q&A experience.
+ * AvatarPage (Phase 32 ANON-04, extended Phase 33 PERS-02) -- the landing
+ * page at `/`. Composes the anonymous session/chat hooks with the
+ * `SourcesPanel` / `AvatarInputBar` / `MicPermissionDialog` components into
+ * the full grounded-Q&A experience.
+ *
+ * Auth-aware routing (Phase 33, PERS-02): both `useAnonymousAvatarSession`
+ * and `usePersonalizedAvatarSession` are called unconditionally on every
+ * render (React rules-of-hooks -- only their *results* are selected
+ * conditionally via `isAuthenticated ? x : y`). The anonymous session token
+ * always powers `useAnonymousVoiceLive` regardless of auth state, per D-13
+ * ("Voice/WebRTC flow is unconditionally reused for both anonymous and
+ * personalized users -- zero new voice code"); only the *text chat*
+ * session/mutation source swaps to the personalized pipeline when logged
+ * in. The header's right-hand slot swaps from the "登录" button to
+ * `{user.email}` + a "专属模式" `Badge` (D-13/D-14) -- no CRM field,
+ * preference tag, or match-status content is ever read or rendered here.
  *
  * Structural separation (AI Avatar Domain Rule #6 / ANON-03 success
  * criterion): the transcript bubble only ever receives `data.answer`, and
@@ -18,9 +30,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogIn } from "lucide-react";
+import { LogIn, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Sheet, SheetContent, SheetTrigger } from "@/components/ui";
+import { Badge, Button, Sheet, SheetContent, SheetTrigger } from "@/components/ui";
 import { AvatarView } from "@/components/voice/avatar-view";
 import { VoiceTranscript } from "@/components/voice/voice-transcript";
 import {
@@ -30,8 +42,12 @@ import {
 } from "@/components/avatar/sources-panel";
 import { AvatarInputBar, type MicUiState } from "@/components/avatar/avatar-input-bar";
 import { MicPermissionDialog } from "@/components/avatar/mic-permission-dialog";
+import { useMe } from "@/hooks/use-auth";
+import { useAuthStore } from "@/stores/auth-store";
 import { useAnonymousAvatarSession } from "@/hooks/use-anonymous-avatar-session";
 import { useAnonymousAvatarChat } from "@/hooks/use-anonymous-avatar-chat";
+import { usePersonalizedAvatarSession } from "@/hooks/use-personalized-avatar-session";
+import { usePersonalizedAvatarChat } from "@/hooks/use-personalized-avatar-chat";
 import { useAnonymousVoiceLive } from "@/hooks/use-anonymous-voice-live";
 import { AnonymousApiError, type ChatResponse } from "@/api/public-avatar";
 import type { AudioState, TranscriptSegment, VoiceConnectionState } from "@/types/voice-live";
@@ -66,14 +82,39 @@ export default function AvatarPage() {
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
   const rateLimitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const { isAuthenticated, user } = useAuthStore();
+
+  // `AvatarPage` is a public route (not `ProtectedRoute`-wrapped), so unlike
+  // guarded pages it never otherwise calls `useMe()` -- on a hard reload,
+  // the in-memory auth store hydrates `token` from localStorage but leaves
+  // `user` as `null` until something fetches `/auth/me`. Call it here
+  // (side-effect only, via `setAuth()` inside its queryFn) so a logged-in
+  // visitor's email is available for the personalization badge below even
+  // on a fresh load. No-op when there's no token (`useMe`'s query is
+  // `enabled: !!token`).
+  useMe();
+
   const { sessionToken, renewSession } = useAnonymousAvatarSession();
 
   const handleUnauthorized = useCallback(() => {
     void renewSession();
   }, [renewSession]);
 
-  const chatMutation = useAnonymousAvatarChat(sessionToken, handleUnauthorized);
+  const anonymousChatMutation = useAnonymousAvatarChat(sessionToken, handleUnauthorized);
 
+  // Personalized session/chat hooks are called unconditionally too (rules of
+  // hooks) -- only which *result* powers `chatMutation` below is selected via
+  // `isAuthenticated`. See module docstring.
+  const { session: personalizedSession } = usePersonalizedAvatarSession();
+  const personalizedChatMutation = usePersonalizedAvatarChat(
+    personalizedSession?.session_id ?? null,
+  );
+
+  const chatMutation = isAuthenticated ? personalizedChatMutation : anonymousChatMutation;
+
+  // Voice/WebRTC is unconditionally powered by the ANONYMOUS session token
+  // regardless of auth state (D-13) -- personalized mode never negotiates its
+  // own voice session in this phase.
   const voiceLive = useAnonymousVoiceLive(sessionToken ?? "", {
     locale: i18n.language,
   });
@@ -214,14 +255,27 @@ export default function AvatarPage() {
     <div className="flex h-screen flex-col">
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
         <span className="text-sm font-semibold">{t("sourcesPanel.title")}</span>
-        <Button
-          variant="ghost"
-          className="font-normal"
-          onClick={() => navigate("/login")}
-        >
-          <LogIn className="mr-1.5 h-4 w-4" />
-          {t("login")}
-        </Button>
+        {isAuthenticated && user ? (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="border-primary/20 bg-primary/10 text-primary text-sm font-normal"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("personalizationBadge")}
+            </Badge>
+            <span className="text-sm text-muted-foreground">{user.email}</span>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            className="font-normal"
+            onClick={() => navigate("/login")}
+          >
+            <LogIn className="mr-1.5 h-4 w-4" />
+            {t("login")}
+          </Button>
+        )}
       </header>
 
       <div className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-[1fr_300px] md:gap-4 lg:grid-cols-[1fr_360px] lg:gap-6">

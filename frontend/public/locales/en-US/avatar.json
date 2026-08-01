@@ -26,5 +26,6 @@
   "toast": {
     "rateLimited": "Too many requests — please wait a moment."
   },
-  "login": "Login"
+  "login": "Login",
+  "personalizationBadge": "Personalized"
 }
