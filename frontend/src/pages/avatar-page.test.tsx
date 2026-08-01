@@ -98,6 +98,36 @@ vi.mock("@/hooks/use-anonymous-voice-live", () => ({
   }),
 }));
 
+// Auth-aware routing mocks (Phase 33, PERS-02).
+let mockIsAuthenticated = false;
+let mockAuthUser: { email: string } | null = null;
+vi.mock("@/stores/auth-store", () => ({
+  useAuthStore: () => ({
+    isAuthenticated: mockIsAuthenticated,
+    user: mockAuthUser,
+  }),
+}));
+
+let mockPersonalizedSession: { session_id: string; expires_at: string } | null = null;
+const mockPersonalizedRenewSession = vi.fn();
+vi.mock("@/hooks/use-personalized-avatar-session", () => ({
+  usePersonalizedAvatarSession: () => ({
+    session: mockPersonalizedSession,
+    isLoading: false,
+    error: null,
+    renewSession: mockPersonalizedRenewSession,
+  }),
+}));
+
+const mockPersonalizedMutate = vi.fn();
+let mockPersonalizedIsPending = false;
+vi.mock("@/hooks/use-personalized-avatar-chat", () => ({
+  usePersonalizedAvatarChat: () => ({
+    mutate: mockPersonalizedMutate,
+    isPending: mockPersonalizedIsPending,
+  }),
+}));
+
 function wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter initialEntries={["/"]}>{children}</MemoryRouter>;
 }
@@ -111,6 +141,10 @@ describe("AvatarPage", () => {
     mockConnectionState = "disconnected";
     mockAudioState = "idle";
     mockIsMuted = false;
+    mockIsAuthenticated = false;
+    mockAuthUser = null;
+    mockPersonalizedSession = null;
+    mockPersonalizedIsPending = false;
   });
 
   it("renders at / without any auth context and does not redirect", () => {
@@ -457,5 +491,97 @@ describe("AvatarPage", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("AvatarPage — authenticated user (Phase 33, PERS-02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionToken = "anon-token-123";
+    mockConnect.mockResolvedValue(undefined);
+    mockIsPending = false;
+    mockConnectionState = "disconnected";
+    mockAudioState = "idle";
+    mockIsMuted = false;
+    mockIsAuthenticated = true;
+    mockAuthUser = { email: "test@x.com" };
+    mockPersonalizedSession = { session_id: "psess-1", expires_at: "2026-08-01T12:00:00Z" };
+    mockPersonalizedIsPending = false;
+  });
+
+  it('renders the "专属模式" badge + user email instead of the 登录 button when isAuthenticated is true', () => {
+    render(<AvatarPage />, { wrapper });
+
+    expect(screen.getByText("personalizationBadge")).toBeInTheDocument();
+    expect(screen.getByText("test@x.com")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /login/ })).not.toBeInTheDocument();
+  });
+
+  it("routes chat through usePersonalizedAvatarChat, never the anonymous chat mutation", async () => {
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    await user.type(screen.getByRole("textbox"), "What is my order status?");
+    await user.keyboard("{Enter}");
+
+    expect(mockPersonalizedMutate).toHaveBeenCalledWith(
+      "What is my order status?",
+      expect.any(Object),
+    );
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it("renders no CRM field, preference tag, or match-status content anywhere on the page", () => {
+    const { container } = render(<AvatarPage />, { wrapper });
+
+    const forbidden = [
+      "crm_notes",
+      "contact_person",
+      "customer_name",
+      "match",
+      "已匹配",
+      "未匹配",
+      "偏好标签",
+    ];
+    const text = container.textContent ?? "";
+    for (const term of forbidden) {
+      expect(text).not.toContain(term);
+    }
+  });
+
+  it("still calls the anonymous voice-live connect unconditionally (D-13 — zero new voice code)", async () => {
+    render(<AvatarPage />, { wrapper });
+
+    await waitFor(() => expect(mockConnect).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("AvatarPage — logged-out user regression guard (Phase 33, PERS-02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionToken = "anon-token-123";
+    mockConnect.mockResolvedValue(undefined);
+    mockIsPending = false;
+    mockConnectionState = "disconnected";
+    mockAudioState = "idle";
+    mockIsMuted = false;
+    mockIsAuthenticated = false;
+    mockAuthUser = null;
+    mockPersonalizedSession = null;
+    mockPersonalizedIsPending = false;
+  });
+
+  it("still renders the 登录 button and routes chat through the anonymous mutation when logged out", async () => {
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    expect(screen.queryByText("personalizationBadge")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /login/ })).toBeInTheDocument();
+
+    await user.type(screen.getByRole("textbox"), "Hello");
+    await user.keyboard("{Enter}");
+
+    expect(mockMutate).toHaveBeenCalledWith("Hello", expect.any(Object));
+    expect(mockPersonalizedMutate).not.toHaveBeenCalled();
   });
 });

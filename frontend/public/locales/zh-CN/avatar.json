@@ -26,5 +26,6 @@
   "toast": {
     "rateLimited": "请求过于频繁，请稍候再试"
   },
-  "login": "登录"
+  "login": "登录",
+  "personalizationBadge": "专属模式"
 }
