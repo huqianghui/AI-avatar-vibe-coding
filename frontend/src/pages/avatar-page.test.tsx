@@ -7,7 +7,7 @@
  * (those are covered by their own dedicated test files).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
@@ -66,25 +66,34 @@ vi.mock("@/hooks/use-anonymous-avatar-session", () => ({
 }));
 
 const mockMutate = vi.fn();
+let mockIsPending = false;
+let capturedOnUnauthorized: (() => void) | null = null;
 vi.mock("@/hooks/use-anonymous-avatar-chat", () => ({
-  useAnonymousAvatarChat: () => ({
-    mutate: mockMutate,
-    isPending: false,
-  }),
+  useAnonymousAvatarChat: (_token: string | null, onUnauthorized: () => void) => {
+    capturedOnUnauthorized = onUnauthorized;
+    return {
+      mutate: mockMutate,
+      isPending: mockIsPending,
+    };
+  },
 }));
 
 const mockConnect = vi.fn();
+const mockToggleMute = vi.fn();
+let mockConnectionState: "disconnected" | "connecting" | "connected" = "disconnected";
+let mockAudioState: "idle" | "listening" | "speaking" = "idle";
+let mockIsMuted = false;
 vi.mock("@/hooks/use-anonymous-voice-live", () => ({
   useAnonymousVoiceLive: () => ({
     connect: mockConnect,
     disconnect: vi.fn(),
-    toggleMute: vi.fn(),
+    toggleMute: mockToggleMute,
     sendTextMessage: vi.fn(),
     sendAudio: vi.fn(),
     send: vi.fn(),
-    isMuted: false,
-    connectionState: "disconnected",
-    audioState: "idle",
+    isMuted: mockIsMuted,
+    connectionState: mockConnectionState,
+    audioState: mockAudioState,
     avatarSdpCallbackRef: { current: null },
   }),
 }));
@@ -98,6 +107,10 @@ describe("AvatarPage", () => {
     vi.clearAllMocks();
     mockSessionToken = "anon-token-123";
     mockConnect.mockResolvedValue(undefined);
+    mockIsPending = false;
+    mockConnectionState = "disconnected";
+    mockAudioState = "idle";
+    mockIsMuted = false;
   });
 
   it("renders at / without any auth context and does not redirect", () => {
@@ -207,5 +220,242 @@ describe("AvatarPage", () => {
     });
     expect(screen.getByText("micDialog.title")).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toBeEnabled();
+  });
+
+  it("resolves mic UI state to disabled while connecting", () => {
+    mockConnectionState = "connecting";
+    render(<AvatarPage />, { wrapper });
+
+    const micButton = screen.getByRole("button", { name: "input.micIdleAriaLabel" });
+    expect(micButton).toBeDisabled();
+  });
+
+  it("resolves mic UI state to muted when voiceLive.isMuted is true", () => {
+    mockConnectionState = "connected";
+    mockIsMuted = true;
+    render(<AvatarPage />, { wrapper });
+
+    const micButton = screen.getByRole("button", { name: "input.micIdleAriaLabel" });
+    expect(micButton.className).toContain("bg-muted-foreground");
+  });
+
+  it("resolves mic UI state to listening when voiceLive.audioState is listening", () => {
+    mockConnectionState = "connected";
+    mockAudioState = "listening";
+    render(<AvatarPage />, { wrapper });
+
+    const micButton = screen.getByRole("button", { name: "input.micIdleAriaLabel" });
+    expect(micButton.className).toContain("bg-voice-speaking");
+  });
+
+  it("resolves mic UI state to speaking when voiceLive.audioState is speaking", () => {
+    mockConnectionState = "connected";
+    mockAudioState = "speaking";
+    render(<AvatarPage />, { wrapper });
+
+    const micButton = screen.getByRole("button", { name: "input.micIdleAriaLabel" });
+    expect(micButton.className).toContain("bg-voice-warning");
+  });
+
+  it("clicking the mic button while already connected toggles mute instead of reconnecting", async () => {
+    const user = userEvent.setup();
+    mockConnectionState = "connected";
+    render(<AvatarPage />, { wrapper });
+
+    // The mount effect always attempts one connect while sessionToken exists
+    // (real hook only reports "connected" after that resolves) -- clicking
+    // the mic button while already connected must not trigger a second one.
+    await waitFor(() => expect(mockConnect).toHaveBeenCalledTimes(1));
+
+    const micButton = screen.getByRole("button", { name: "input.micIdleAriaLabel" });
+    await user.click(micButton);
+
+    expect(mockToggleMute).toHaveBeenCalledTimes(1);
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows stillDenied messaging after a second consecutive mic connect failure", async () => {
+    mockConnect.mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("micDialog.stillDenied")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "micDialog.retry" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("micDialog.stillDenied")).toBeInTheDocument();
+    });
+  });
+
+  it('"Use text instead" closes the mic dialog and focuses the textarea', async () => {
+    mockConnect.mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "micDialog.useTextInstead" }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("textbox")).toHaveFocus();
+    });
+  });
+
+  it("does not call mutate when the message is only whitespace", async () => {
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    await user.type(screen.getByRole("textbox"), "   ");
+    await user.keyboard("{Enter}");
+
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it("does not call mutate again while a chat mutation is already pending", async () => {
+    mockIsPending = true;
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    await user.type(screen.getByRole("textbox"), "Another question");
+    await user.keyboard("{Enter}");
+
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it("shows the SourcesPanel loading state while the chat mutation is pending", () => {
+    mockIsPending = true;
+    render(<AvatarPage />, { wrapper });
+
+    expect(screen.queryByText("sourcesPanel.emptyNoMatch.heading")).not.toBeInTheDocument();
+  });
+
+  it("on a non-429 chat error, shows a generic connection-failed toast and keeps send enabled", async () => {
+    const { toast } = await import("sonner");
+    const user = userEvent.setup();
+    mockMutate.mockImplementation(
+      (_message: string, options: { onError: (err: Error) => void }) => {
+        options.onError(new Error("network failure"));
+      },
+    );
+
+    render(<AvatarPage />, { wrapper });
+    await user.type(screen.getByRole("textbox"), "Hello");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("error.connectionFailed");
+    });
+    expect(screen.getByRole("button", { name: "input.sendAriaLabel" })).toBeEnabled();
+  });
+
+  it("uses AnonymousApiError.retryAfterSeconds for the countdown when present", async () => {
+    const { AnonymousApiError } = await import("@/api/public-avatar");
+    const user = userEvent.setup();
+    mockMutate.mockImplementation(
+      (_message: string, options: { onError: (err: Error) => void }) => {
+        options.onError(new AnonymousApiError("send anonymous chat message failed: 429", 429, 5));
+      },
+    );
+
+    render(<AvatarPage />, { wrapper });
+    await user.type(screen.getByRole("textbox"), "Hello");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(screen.getByText("rateLimited(seconds=5)")).toBeInTheDocument();
+    });
+  });
+
+  it('renders "empty-no-match" sources state when a non-refusal answer has zero citations', async () => {
+    const user = userEvent.setup();
+    mockMutate.mockImplementation(
+      (_message: string, options: { onSuccess: (data: unknown) => void }) => {
+        options.onSuccess({
+          answer: "An answer with no sources",
+          citations: [],
+          is_refusal: false,
+        });
+      },
+    );
+
+    render(<AvatarPage />, { wrapper });
+    await user.type(screen.getByRole("textbox"), "Any question");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(screen.getByText("sourcesPanel.emptyNoMatch.heading")).toBeInTheDocument();
+    });
+  });
+
+  it("clicking the login button navigates to /login", async () => {
+    const user = userEvent.setup();
+    render(<AvatarPage />, { wrapper });
+
+    await user.click(screen.getByRole("button", { name: /login/ }));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
+  });
+
+  it("calls renewSession when the chat hook reports an unauthorized (401) session", () => {
+    render(<AvatarPage />, { wrapper });
+
+    capturedOnUnauthorized?.();
+
+    expect(mockRenewSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking the mic button while disconnected attempts a mic connect", async () => {
+    const user = userEvent.setup();
+    // Prevent the mount effect from auto-attempting a connect so the click
+    // is the only call under test.
+    mockSessionToken = null;
+    render(<AvatarPage />, { wrapper });
+
+    const micButton = screen.getByRole("button", { name: "input.micIdleAriaLabel" });
+    await user.click(micButton);
+
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts down rate-limit seconds and clears back to null (re-enabling send) at zero", () => {
+    vi.useFakeTimers();
+    try {
+      mockMutate.mockImplementation(
+        (_message: string, options: { onError: (err: Error) => void }) => {
+          options.onError(new Error("send anonymous chat message failed: 429"));
+        },
+      );
+
+      render(<AvatarPage />, { wrapper });
+      const textarea = screen.getByRole("textbox");
+      fireEvent.change(textarea, { target: { value: "Hello" } });
+      fireEvent.keyDown(textarea, { key: "Enter" });
+
+      expect(screen.getByText("rateLimited(seconds=30)")).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("rateLimited(seconds=29)")).toBeInTheDocument();
+
+      // Fast-forward the remaining seconds down to and past zero.
+      act(() => {
+        vi.advanceTimersByTime(29_000);
+      });
+
+      expect(screen.queryByText(/rateLimited/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "input.sendAriaLabel" })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

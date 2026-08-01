@@ -15,6 +15,7 @@ from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.services.anonymous_session_service import (
     create_anonymous_session,
+    touch_session,
     verify_anonymous_token,
 )
 from app.services.rate_limit import limiter_ip
@@ -157,6 +158,21 @@ class TestVerifyAnonymousToken:
             raise AssertionError("Expected UNAUTHORIZED")
         except AppException as exc:
             assert exc.status_code == 401
+
+
+class TestTouchSession:
+    async def test_updates_last_activity_and_increments_request_count(self, db_session):
+        """`touch_session` bumps `last_activity_at` and `request_count` but does
+        NOT extend `expires_at` (fixed-window renewal decision)."""
+        session, _ = await create_anonymous_session(db_session, "203.0.113.20")
+        original_expires_at = session.expires_at
+        original_count = session.request_count
+
+        await touch_session(db_session, session)
+
+        assert session.request_count == original_count + 1
+        assert session.last_activity_at is not None
+        assert session.expires_at == original_expires_at
 
 
 class TestCreateSessionEndpoint:
