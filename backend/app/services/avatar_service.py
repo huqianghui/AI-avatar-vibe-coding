@@ -62,10 +62,20 @@ async def handle_anonymous_turn(
                 response_id = event.response_id
         return "".join(chunks), response_id
 
-    (answer_text, response_id), citations = await asyncio.gather(
-        collect_agent_text(),
-        retrieve_citations(public_config.connection_target, public_config.index_name, message),
-    )
+    try:
+        (answer_text, response_id), citations = await asyncio.gather(
+            collect_agent_text(),
+            retrieve_citations(
+                public_config.connection_target, public_config.index_name, message
+            ),
+        )
+    except Exception:
+        # Agent stream or citation retrieval failed -- degrade to the fixed
+        # refusal response instead of propagating and silently dropping the
+        # audit-log write below. ANON-05 / T-32-08 require every anonymous
+        # turn to be auditable, and a half-formed/unfiltered answer must
+        # never reach the visitor as if it were grounded (T-32-07).
+        answer_text, response_id, citations = "", None, []
 
     is_refusal = len(citations) == 0
     final_answer = (

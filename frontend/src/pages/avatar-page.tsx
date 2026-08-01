@@ -33,7 +33,7 @@ import { MicPermissionDialog } from "@/components/avatar/mic-permission-dialog";
 import { useAnonymousAvatarSession } from "@/hooks/use-anonymous-avatar-session";
 import { useAnonymousAvatarChat } from "@/hooks/use-anonymous-avatar-chat";
 import { useAnonymousVoiceLive } from "@/hooks/use-anonymous-voice-live";
-import type { ChatResponse } from "@/api/public-avatar";
+import { AnonymousApiError, type ChatResponse } from "@/api/public-avatar";
 import type { AudioState, TranscriptSegment, VoiceConnectionState } from "@/types/voice-live";
 
 function resolveMicUiState(
@@ -63,6 +63,8 @@ export default function AvatarPage() {
   const [micDialogOpen, setMicDialogOpen] = useState(false);
   const [micStillDenied, setMicStillDenied] = useState(false);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
+  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
+  const rateLimitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { sessionToken, renewSession } = useAnonymousAvatarSession();
 
@@ -118,7 +120,34 @@ export default function AvatarPage() {
 
   const handleUseTextInstead = useCallback(() => {
     setMicDialogOpen(false);
-    textareaRef.current?.focus();
+    // Defer the focus call past the current synchronous handler -- Radix's
+    // Dialog focus-trap is still active at this exact point (it only
+    // releases once React re-renders with `open=false`), so calling
+    // `.focus()` here immediately gets stolen back into the dialog.
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }, []);
+
+  // Rate-limit countdown: on a 429 chat response, disable only the send
+  // action (text input stays usable per UI-SPEC) until the countdown hits 0.
+  const startRateLimitCountdown = useCallback((seconds: number) => {
+    if (rateLimitTimerRef.current) clearInterval(rateLimitTimerRef.current);
+    setRateLimitSeconds(seconds);
+    rateLimitTimerRef.current = setInterval(() => {
+      setRateLimitSeconds((prev) => {
+        if (prev === null || prev <= 1) {
+          if (rateLimitTimerRef.current) clearInterval(rateLimitTimerRef.current);
+          rateLimitTimerRef.current = null;
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (rateLimitTimerRef.current) clearInterval(rateLimitTimerRef.current);
+    };
   }, []);
 
   const handleSend = useCallback(() => {
@@ -159,12 +188,17 @@ export default function AvatarPage() {
       onError: (err: Error) => {
         if (/\b429\b/.test(err.message)) {
           toast.error(t("toast.rateLimited"));
+          const retryAfterSeconds =
+            err instanceof AnonymousApiError && err.retryAfterSeconds
+              ? err.retryAfterSeconds
+              : 30;
+          startRateLimitCountdown(retryAfterSeconds);
         } else {
           toast.error(tVoice("error.connectionFailed"));
         }
       },
     });
-  }, [inputValue, chatMutation, t, tVoice]);
+  }, [inputValue, chatMutation, t, tVoice, startRateLimitCountdown]);
 
   const displaySourcesStatus: SourcesPanelStatus = chatMutation.isPending
     ? "loading"
@@ -213,6 +247,7 @@ export default function AvatarPage() {
             onSend={handleSend}
             onMicClick={handleMicClick}
             micState={micUiState}
+            rateLimitSeconds={rateLimitSeconds}
             textareaRef={textareaRef}
           />
         </div>

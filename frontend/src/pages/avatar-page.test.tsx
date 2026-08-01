@@ -172,6 +172,24 @@ describe("AvatarPage", () => {
     expect(screen.getByText("sourcesPanel.emptyNoMatch.heading")).toBeInTheDocument();
   });
 
+  it("on a 429 chat error, disables the send button while keeping the textarea enabled", async () => {
+    const user = userEvent.setup();
+    mockMutate.mockImplementation(
+      (_message: string, options: { onError: (err: Error) => void }) => {
+        options.onError(new Error("send anonymous chat message failed: 429"));
+      },
+    );
+
+    render(<AvatarPage />, { wrapper });
+    await user.type(screen.getByRole("textbox"), "Hello");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "input.sendAriaLabel" })).toBeDisabled();
+    });
+    expect(screen.getByRole("textbox")).toBeEnabled();
+  });
+
   it("opens MicPermissionDialog automatically on a getUserMedia denial, and keeps the text input enabled", async () => {
     const getUserMediaMock = vi
       .fn()

@@ -50,9 +50,35 @@ export interface WebrtcSessionResponse {
   avatar_warning?: string | null;
 }
 
+/**
+ * Thrown by `parseOrThrow` on a non-2xx response. Preserves the HTTP status
+ * and, when present, the `Retry-After` header (seconds) so callers can drive
+ * a rate-limit countdown UI without re-parsing `err.message` (Phase 32-05).
+ * Still a plain `Error` subclass -- existing `instanceof Error` /
+ * `err.message` regex checks (e.g. `use-anonymous-avatar-chat.ts`'s 401
+ * detection) continue to work unchanged.
+ */
+export class AnonymousApiError extends Error {
+  status: number;
+  retryAfterSeconds?: number;
+
+  constructor(message: string, status: number, retryAfterSeconds?: number) {
+    super(message);
+    this.name = "AnonymousApiError";
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
 async function parseOrThrow<T>(res: Response, action: string): Promise<T> {
   if (!res.ok) {
-    throw new Error(`${action} failed: ${res.status}`);
+    const retryAfterHeader = res.headers.get("Retry-After");
+    const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : undefined;
+    throw new AnonymousApiError(
+      `${action} failed: ${res.status}`,
+      res.status,
+      Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined,
+    );
   }
   return (await res.json()) as T;
 }
