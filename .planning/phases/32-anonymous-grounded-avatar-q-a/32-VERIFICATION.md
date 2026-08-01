@@ -1,12 +1,17 @@
 ---
 phase: 32-anonymous-grounded-avatar-q-a
 verified: 2026-08-01T08:18:27Z
-status: gaps_found
-score: 5/6 must-haves verified
-overrides_applied: 0
+status: passed
+score: 5/6 must-haves verified (1 gap accepted by user override)
+overrides_applied: 1
+override_note: >
+  User decision 2026-08-01: knowledge-source binding is handled by Foundry IQ /
+  Web IQ directly ("这个就是通过foundaryIQ 和 webIQ来做，不需要额外的配置") —
+  no in-app admin configuration entry point is required. The admin-UI decision
+  in CONTEXT.md is superseded; gap accepted, phase passes.
 gaps:
   - truth: "Anonymous grounded Q&A is usable in a real/fresh deployment (an admin can configure which agent/KB/avatar the public page uses)"
-    status: failed
+    status: accepted_by_override
     reason: >
       CONTEXT.md locks the decision "公共知识库绑定由 Admin 界面配置 ... 复用 Phase 17
       的 KB 列表/选择 UI；不用环境变量硬编码" (admin-UI-configured PublicKnowledgeConfig,

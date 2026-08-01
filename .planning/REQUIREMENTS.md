@@ -10,11 +10,11 @@
 
 ### 匿名问答 (ANON)
 
-- [ ] **ANON-01**: 匿名访客无需登录即可打开 avatar 页面并以文本向数字人提问
-- [ ] **ANON-02**: 匿名回答基于官网内容知识库（Azure AI Foundry IQ 索引）grounding，仅使用授权知识来源
-- [ ] **ANON-03**: 每个回答附来源引用（page + document link），且与回答内容作为独立 UI 元素分离展示
-- [ ] **ANON-04**: 匿名访客可获得数字人语音回答（Voice Live avatar）
-- [ ] **ANON-05**: 匿名端点具备限流与滥用防护（slowapi 限流 + 会话配额 + 交互审计日志）
+- [x] **ANON-01**: 匿名访客无需登录即可打开 avatar 页面并以文本向数字人提问
+- [x] **ANON-02**: 匿名回答基于官网内容知识库（Azure AI Foundry IQ 索引）grounding，仅使用授权知识来源
+- [x] **ANON-03**: 每个回答附来源引用（page + document link），且与回答内容作为独立 UI 元素分离展示
+- [x] **ANON-04**: 匿名访客可获得数字人语音回答（Voice Live avatar）
+- [x] **ANON-05**: 匿名端点具备限流与滥用防护（slowapi 限流 + 会话配额 + 交互审计日志）
 
 ### 登录个性化 (PERS)
 
@@ -52,11 +52,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANON-01 | Phase 32 | Pending |
-| ANON-02 | Phase 32 | Pending |
-| ANON-03 | Phase 32 | Pending |
-| ANON-04 | Phase 32 | Pending |
-| ANON-05 | Phase 32 | Pending |
+| ANON-01 | Phase 32 | Complete |
+| ANON-02 | Phase 32 | Complete |
+| ANON-03 | Phase 32 | Complete |
+| ANON-04 | Phase 32 | Complete |
+| ANON-05 | Phase 32 | Complete |
 | PERS-01 | Phase 33 | Pending |
 | PERS-02 | Phase 33 | Pending |
 | PERS-03 | Phase 33 | Pending |
