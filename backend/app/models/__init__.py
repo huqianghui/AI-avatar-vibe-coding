@@ -1,3 +1,5 @@
+from app.models.anonymous_avatar_session import AnonymousAvatarSession
+from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.base import Base, TimestampMixin
 from app.models.conference import ConferenceAudienceHcp
 from app.models.dry_run import DryRun, DryRunMessage
@@ -9,6 +11,7 @@ from app.models.meta_skill import MetaSkill
 from app.models.prompt_optimization_run import PromptOptimizationRun
 from app.models.prompt_template import PromptTemplate
 from app.models.prompt_version import PromptVersion
+from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.models.scenario import Scenario
 from app.models.scenario_group import (
     ScenarioGroup,
@@ -30,6 +33,9 @@ __all__ = [
     "Base",
     "TimestampMixin",
     "User",
+    "AnonymousAvatarSession",
+    "AvatarInteractionLog",
+    "PublicKnowledgeConfig",
     "DryRun",
     "DryRunMessage",
     "HcpKnowledgeConfig",
