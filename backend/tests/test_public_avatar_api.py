@@ -5,17 +5,48 @@ Covers session token issuance/verification (Task 1) and the chat endpoint
 """
 
 from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
+import pytest
 from jose import jwt
 
 from app.config import get_settings
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
+from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.services.anonymous_session_service import (
     create_anonymous_session,
     verify_anonymous_token,
 )
+from app.services.rate_limit import limiter_ip
 
 settings = get_settings()
+
+
+@pytest.fixture(autouse=True)
+def _reset_limiter_storage():
+    """Prevent cross-test pollution: `client` always presents the same fixed
+    ASGITransport test IP, so every test in this file shares one rate-limit
+    bucket unless reset (mirrors test_rate_limiting.py's fixture)."""
+    limiter_ip.reset()
+    yield
+    limiter_ip.reset()
+
+
+def _make_public_config() -> PublicKnowledgeConfig:
+    return PublicKnowledgeConfig(
+        agent_id="test-agent",
+        agent_version="1",
+        connection_name="conn",
+        connection_target="https://search.example",
+        index_name="kb1",
+        is_active=True,
+    )
+
+
+async def _anon_session_and_header(client) -> dict:
+    response = await client.post("/public/avatar/session")
+    token = response.json()["session_token"]
+    return {"X-Anon-Session": token}
 
 
 class TestCreateAnonymousSession:
@@ -150,3 +181,80 @@ class TestCreateSessionEndpoint:
         )
 
         assert response.status_code == 201
+
+
+class TestChatEndpoint:
+    """POST /public/avatar/chat (Phase 32, Task 3)."""
+
+    async def test_returns_200_with_answer_citations_is_refusal(self, client):
+        headers = await _anon_session_and_header(client)
+        result = {
+            "answer": "Grounded answer.",
+            "citations": [{"title": "T1", "url": "https://a", "page": 1}],
+            "is_refusal": False,
+            "response_id": "resp-1",
+        }
+
+        with (
+            patch(
+                "app.api.public_avatar.get_active_public_config",
+                AsyncMock(return_value=_make_public_config()),
+            ),
+            patch(
+                "app.api.public_avatar.handle_anonymous_turn",
+                AsyncMock(return_value=result),
+            ),
+        ):
+            response = await client.post(
+                "/public/avatar/chat", json={"message": "What is BeiGene?"}, headers=headers
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["answer"] == "Grounded answer."
+        assert body["citations"] == [{"title": "T1", "url": "https://a", "page": 1}]
+        assert body["is_refusal"] is False
+
+    async def test_missing_session_header_returns_401_structured_error(self, client):
+        response = await client.post("/public/avatar/chat", json={"message": "Hello"})
+
+        assert response.status_code == 401
+        body = response.json()
+        assert "code" in body
+        assert "message" in body
+
+    async def test_message_over_2000_chars_returns_422(self, client):
+        headers = await _anon_session_and_header(client)
+
+        response = await client.post(
+            "/public/avatar/chat", json={"message": "x" * 2001}, headers=headers
+        )
+
+        assert response.status_code == 422
+
+    async def test_exceeding_ip_rate_limit_returns_429_with_rate_limited_code(self, client):
+        """Reuses Plan 01's structured 429 handler — confirms wiring only, not
+        the limiter's own correctness (already covered by test_rate_limiting.py)."""
+        headers = await _anon_session_and_header(client)
+        limit_count = int(settings.anon_rate_limit_chat_ip.split("/")[0])
+        result = {"answer": "ok", "citations": [], "is_refusal": True, "response_id": ""}
+
+        statuses = []
+        with (
+            patch(
+                "app.api.public_avatar.get_active_public_config",
+                AsyncMock(return_value=_make_public_config()),
+            ),
+            patch(
+                "app.api.public_avatar.handle_anonymous_turn",
+                AsyncMock(return_value=result),
+            ),
+        ):
+            for _ in range(limit_count + 1):
+                response = await client.post(
+                    "/public/avatar/chat", json={"message": "Hello"}, headers=headers
+                )
+                statuses.append(response.status_code)
+
+        assert statuses[-1] == 429
+        assert response.json()["code"] == "RATE_LIMITED"

@@ -13,7 +13,7 @@ from app.database import get_db
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.user import User
 from app.services.anonymous_session_service import verify_anonymous_token
-from app.utils.exceptions import AppException
+from app.utils.exceptions import AppException, unauthorized
 
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_prefix}/auth/login")
@@ -54,12 +54,19 @@ def require_role(role: str) -> Callable:
 
 
 async def get_anonymous_session(
-    x_anon_session: str = Header(..., alias="X-Anon-Session"),
+    x_anon_session: str | None = Header(None, alias="X-Anon-Session"),
     db: AsyncSession = Depends(get_db),
 ) -> AnonymousAvatarSession:
     """Anonymous trust boundary dependency (Phase 32, ANON-01) — a NEW trust
     boundary, not JWT auth made optional. Validates the `X-Anon-Session`
-    header against the live `AnonymousAvatarSession` row."""
+    header against the live `AnonymousAvatarSession` row.
+
+    The header is declared optional (default `None`) rather than required so
+    a missing header raises the project's structured 401 via `unauthorized()`
+    instead of FastAPI's generic 422 request-validation error — an absent
+    session is an auth failure, not a malformed request."""
+    if x_anon_session is None:
+        unauthorized("Missing anonymous session")
     return await verify_anonymous_token(db, x_anon_session)
 
 
