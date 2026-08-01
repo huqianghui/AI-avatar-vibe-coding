@@ -21,4 +21,23 @@ export const UNTRANSLATED_WHITELIST: readonly string[] = [
   // Brand/product names, unchanged across locales (D-03).
   "common.appName",
   "common.poweredBy",
+  // admin.json (34-02): bare AI model version codes with no translatable
+  // content (pure alphanumeric SKU identifiers -- "GPT-4o", "GPT-4.1",
+  // "GPT-5" carry no generic English word to localize, unlike sibling
+  // entries such as modelGptRealtime/modelGpt5Chat/modelGpt5Mini which were
+  // genuinely translated instead of whitelisted).
+  "admin.hcp.modelGpt4o",
+  "admin.hcp.modelGpt41",
+  "admin.hcp.modelGpt5",
+  // admin.json (34-02): "HCP" is this platform's own domain abbreviation
+  // (Healthcare Professional), used as a bare table-column header here;
+  // kept as the established untranslated term used throughout the app.
+  "admin.scenarios.table.hcp",
+  // admin.json (34-02): bare Azure/Microsoft product names with zero
+  // translatable surrounding words (unlike list items such as
+  // azureConfig.services.openai which gained a translated parenthetical
+  // descriptor to legitimately differ from en-US).
+  "admin.azureConfig.aiFoundry.title",
+  "admin.voiceLive.name",
+  "admin.voiceLive.nav",
 ];
