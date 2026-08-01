@@ -2,6 +2,7 @@ from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.base import Base, TimestampMixin
 from app.models.conference import ConferenceAudienceHcp
+from app.models.crm_import_log import CrmImportLog
 from app.models.dry_run import DryRun, DryRunMessage
 from app.models.hcp_knowledge_config import HcpKnowledgeConfig
 from app.models.hcp_profile import HcpProfile
@@ -37,6 +38,7 @@ __all__ = [
     "UserCrmContext",
     "AnonymousAvatarSession",
     "AvatarInteractionLog",
+    "CrmImportLog",
     "PublicKnowledgeConfig",
     "DryRun",
     "DryRunMessage",

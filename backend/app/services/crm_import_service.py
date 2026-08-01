@@ -1,6 +1,7 @@
 """CRM Excel import service (Phase 33, PERS-01, D-01..D-04)."""
 
 import io
+import json
 from dataclasses import dataclass, field
 
 import openpyxl
@@ -8,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.models.crm_import_log import CrmImportLog
 from app.models.user import User
 from app.models.user_crm_context import UserCrmContext
 from app.services.personalization_sanitizer import sanitize_field, sanitize_free_text_with_pii
@@ -78,3 +80,28 @@ def generate_crm_template_workbook() -> bytes:
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+async def record_import_log(
+    db: AsyncSession, filename: str, result: CrmImportResult, admin_user_id: str
+) -> CrmImportLog:
+    """Persist one CrmImportLog row per admin-triggered upload (D-12)."""
+    log = CrmImportLog(
+        filename=filename,
+        success_count=result.success_count,
+        skipped=json.dumps(result.skipped),
+        unmatched=json.dumps(result.unmatched),
+        imported_by=admin_user_id,
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return log
+
+
+async def get_last_import_log(db: AsyncSession) -> CrmImportLog | None:
+    """Return the most recently created CrmImportLog row, or None."""
+    result = await db.execute(
+        select(CrmImportLog).order_by(CrmImportLog.created_at.desc()).limit(1)
+    )
+    return result.scalar_one_or_none()

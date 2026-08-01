@@ -1,6 +1,7 @@
 """Tests for CRM Excel import service (Phase 33, PERS-01, D-01..D-04)."""
 
 import io
+import json
 
 import openpyxl
 import pytest
@@ -8,11 +9,15 @@ from sqlalchemy import select
 
 from app.models.user import User
 from app.models.user_crm_context import UserCrmContext
+from app.schemas.crm_import import CrmImportLogOut
 from app.services.crm_import_service import (
     EXPECTED_HEADERS,
     CrmHeaderValidationError,
+    CrmImportResult,
     generate_crm_template_workbook,
+    get_last_import_log,
     parse_and_import_crm_excel,
+    record_import_log,
 )
 
 
@@ -197,3 +202,55 @@ class TestGenerateCrmTemplateWorkbook:
         ws = wb.active
         header_row = next(ws.iter_rows(values_only=True))
         assert list(header_row) == EXPECTED_HEADERS
+
+
+class TestRecordAndGetLastImportLog:
+    """Tests for CrmImportLog persistence (Phase 33, PERS-01, D-12)."""
+
+    @pytest.mark.asyncio
+    async def test_record_import_log_persists_row_and_returns_it(self, db_session):
+        result = CrmImportResult(
+            success_count=2,
+            skipped=[{"row": 3, "reason": "missing user_email"}],
+            unmatched=[{"row": 5, "email": "x@x.com", "reason": "email not found"}],
+        )
+
+        log = await record_import_log(db_session, "crm.xlsx", result, "admin-1")
+
+        assert log.id is not None
+        assert log.filename == "crm.xlsx"
+        assert log.success_count == 2
+        assert log.imported_by == "admin-1"
+        assert json.loads(log.skipped) == result.skipped
+        assert json.loads(log.unmatched) == result.unmatched
+
+    @pytest.mark.asyncio
+    async def test_get_last_import_log_returns_none_when_no_rows(self, db_session):
+        assert await get_last_import_log(db_session) is None
+
+    @pytest.mark.asyncio
+    async def test_get_last_import_log_returns_most_recent_by_created_at(self, db_session):
+        await record_import_log(db_session, "first.xlsx", CrmImportResult(), "admin-1")
+        second = await record_import_log(db_session, "second.xlsx", CrmImportResult(), "admin-1")
+
+        last = await get_last_import_log(db_session)
+
+        assert last is not None
+        assert last.id == second.id
+        assert last.filename == "second.xlsx"
+
+    @pytest.mark.asyncio
+    async def test_crm_import_log_out_from_log_json_decodes_skipped_and_unmatched(self, db_session):
+        result = CrmImportResult(
+            success_count=2,
+            skipped=[{"row": 3, "reason": "missing user_email"}],
+            unmatched=[{"row": 5, "email": "x@x.com", "reason": "email not found"}],
+        )
+        log = await record_import_log(db_session, "crm.xlsx", result, "admin-1")
+
+        out = CrmImportLogOut.from_log(log)
+
+        assert out.skipped == result.skipped
+        assert out.unmatched == result.unmatched
+        assert isinstance(out.skipped[0], dict)
+        assert isinstance(out.unmatched[0], dict)
