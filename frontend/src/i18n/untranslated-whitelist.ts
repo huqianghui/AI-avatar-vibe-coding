@@ -18,4 +18,7 @@ export const UNTRANSLATED_WHITELIST: readonly string[] = [
   "common.lang.esES",
   "common.lang.esMX",
   "common.lang.esUS",
+  // Brand/product names, unchanged across locales (D-03).
+  "common.appName",
+  "common.poweredBy",
 ];

@@ -32,6 +32,9 @@ describe("LanguageSwitcher", () => {
     // Translation keys are rendered as-is by the mock
     expect(screen.getByText("lang.zhCN")).toBeInTheDocument();
     expect(screen.getByText("lang.enUS")).toBeInTheDocument();
+    expect(screen.getByText("lang.esES")).toBeInTheDocument();
+    expect(screen.getByText("lang.esMX")).toBeInTheDocument();
+    expect(screen.getByText("lang.esUS")).toBeInTheDocument();
   });
 
   it("calls changeLanguage with zh-CN when Chinese option is clicked", async () => {
@@ -52,5 +55,35 @@ describe("LanguageSwitcher", () => {
     const enOption = screen.getByText("lang.enUS");
     await userEvent.click(enOption);
     expect(changeLanguageMock).toHaveBeenCalledWith("en-US");
+  });
+
+  it("calls changeLanguage with es-ES when the es-ES option is clicked", async () => {
+    render(<LanguageSwitcher />);
+    const trigger = screen.getByRole("button", { name: /switch language/i });
+    await userEvent.click(trigger);
+
+    const esESOption = screen.getByText("lang.esES");
+    await userEvent.click(esESOption);
+    expect(changeLanguageMock).toHaveBeenCalledWith("es-ES");
+  });
+
+  it("calls changeLanguage with es-MX when the es-MX option is clicked", async () => {
+    render(<LanguageSwitcher />);
+    const trigger = screen.getByRole("button", { name: /switch language/i });
+    await userEvent.click(trigger);
+
+    const esMXOption = screen.getByText("lang.esMX");
+    await userEvent.click(esMXOption);
+    expect(changeLanguageMock).toHaveBeenCalledWith("es-MX");
+  });
+
+  it("calls changeLanguage with es-US when the es-US option is clicked", async () => {
+    render(<LanguageSwitcher />);
+    const trigger = screen.getByRole("button", { name: /switch language/i });
+    await userEvent.click(trigger);
+
+    const esUSOption = screen.getByText("lang.esUS");
+    await userEvent.click(esUSOption);
+    expect(changeLanguageMock).toHaveBeenCalledWith("es-US");
   });
 });

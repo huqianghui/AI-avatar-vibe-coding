@@ -13,7 +13,10 @@
   "loading": "加载中...",
   "lang": {
     "zhCN": "中文",
-    "enUS": "English"
+    "enUS": "English",
+    "esES": "Español (España)",
+    "esMX": "Español (México)",
+    "esUS": "Español (EE. UU.)"
   },
   "logout": "退出登录",
   "profile": "个人资料",

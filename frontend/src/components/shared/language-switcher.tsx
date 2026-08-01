@@ -10,6 +10,9 @@ import { Button } from "@/components/ui";
 const languages = [
   { code: "zh-CN", labelKey: "lang.zhCN", flag: "\u{1F1E8}\u{1F1F3}" },
   { code: "en-US", labelKey: "lang.enUS", flag: "\u{1F1FA}\u{1F1F8}" },
+  { code: "es-ES", labelKey: "lang.esES", flag: "\u{1F1EA}\u{1F1F8}" },
+  { code: "es-MX", labelKey: "lang.esMX", flag: "\u{1F1F2}\u{1F1FD}" },
+  { code: "es-US", labelKey: "lang.esUS", flag: "\u{1F1FA}\u{1F1F8}" }, // same flag as en-US, intentional (D-09) -- disambiguated by label, not flag
 ] as const;
 
 export function LanguageSwitcher() {

@@ -13,7 +13,10 @@
   "loading": "Loading...",
   "lang": {
     "zhCN": "Chinese",
-    "enUS": "English"
+    "enUS": "English",
+    "esES": "Español (España)",
+    "esMX": "Español (México)",
+    "esUS": "Español (EE. UU.)"
   },
   "logout": "Sign Out",
   "profile": "Profile",
