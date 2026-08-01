@@ -1,0 +1,21 @@
+{
+  "dashboard": "Tablero de Control",
+  "training": "Capacitación",
+  "history": "Historial",
+  "reports": "Reportes",
+  "users": "Usuarios",
+  "hcpProfiles": "Perfiles de HCP",
+  "scenarios": "Escenarios",
+  "materials": "Materiales",
+  "scoringRubrics": "Rúbricas de Calificación",
+  "azureServices": "Servicios de Azure",
+  "settings": "Ajustes",
+  "crmData": "Datos CRM",
+  "configuration": "Configuración",
+  "content": "Contenido",
+  "analytics": "Analítica",
+  "voiceLive": "Voice Live (Voz en Vivo)",
+  "skillHub": "Centro de Habilidades",
+  "metaSkills": "Habilidades Meta",
+  "prompts": "Gestión de Prompts"
+}
