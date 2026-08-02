@@ -41,7 +41,7 @@
 - [x] **PERSONA-01**: 管理员可管理数字人 Persona 列表（增删改、启用/禁用）— 每个 Persona 含名称、Azure 预置 avatar character+style、按语言的 voice、问候语/persona prompt 片段
 - [x] **PERSONA-02**: 管理员可将且仅将一个启用的 Persona 标记为默认 — 匿名访客与未选择的登录用户自动使用默认 Persona
 - [ ] **PERSONA-03**: 登录用户可在 avatar 页内切换 Persona（切换重建会话，沿用西语切换惯例），选择持久化为 `selected_persona_id` 并在下次登录生效
-- [ ] **PERSONA-04**: avatar 会话实际使用当前 Persona 的 character/style/voice 并播报其问候语；persona prompt 片段与 CRM/偏好上下文一同注入（复用既有 sanitization）
+- [x] **PERSONA-04**: avatar 会话实际使用当前 Persona 的 character/style/voice 并播报其问候语；persona prompt 片段与 CRM/偏好上下文一同注入（复用既有 sanitization）
 
 ### 登录落地 (LAND)
 
@@ -82,7 +82,7 @@
 | PERSONA-01 | Phase 36 | Complete |
 | PERSONA-02 | Phase 36 | Complete |
 | PERSONA-03 | Phase 36 | Pending |
-| PERSONA-04 | Phase 36 | Pending |
+| PERSONA-04 | Phase 36 | Complete |
 | LAND-01 | Phase 36 | Pending |
 
 **Coverage:**
