@@ -30,7 +30,7 @@
 ### 清爽 Avatar UI (AVUI)
 
 - [x] **AVUI-01**: avatar 页面仅展示数字人 + 文档链接信息 — 数字人语音内容与文档来源展示视觉分离
-- [ ] **AVUI-02**: 旧 coach 功能导航入口通过 feature flag 隐藏（代码与路由保留，现有测试不破坏）
+- [x] **AVUI-02**: 旧 coach 功能导航入口通过 feature flag 隐藏（代码与路由保留，现有测试不破坏）
 
 ## Future Requirements
 
@@ -63,7 +63,7 @@
 | LANG-01 | Phase 34 | Complete |
 | LANG-02 | Phase 34 | Complete |
 | AVUI-01 | Phase 35 | Complete |
-| AVUI-02 | Phase 35 | Pending |
+| AVUI-02 | Phase 35 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 12 total

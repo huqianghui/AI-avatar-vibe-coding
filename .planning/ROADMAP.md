@@ -222,7 +222,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 32: Anonymous Grounded Avatar Q&A** - Visitors chat with the avatar without login and get Foundry-IQ-grounded, sourced, spoken answers, with rate limiting and audit logging (completed 2026-08-01)
 - [x] **Phase 33: Personalized CRM-Excel Avatar** - Logged-in users get avatar answers shaped by Excel-based CRM context and admin-managed preference tags (completed 2026-08-01)
 - [x] **Phase 34: Spanish (es) i18n** - Full UI translation parity and Spanish neural voice for the avatar (completed 2026-08-01)
-- [ ] **Phase 35: Clean Avatar UI & Legacy Coach Hiding** - Avatar page shows only digital human + source links; legacy coach nav hidden behind a feature flag
+- [x] **Phase 35: Clean Avatar UI & Legacy Coach Hiding** - Avatar page shows only digital human + source links; legacy coach nav hidden behind a feature flag (completed 2026-08-02)
 
 ## Phase Details
 
@@ -289,7 +289,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 35-01-PLAN.md — AVUI-01 verification lock-in: chrome-absence E2E assertion + pre-change full E2E baseline capture
-- [ ] 35-02-PLAN.md — AVUI-02 feature-flag pipeline: backend Settings/API + frontend type/context/UserLayout gating + full regression proof
+- [x] 35-02-PLAN.md — AVUI-02 feature-flag pipeline: backend Settings/API + frontend type/context/UserLayout gating + full regression proof
 **UI hint**: yes
 
 ## Progress
@@ -304,5 +304,5 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 32. Anonymous Grounded Avatar Q&A | v2.0 | 5/5 | Complete    | 2026-08-01 |
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
-| 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 1/2 | In Progress|  |
+| 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete   | 2026-08-02 |
 </content>
