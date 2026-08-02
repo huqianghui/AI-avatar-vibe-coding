@@ -169,4 +169,28 @@ describe("UserLayout", () => {
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
+
+  it("hides the mobile hamburger button entirely when legacy_coach_nav_enabled is false", () => {
+    mockUseConfig.mockReturnValueOnce({
+      avatar_enabled: false,
+      voice_enabled: false,
+      realtime_voice_enabled: false,
+      conference_enabled: false,
+      voice_live_enabled: false,
+      legacy_coach_nav_enabled: false,
+      default_voice_mode: "text_only",
+      region: "global",
+    });
+
+    const { container } = render(
+      <MemoryRouter initialEntries={["/user/dashboard"]}>
+        <UserLayout />
+      </MemoryRouter>,
+    );
+
+    // The mobile hamburger button (identified by its md:hidden trigger class)
+    // must not be rendered, since it would otherwise open an empty, dead-end
+    // Sheet with no navigable content when the legacy nav is disabled.
+    expect(container.querySelector("button.md\\:hidden")).not.toBeInTheDocument();
+  });
 });

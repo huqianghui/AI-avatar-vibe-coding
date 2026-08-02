@@ -64,14 +64,16 @@ export function UserLayout() {
       <header className="sticky top-0 z-40 flex h-16 items-center border-b bg-background shadow-sm">
         <div className="flex w-full items-center px-4 lg:px-6">
           {/* Mobile hamburger */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            <Menu className="size-5" />
-          </Button>
+          {legacy_coach_nav_enabled && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="size-5" />
+            </Button>
+          )}
 
           {/* Logo */}
           <div className="flex items-center gap-2">
