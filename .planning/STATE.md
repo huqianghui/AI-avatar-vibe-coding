@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: verifying
-stopped_at: Completed 34-10-PLAN.md + post-plan gate fixes -- phase 34 execution complete; LANG-01 and LANG-02 both Complete
-last_updated: "2026-08-01T19:15:15.902Z"
+stopped_at: Phase 35 UI-SPEC approved
+last_updated: "2026-08-02T00:30:56.859Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 4
@@ -379,6 +379,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-01T19:15:15.899Z
-Stopped at: Completed 34-10-PLAN.md + post-plan gate fixes -- phase 34 execution complete; LANG-01 and LANG-02 both Complete
-Resume file: None
+Last session: 2026-08-02T00:30:56.849Z
+Stopped at: Phase 35 UI-SPEC approved
+Resume file: .planning/phases/35-clean-avatar-ui-legacy-coach-hiding/35-UI-SPEC.md
