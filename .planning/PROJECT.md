@@ -60,14 +60,14 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - ✓ 西班牙语（es）i18n 支持：UI 全量 es 翻译（key-parity 校验）+ es-* neural voice 数字人语音回答 — v2.0 (Phase 34)
 - ✓ 清爽 Avatar UI：avatar 页仅数字人 + 文档链接面板，语音内容与来源视觉分离，chrome-absence E2E 回归锁定 — v2.0 (Phase 35)
 - ✓ 隐藏旧 coach 功能前端入口：`feature_legacy_coach_nav_enabled` flag（默认隐藏，env-only），代码与路由保留，零新增 E2E 失败 — v2.0 (Phase 35)
+- ✓ 管理员数字人 Persona 目录管理（Azure 预置 avatar character+style + 按语言 voice + 问候语/prompt 片段，启用/禁用，唯一默认标记，admin CRUD + `/admin/avatar-personas` 页面）— v2.1 (Phase 36, PERSONA-01/02)
+- ✓ 登录用户页内切换数字人并持久化 `selected_persona_id`（挂 Phase 33 偏好存储）；匿名与未选择用户默认 Persona 兜底，切换重建 Voice Live 会话并播报问候语 — v2.1 (Phase 36, PERSONA-03)
+- ✓ avatar 会话实际应用 Persona：voice 三级回退链（persona voice_map → Phase 34 voice_map → DEFAULT_PUBLIC_VOICE_BY_LOCALE）+ greeting 下发 + persona prompt 片段双闸 sanitization 注入匿名/个性化 chat — v2.1 (Phase 36, PERSONA-04)
+- ✓ 普通用户登录直达 avatar 页（`/`），admin 仍落 /admin/dashboard，`/user/dashboard` 保持可直达 — v2.1 (Phase 36, LAND-01)
 
 ### Active
 
-**v2.1 Avatar Persona & Post-Login Experience (Phase 36):**
-- 管理员数字人 Persona 目录管理（Azure 预置 avatar character+style + 按语言 voice + 问候语/prompt 片段，启用/禁用，唯一默认标记）— PERSONA-01/02
-- 登录用户页内切换数字人并持久化 `selected_persona_id`；匿名与未选择用户使用默认 Persona 兜底（无强制选择页）— PERSONA-03
-- avatar 会话实际应用 Persona 的 character/style/voice + 问候语，persona prompt 片段随 CRM/偏好上下文注入 — PERSONA-04
-- 普通用户登录直达 avatar 页（`/`）加载记忆与已选 Persona；admin 仍落 /admin/dashboard — LAND-01
+(none — v2.1 milestone complete, awaiting next milestone)
 
 ### Out of Scope
 
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-01 — Phase 33 complete (登录个性化: Excel CRM 导入 + chat-time 注入 + 管理员偏好打标签)；下一阶段 Phase 34 西班牙语 i18n*
+*Last updated: 2026-08-02 — Phase 36 complete (v2.1 Avatar Persona & Post-Login Experience: PERSONA-01/02/03/04 + LAND-01 全部验证通过, 5/5 plans, VERIFICATION passed 11/11)；v2.1 milestone 完成*
