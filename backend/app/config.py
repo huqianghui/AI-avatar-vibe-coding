@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     feature_realtime_voice_enabled: bool = False
     feature_conference_enabled: bool = False
     feature_voice_live_enabled: bool = True
+    feature_legacy_coach_nav_enabled: bool = False  # AVUI-02: hidden by default
 
     # Voice Mode (PLAT-05): "text_only" | "stt_tts" | "realtime" | "voice_live"
     default_voice_mode: str = "text_only"

@@ -20,6 +20,7 @@ class FeatureFlags(BaseModel):
     realtime_voice_enabled: bool
     conference_enabled: bool
     voice_live_enabled: bool
+    legacy_coach_nav_enabled: bool
     default_voice_mode: str
     region: str
 
@@ -56,6 +57,7 @@ async def get_features(
             conference_enabled=settings.feature_conference_enabled,
             voice_live_enabled=settings.feature_voice_live_enabled
             or bool(azure_voice_live and azure_voice_live.is_active),
+            legacy_coach_nav_enabled=settings.feature_legacy_coach_nav_enabled,
             default_voice_mode=settings.default_voice_mode,
             region=settings.region,
         ),

@@ -41,6 +41,7 @@ class TestGetFeatures:
             mock_settings.feature_realtime_voice_enabled = False
             mock_settings.feature_conference_enabled = False
             mock_settings.feature_voice_live_enabled = False
+            mock_settings.feature_legacy_coach_nav_enabled = False
             mock_settings.default_voice_mode = "text_only"
             mock_settings.region = "global"
             mock_get_settings.return_value = mock_settings
@@ -59,6 +60,8 @@ class TestGetFeatures:
         assert "realtime_voice_enabled" in features
         assert "conference_enabled" in features
         assert "voice_live_enabled" in features
+        assert "legacy_coach_nav_enabled" in features
+        assert features["legacy_coach_nav_enabled"] is False
         assert "default_voice_mode" in features
         assert "region" in features
 
@@ -91,6 +94,7 @@ class TestGetFeatures:
             mock_settings.feature_realtime_voice_enabled = False
             mock_settings.feature_conference_enabled = False
             mock_settings.feature_voice_live_enabled = False
+            mock_settings.feature_legacy_coach_nav_enabled = False
             mock_settings.default_voice_mode = "text_only"
             mock_settings.region = "global"
             mock_get_settings.return_value = mock_settings
