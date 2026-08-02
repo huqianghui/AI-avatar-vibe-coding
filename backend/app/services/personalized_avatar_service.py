@@ -19,9 +19,11 @@ from app.models.personalized_avatar_session import PersonalizedAvatarSession
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.models.user import User
 from app.services.agent_chat_service import stream_agent_response
+from app.services.avatar_persona_service import resolve_active_persona
 from app.services.avatar_search_service import retrieve_citations
 from app.services.avatar_service import REFUSAL_TEMPLATES
 from app.services.personalization_injection_service import build_personalization_context
+from app.services.personalization_sanitizer import sanitize_free_text_with_pii
 
 
 async def handle_personalized_turn(
@@ -34,8 +36,16 @@ async def handle_personalized_turn(
 ) -> dict:
     """Run one personalized Q&A turn: concurrent agent-chat (with the built
     personalization context prepended) + citation retrieval, refusal gating,
-    and a single audit-log write tagged with user_id/personalized_session_id."""
-    personalization_context = await build_personalization_context(db, user.id)
+    and a single audit-log write tagged with user_id/personalized_session_id.
+
+    Phase 36 (PERSONA-04): the user's active persona fragment (re-sanitized,
+    gate 2) is concatenated ahead of their existing CRM/preference context --
+    the CRM sanitization pipeline itself is untouched, only concatenated
+    with."""
+    persona = await resolve_active_persona(db, user_id=user.id, requested_persona_id=None)
+    sanitized_persona_fragment = sanitize_free_text_with_pii(persona.prompt_fragment)
+    crm_context = await build_personalization_context(db, user.id)
+    personalization_context = "\n\n".join(filter(None, [sanitized_persona_fragment, crm_context]))
 
     async def collect_agent_text() -> tuple[str, str | None]:
         chunks: list[str] = []

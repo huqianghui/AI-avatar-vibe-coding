@@ -26,7 +26,9 @@ from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.services.agent_chat_service import stream_agent_response
+from app.services.avatar_persona_service import resolve_active_persona
 from app.services.avatar_search_service import retrieve_citations
+from app.services.personalization_sanitizer import sanitize_free_text_with_pii
 
 REFUSAL_TEMPLATES = {
     "zh-CN": "抱歉，我目前只能回答与官网内容相关的问题。",
@@ -56,7 +58,14 @@ async def handle_anonymous_turn(
     locale: str = "zh-CN",
 ) -> dict:
     """Run one anonymous Q&A turn: concurrent agent-chat + citation retrieval,
-    refusal gating, and a single audit-log write."""
+    refusal gating, and a single audit-log write.
+
+    Phase 36 (PERSONA-04): the default persona's prompt fragment is
+    re-sanitized (gate 2) and passed alone as `personalization_context` --
+    the anonymous UI never surfaces a persona switcher, and zero user data
+    is ever present on this path."""
+    persona = await resolve_active_persona(db, user_id=None, requested_persona_id=None)
+    personalization_context = sanitize_free_text_with_pii(persona.prompt_fragment)
 
     async def collect_agent_text() -> tuple[str, str | None]:
         chunks: list[str] = []
@@ -67,6 +76,7 @@ async def handle_anonymous_turn(
             public_config.agent_version,
             message,
             session.last_response_id or None,
+            personalization_context=personalization_context,
         ):
             if event.kind == "text":
                 chunks.append(event.text)

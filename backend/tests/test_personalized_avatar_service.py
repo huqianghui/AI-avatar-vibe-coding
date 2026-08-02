@@ -9,16 +9,38 @@ pytest. Structurally mirrors test_avatar_service.py.
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from sqlalchemy import select
 
 from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.personalized_avatar_session import PersonalizedAvatarSession
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.models.user import User
+from app.schemas.avatar_persona import AvatarPersonaCreate
+from app.services import avatar_persona_service
 from app.services.agent_chat_service import AgentResponseEvent
 from app.services.auth import get_password_hash
 from app.services.avatar_service import REFUSAL_TEMPLATES
 from app.services.personalized_avatar_service import handle_personalized_turn
+
+
+@pytest.fixture(autouse=True)
+async def _default_persona(db_session):
+    """Phase 36, PERSONA-04: handle_personalized_turn always resolves an
+    active persona (default, absent a per-user selected_persona_id
+    preference) -- every test in this file needs one to exist."""
+    return await avatar_persona_service.create_persona(
+        db_session,
+        AvatarPersonaCreate(
+            name="Default Test Persona",
+            character="lisa",
+            style="casual-sitting",
+            greeting="Hi there!",
+            prompt_fragment="Be warm and professional.",
+            enabled=True,
+            is_default=True,
+        ),
+    )
 
 
 async def _agent_events(*events):
@@ -62,8 +84,9 @@ def _make_public_config() -> PublicKnowledgeConfig:
 
 class TestHandlePersonalizedTurnForwarding:
     async def test_build_personalization_context_result_forwarded_to_agent_call(self, db_session):
-        """The built context string is forwarded verbatim into
-        stream_agent_response's personalization_context kwarg."""
+        """The built context string is forwarded into stream_agent_response's
+        personalization_context kwarg, concatenated after the active
+        persona's sanitized fragment (Phase 36, PERSONA-04, D-08)."""
         user = await _make_user(db_session)
         session = await _make_session(db_session, user)
         public_config = _make_public_config()
@@ -98,12 +121,15 @@ class TestHandlePersonalizedTurnForwarding:
         assert result["answer"] == "Personalized answer."
         stream_mock.assert_called_once()
         _, call_kwargs = stream_mock.call_args
-        assert call_kwargs["personalization_context"] == "## User Background\nCustomer: Acme"
+        assert call_kwargs["personalization_context"] == (
+            "Be warm and professional.\n\n## User Background\nCustomer: Acme"
+        )
 
     async def test_empty_personalization_context_still_forwarded_as_empty_string(self, db_session):
         """D-08: when build_personalization_context returns '', the turn still
         proceeds -- stream_agent_response is called with
-        personalization_context=''."""
+        personalization_context equal to just the persona fragment (Phase 36,
+        PERSONA-04: no stray separator when CRM context is empty)."""
         user = await _make_user(db_session)
         session = await _make_session(db_session, user)
         public_config = _make_public_config()
@@ -136,7 +162,7 @@ class TestHandlePersonalizedTurnForwarding:
         assert result["answer"] == "Unpersonalized answer."
         stream_mock.assert_called_once()
         _, call_kwargs = stream_mock.call_args
-        assert call_kwargs["personalization_context"] == ""
+        assert call_kwargs["personalization_context"] == "Be warm and professional."
 
 
 class TestHandlePersonalizedTurnAuditLog:
@@ -269,3 +295,127 @@ class TestHandlePersonalizedTurnRefusal:
         rows = (await db_session.execute(select(AvatarInteractionLog))).scalars().all()
         assert len(rows) == 1
         assert rows[0].is_refusal is True
+
+
+class TestHandlePersonalizedTurnPersonaInjection:
+    """Phase 36, PERSONA-04: personalized chat is shaped by the user's
+    active persona's sanitized fragment concatenated with their existing
+    CRM/preference context (D-08)."""
+
+    async def test_persona_fragment_and_crm_context_are_concatenated(self, db_session):
+        user = await _make_user(db_session)
+        session = await _make_session(db_session, user)
+        public_config = _make_public_config()
+
+        captured = {}
+
+        def _stream_side_effect(*args, **kwargs):
+            captured["personalization_context"] = kwargs["personalization_context"]
+            return _agent_events(
+                AgentResponseEvent(kind="text", text="Answer."),
+                AgentResponseEvent(kind="completed", response_id="resp-persona-1"),
+            )
+
+        with (
+            patch(
+                "app.services.personalized_avatar_service.stream_agent_response",
+                side_effect=_stream_side_effect,
+            ),
+            patch(
+                "app.services.personalized_avatar_service.retrieve_citations",
+                AsyncMock(return_value=[{"title": "T1", "url": "https://a", "page": 1}]),
+            ),
+            patch(
+                "app.services.personalized_avatar_service.build_personalization_context",
+                AsyncMock(return_value="## User Background\nCustomer: Acme"),
+            ),
+        ):
+            await handle_personalized_turn(
+                db_session, session, user, "What is BeiGene?", public_config
+            )
+
+        assert captured["personalization_context"] == (
+            "Be warm and professional.\n\n## User Background\nCustomer: Acme"
+        )
+
+    async def test_empty_crm_context_leaves_persona_fragment_alone(self, db_session):
+        """When build_personalization_context returns '', the combined
+        personalization_context is just the persona fragment -- no stray
+        leading/trailing separator."""
+        user = await _make_user(db_session)
+        session = await _make_session(db_session, user)
+        public_config = _make_public_config()
+
+        captured = {}
+
+        def _stream_side_effect(*args, **kwargs):
+            captured["personalization_context"] = kwargs["personalization_context"]
+            return _agent_events(
+                AgentResponseEvent(kind="text", text="Answer."),
+                AgentResponseEvent(kind="completed", response_id="resp-persona-2"),
+            )
+
+        with (
+            patch(
+                "app.services.personalized_avatar_service.stream_agent_response",
+                side_effect=_stream_side_effect,
+            ),
+            patch(
+                "app.services.personalized_avatar_service.retrieve_citations",
+                AsyncMock(return_value=[{"title": "T1", "url": "https://a", "page": 1}]),
+            ),
+            patch(
+                "app.services.personalized_avatar_service.build_personalization_context",
+                AsyncMock(return_value=""),
+            ),
+        ):
+            await handle_personalized_turn(
+                db_session, session, user, "What is BeiGene?", public_config
+            )
+
+        assert captured["personalization_context"] == "Be warm and professional."
+
+    async def test_persona_fragment_is_re_sanitized_at_injection_time_gate_2(self, db_session):
+        """Gate 2 (T-36-12): even though gate 1 already sanitized at
+        admin-save time, handle_personalized_turn re-sanitizes again -- a
+        fragment that somehow bypassed gate 1 must still never leak PII into
+        the live prompt."""
+        user = await _make_user(db_session)
+        session = await _make_session(db_session, user)
+        public_config = _make_public_config()
+
+        default_persona = (
+            await avatar_persona_service.list_personas(db_session, enabled_only=True)
+        )[0]
+        default_persona.prompt_fragment = "Contact test@example.com for help."
+        await db_session.commit()
+
+        captured = {}
+
+        def _stream_side_effect(*args, **kwargs):
+            captured["personalization_context"] = kwargs["personalization_context"]
+            return _agent_events(
+                AgentResponseEvent(kind="text", text="Answer."),
+                AgentResponseEvent(kind="completed", response_id="resp-persona-3"),
+            )
+
+        with (
+            patch(
+                "app.services.personalized_avatar_service.stream_agent_response",
+                side_effect=_stream_side_effect,
+            ),
+            patch(
+                "app.services.personalized_avatar_service.retrieve_citations",
+                AsyncMock(return_value=[{"title": "T1", "url": "https://a", "page": 1}]),
+            ),
+            patch(
+                "app.services.personalized_avatar_service.build_personalization_context",
+                AsyncMock(return_value=""),
+            ),
+        ):
+            await handle_personalized_turn(
+                db_session, session, user, "What is BeiGene?", public_config
+            )
+
+        assert "test@example.com" not in captured["personalization_context"]
+        assert "[EMAIL_REDACTED]" in captured["personalization_context"]

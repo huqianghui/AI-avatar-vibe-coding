@@ -14,13 +14,34 @@ anonymous chat turn produces a matching audit-log row.
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from sqlalchemy import select
 
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.public_knowledge_config import PublicKnowledgeConfig
+from app.schemas.avatar_persona import AvatarPersonaCreate
+from app.services import avatar_persona_service
 from app.services.agent_chat_service import AgentResponseEvent
 from app.services.avatar_service import handle_anonymous_turn
+
+
+@pytest.fixture(autouse=True)
+async def _default_persona(db_session):
+    """Phase 36, PERSONA-04: handle_anonymous_turn always resolves the
+    catalog's default persona -- this file's real calls need one to exist."""
+    return await avatar_persona_service.create_persona(
+        db_session,
+        AvatarPersonaCreate(
+            name="Default Test Persona",
+            character="lisa",
+            style="casual-sitting",
+            greeting="Hi there!",
+            prompt_fragment="Be warm and professional.",
+            enabled=True,
+            is_default=True,
+        ),
+    )
 
 
 async def _agent_events(*events):

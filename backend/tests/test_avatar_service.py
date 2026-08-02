@@ -8,13 +8,37 @@ Mocks `stream_agent_response` (async generator stub) and `retrieve_citations`
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from sqlalchemy import select
 
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.public_knowledge_config import PublicKnowledgeConfig
+from app.schemas.avatar_persona import AvatarPersonaCreate
+from app.services import avatar_persona_service
 from app.services.agent_chat_service import AgentResponseEvent
 from app.services.avatar_service import REFUSAL_TEMPLATES, handle_anonymous_turn
+
+
+@pytest.fixture(autouse=True)
+async def _default_persona(db_session):
+    """Phase 36, PERSONA-04: handle_anonymous_turn always resolves the
+    catalog's default persona -- every test in this file needs one to exist
+    (resolve_active_persona raises 404 on a fully empty catalog, a true
+    misconfiguration that never happens in production thanks to seed_data.py
+    + the unique-default guard)."""
+    return await avatar_persona_service.create_persona(
+        db_session,
+        AvatarPersonaCreate(
+            name="Default Test Persona",
+            character="lisa",
+            style="casual-sitting",
+            greeting="Hi there!",
+            prompt_fragment="Be warm and professional.",
+            enabled=True,
+            is_default=True,
+        ),
+    )
 
 
 async def _agent_events(*events):
@@ -261,3 +285,65 @@ class TestHandleAnonymousTurnNoClientOverride:
         retrieve_mock.assert_awaited_once_with(
             public_config.connection_target, public_config.index_name, "Any question"
         )
+
+
+class TestHandleAnonymousTurnPersonaInjection:
+    """Phase 36, PERSONA-04: anonymous chat is shaped only by the default
+    persona's sanitized prompt fragment -- zero user data injected."""
+
+    async def test_default_persona_fragment_passed_as_personalization_context(self, db_session):
+        session = await _make_session(db_session)
+        public_config = _make_public_config()
+
+        def _stream_side_effect(_db, _agent, _version, _message, _prev, **kwargs):
+            assert kwargs["personalization_context"] == "Be warm and professional."
+            return _agent_events(AgentResponseEvent(kind="completed", response_id="resp-p1"))
+
+        with (
+            patch(
+                "app.services.avatar_service.stream_agent_response",
+                side_effect=_stream_side_effect,
+            ),
+            patch(
+                "app.services.avatar_service.retrieve_citations",
+                AsyncMock(return_value=[{"title": "T1", "url": "https://a", "page": 1}]),
+            ),
+        ):
+            await handle_anonymous_turn(db_session, session, "What is BeiGene?", public_config)
+
+    async def test_persona_fragment_is_re_sanitized_at_injection_time_gate_2(self, db_session):
+        """Gate 2 (T-36-12): even though gate 1 already sanitized at
+        admin-save time, handle_anonymous_turn re-sanitizes again -- a
+        fragment that somehow bypassed gate 1 (e.g. a pre-existing DB row)
+        must still never leak PII into the live prompt."""
+        session = await _make_session(db_session)
+        public_config = _make_public_config()
+
+        # Bypass gate 1 by writing directly to the ORM object (simulates a
+        # legacy row / direct DB edit that never went through create_persona).
+        default_persona = (
+            await avatar_persona_service.list_personas(db_session, enabled_only=True)
+        )[0]
+        default_persona.prompt_fragment = "Contact test@example.com for help."
+        await db_session.commit()
+
+        captured = {}
+
+        def _stream_side_effect(_db, _agent, _version, _message, _prev, **kwargs):
+            captured["personalization_context"] = kwargs["personalization_context"]
+            return _agent_events(AgentResponseEvent(kind="completed", response_id="resp-p2"))
+
+        with (
+            patch(
+                "app.services.avatar_service.stream_agent_response",
+                side_effect=_stream_side_effect,
+            ),
+            patch(
+                "app.services.avatar_service.retrieve_citations",
+                AsyncMock(return_value=[{"title": "T1", "url": "https://a", "page": 1}]),
+            ),
+        ):
+            await handle_anonymous_turn(db_session, session, "What is BeiGene?", public_config)
+
+        assert "test@example.com" not in captured["personalization_context"]
+        assert "[EMAIL_REDACTED]" in captured["personalization_context"]
