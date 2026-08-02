@@ -27,5 +27,13 @@
     "rateLimited": "请求过于频繁，请稍候再试"
   },
   "login": "登录",
-  "personalizationBadge": "专属模式"
+  "personalizationBadge": "专属模式",
+  "personaSwitcher": {
+    "title": "切换数字人",
+    "switching": "正在切换到 {{name}}…",
+    "error": {
+      "title": "无法切换角色",
+      "body": "当前角色保持不变。请检查网络连接后重试。"
+    }
+  }
 }

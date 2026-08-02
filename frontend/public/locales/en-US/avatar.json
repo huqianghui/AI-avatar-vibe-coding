@@ -27,5 +27,13 @@
     "rateLimited": "Too many requests — please wait a moment."
   },
   "login": "Login",
-  "personalizationBadge": "Personalized"
+  "personalizationBadge": "Personalized",
+  "personaSwitcher": {
+    "title": "Switch digital human",
+    "switching": "Switching to {{name}}…",
+    "error": {
+      "title": "Couldn't switch persona",
+      "body": "Your session kept the current persona. Check your connection and try again."
+    }
+  }
 }

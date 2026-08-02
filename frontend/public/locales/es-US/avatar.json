@@ -27,5 +27,13 @@
     "rateLimited": "Demasiadas solicitudes — espere un momento, por favor."
   },
   "login": "Iniciar Sesión",
-  "personalizationBadge": "Personalizado"
+  "personalizationBadge": "Personalizado",
+  "personaSwitcher": {
+    "title": "Cambiar de humano digital",
+    "switching": "Cambiando a {{name}}…",
+    "error": {
+      "title": "No se pudo cambiar de personaje",
+      "body": "Su sesión mantuvo el personaje actual. Verifique su conexión e intente de nuevo."
+    }
+  }
 }
