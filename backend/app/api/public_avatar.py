@@ -22,8 +22,9 @@ from app.schemas.public_avatar import (
     WebrtcSessionResponse,
 )
 from app.services.anonymous_session_service import create_anonymous_session
+from app.services.avatar_persona_service import resolve_active_persona, resolve_voice_for_locale
 from app.services.avatar_service import handle_anonymous_turn
-from app.services.public_knowledge_config_service import get_active_public_config, parse_voice_map
+from app.services.public_knowledge_config_service import get_active_public_config
 from app.services.rate_limit import limiter_ip, limiter_session
 from app.services.voice_live_webrtc import create_public_webrtc_session_config
 
@@ -73,13 +74,20 @@ async def webrtc_session(
     db: AsyncSession = Depends(get_db),
 ):
     """Anonymous WebRTC ephemeral-credential issuance (ANON-04) — the avatar
-    character/style/voice are always resolved server-side from the active
+    character/style/agent are always resolved server-side from the active
     `PublicKnowledgeConfig` row; `get_anonymous_session` runs before any
-    Azure credential call is attempted (T-32-14)."""
+    Azure credential call is attempted (T-32-14). Voice and greeting are
+    resolved from the active persona (Phase 36, PERSONA-04) -- a client-
+    supplied `persona_id` that is disabled/unknown silently falls back to
+    the default persona (T-36-10/T-36-11)."""
     public_config = await get_active_public_config(db)
-    voice_map = parse_voice_map(public_config)
-    voice = voice_map.get(body.locale, "")
+    persona = await resolve_active_persona(db, user_id=None, requested_persona_id=body.persona_id)
+    voice = resolve_voice_for_locale(persona, body.locale, public_config=public_config)
     credential = await create_public_webrtc_session_config(
-        db, agent_id=public_config.agent_id, voice_name=voice, locale=body.locale
+        db,
+        agent_id=public_config.agent_id,
+        voice_name=voice,
+        locale=body.locale,
+        greeting=persona.greeting,
     )
     return WebrtcSessionResponse(**credential.model_dump())

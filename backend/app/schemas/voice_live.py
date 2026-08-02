@@ -74,6 +74,10 @@ class WebRTCSessionResponse(BaseModel):
     agent_version: str | None = None
     project_name: str | None = None
     avatar_warning: str | None = None  # Warning when avatar unavailable with WebRTC
+    # Active persona's greeting text (Phase 36, PERSONA-04) so the frontend
+    # can have the digital human speak first. None on the authenticated HCP
+    # training path (persona catalog only applies to the public avatar path).
+    greeting: str | None = None
 
 
 class AvatarCharacterStyle(BaseModel):

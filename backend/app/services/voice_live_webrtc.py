@@ -244,16 +244,20 @@ async def create_public_webrtc_session_config(
     agent_id: str,
     voice_name: str,
     locale: str = "zh-CN",
+    greeting: str | None = None,
 ) -> WebRTCSessionResponse:
     """Build a WebRTC ephemeral-credential session for the anonymous public
-    avatar path (Phase 32, ANON-04).
+    avatar path (Phase 32, ANON-04; `greeting` added Phase 36, PERSONA-04).
 
     Reuses the same Azure Voice Live config resolution, agent-mode signaling
     URL construction, and bearer-token exchange as
     `create_webrtc_session_config`'s authenticated agent-mode path, but
     resolves identity from an explicit `agent_id` (sourced server-side from
     the active `PublicKnowledgeConfig` row) instead of an HCP profile — the
-    caller never supplies a character/style/voice override.
+    caller never supplies a character/style/voice override. `greeting` is
+    the resolved active persona's greeting text (caller-resolved via
+    `resolve_active_persona()`); `session_config` shape is otherwise
+    unchanged (still no `instructions` field -- audio/voice only).
     """
     vl_config = await config_service.get_config(db, "azure_voice_live")
     if not vl_config or not vl_config.is_active:
@@ -316,4 +320,5 @@ async def create_public_webrtc_session_config(
         agent_version=None,
         project_name=project_name_val,
         avatar_warning=AVATAR_WARNING,
+        greeting=greeting,
     )

@@ -46,12 +46,17 @@ class ChatResponse(BaseModel):
 
 
 class WebrtcSessionRequest(BaseModel):
-    """Request for POST /public/avatar/webrtc/session — locale is the only
-    client-suppliable field (T-32-12): no character/style/voice/agent_id/
-    kb_name override field exists anywhere in this schema. Avatar identity is
-    100% server-resolved from the active `PublicKnowledgeConfig` row."""
+    """Request for POST /public/avatar/webrtc/session — locale plus an
+    optional `persona_id` (Phase 36, PERSONA-04): no character/style/voice/
+    agent_id/kb_name override field exists anywhere in this schema. Avatar
+    character/style/agent identity remains 100% server-resolved from the
+    active `PublicKnowledgeConfig` row; `persona_id` only ever selects among
+    the admin-managed, enabled `AvatarPersona` catalog via
+    `resolve_active_persona()` (T-36-10: an invalid/disabled value silently
+    falls back to the default persona, never an error)."""
 
     locale: str = Field(default="zh-CN", pattern="^(zh-CN|en-US|es-ES|es-MX|es-US)$")
+    persona_id: str | None = None
 
     model_config = ConfigDict(from_attributes=False)
 
@@ -59,4 +64,5 @@ class WebrtcSessionRequest(BaseModel):
 class WebrtcSessionResponse(WebRTCSessionResponse):
     """Mirrors the exact field set of the authenticated `/voice-live/webrtc/session`
     response (`WebRTCSessionResponse`) verbatim — same shape, anonymous trust
-    boundary only."""
+    boundary only. Inherits `greeting` (Phase 36, PERSONA-04) from the base
+    class: the resolved active persona's greeting text."""

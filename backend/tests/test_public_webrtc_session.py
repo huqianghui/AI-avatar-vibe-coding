@@ -12,10 +12,29 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.config import get_settings
+from app.models.avatar_persona import AvatarPersona
 from app.models.public_knowledge_config import PublicKnowledgeConfig
+from app.schemas.avatar_persona import AvatarPersonaCreate
+from app.services import avatar_persona_service
 from app.services.rate_limit import limiter_ip
 
 settings = get_settings()
+
+
+async def _create_persona(db_session, **overrides) -> AvatarPersona:
+    defaults = {
+        "name": "Lisa Default",
+        "character": "lisa",
+        "style": "casual-sitting",
+        "voice_map": {},
+        "greeting": "Hi, I'm Lisa!",
+        "prompt_fragment": "Be friendly.",
+        "enabled": True,
+        "is_default": True,
+    }
+    defaults.update(overrides)
+    data = AvatarPersonaCreate(**defaults)
+    return await avatar_persona_service.create_persona(db_session, data)
 
 
 @pytest.fixture(autouse=True)
@@ -66,8 +85,9 @@ class TestWebrtcSessionSuccess:
     @patch("app.services.voice_live_webrtc.config_service")
     @patch("app.api.public_avatar.get_active_public_config")
     async def test_valid_session_returns_credential_shape(
-        self, mock_get_config, mock_config_svc, mock_exchange, client
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
+        await _create_persona(db_session)
         headers = await _anon_session_and_header(client)
         mock_get_config.return_value = _make_public_config()
         mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
@@ -96,24 +116,27 @@ class TestWebrtcSessionSuccess:
             "agent_version",
             "project_name",
             "avatar_warning",
+            "greeting",
         ):
             assert field in data
         assert data["auth_token"] == "bearer-token-abc"
         assert data["auth_type"] == "bearer"
         assert data["mode"] == "agent"
         assert data["agent_id"] == "public-agent-1"
+        assert data["greeting"] == "Hi, I'm Lisa!"
         mock_exchange.assert_awaited_once()
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
     @patch("app.api.public_avatar.get_active_public_config")
     async def test_avatar_identity_sourced_from_admin_config_not_client(
-        self, mock_get_config, mock_config_svc, mock_exchange, client
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
         """The issued credential's agent/voice come from the active
         PublicKnowledgeConfig for the requested locale, not a hardcoded
         default and not a client-supplied override (WebrtcSessionRequest has
         no character/style/voice field to supply one)."""
+        await _create_persona(db_session)
         headers = await _anon_session_and_header(client)
         mock_get_config.return_value = _make_public_config(
             voice_map={
@@ -149,8 +172,9 @@ class TestWebrtcSessionMalformedVoiceMap:
     @patch("app.services.voice_live_webrtc.config_service")
     @patch("app.api.public_avatar.get_active_public_config")
     async def test_malformed_voice_map_json_falls_back_instead_of_500(
-        self, mock_get_config, mock_config_svc, mock_exchange, client
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
+        await _create_persona(db_session)
         headers = await _anon_session_and_header(client)
         config = _make_public_config()
         config.voice_map = "{not valid json"
@@ -183,8 +207,9 @@ class TestWebrtcSessionLocaleValidation:
     @patch("app.services.voice_live_webrtc.config_service")
     @patch("app.api.public_avatar.get_active_public_config")
     async def test_es_locales_accepted(
-        self, mock_get_config, mock_config_svc, mock_exchange, client, locale
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session, locale
     ):
+        await _create_persona(db_session)
         headers = await _anon_session_and_header(client)
         mock_get_config.return_value = _make_public_config()
         mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
@@ -242,8 +267,9 @@ class TestWebrtcSessionRateLimit:
     @patch("app.services.voice_live_webrtc.config_service")
     @patch("app.api.public_avatar.get_active_public_config")
     async def test_exceeding_ip_rate_limit_returns_429_structured_error(
-        self, mock_get_config, mock_config_svc, mock_exchange, client
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
+        await _create_persona(db_session)
         headers = await _anon_session_and_header(client)
         mock_get_config.return_value = _make_public_config()
         mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
@@ -264,3 +290,131 @@ class TestWebrtcSessionRateLimit:
 
         assert statuses[-1] == 429
         assert response.json()["code"] == "RATE_LIMITED"
+
+
+class TestWebrtcSessionPersonaResolution:
+    """Phase 36, PERSONA-04: the session response's voice_name and greeting
+    reflect the resolved persona; an invalid/disabled persona_id degrades to
+    the default persona without error (T-36-10/T-36-11)."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_persona_voice_map_wins_over_admin_config_voice_map(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(
+            db_session,
+            voice_map={"en-US": "en-US-PersonaVoiceNeural"},
+            greeting="Hello from persona!",
+        )
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = _make_public_config(
+            voice_map={"en-US": "en-US-AdminVoiceNeural"}
+        )
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-persona"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "en-US"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_config"]["voice"]["name"] == "en-US-PersonaVoiceNeural"
+        assert data["greeting"] == "Hello from persona!"
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_explicit_enabled_persona_id_is_used(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(db_session, name="Default", greeting="Default greeting")
+        other = await _create_persona(
+            db_session,
+            name="Other",
+            is_default=False,
+            greeting="Other greeting",
+            voice_map={"zh-CN": "zh-CN-OtherVoiceNeural"},
+        )
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-explicit"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session",
+            json={"locale": "zh-CN", "persona_id": other.id},
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["greeting"] == "Other greeting"
+        assert data["session_config"]["voice"]["name"] == "zh-CN-OtherVoiceNeural"
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_disabled_persona_id_falls_back_to_default_without_error(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(db_session, name="Default", greeting="Default greeting")
+        disabled = await _create_persona(
+            db_session, name="Disabled", enabled=False, is_default=False
+        )
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-disabled"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session",
+            json={"locale": "zh-CN", "persona_id": disabled.id},
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["greeting"] == "Default greeting"
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_unknown_persona_id_falls_back_to_default_without_error(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(db_session, name="Default", greeting="Default greeting")
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-unknown"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session",
+            json={"locale": "zh-CN", "persona_id": "does-not-exist"},
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["greeting"] == "Default greeting"
