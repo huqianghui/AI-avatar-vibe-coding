@@ -26,7 +26,7 @@ export function GuestRoute() {
   const { token, user } = useAuthStore();
   if (token) {
     const target =
-      user?.role === "admin" ? "/admin/dashboard" : "/user/dashboard";
+      user?.role === "admin" ? "/admin/dashboard" : "/";
     return <Navigate to={target} replace />;
   }
   return <Outlet />;

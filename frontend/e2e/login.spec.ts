@@ -27,14 +27,16 @@ test.describe("Login Page", () => {
     await expect(page.locator('button[type="submit"]')).toBeEnabled();
   });
 
-  test("successful login as regular user redirects to user dashboard", async ({
+  test("successful login as regular user redirects to the avatar page", async ({
     page,
   }) => {
+    // LAND-01 (Phase 36): regular-user post-login now lands on `/` (the
+    // avatar page), not the legacy `/user/dashboard` -- see login.tsx.
     await page.locator("#username").fill("user1");
     await page.locator("#password").fill("user123");
     await page.locator('button[type="submit"]').click();
-    await page.waitForURL("**/user/dashboard");
-    await expect(page).toHaveURL(/\/user\/dashboard/);
+    await page.waitForURL("http://localhost:5173/");
+    await expect(page).toHaveURL("/");
   });
 
   test("successful login as admin redirects to admin dashboard", async ({

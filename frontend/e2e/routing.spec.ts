@@ -27,7 +27,7 @@ test.describe("Route Guards — Authenticated User", () => {
     page,
   }) => {
     await page.goto("/login");
-    await expect(page).toHaveURL(/\/user\/dashboard/);
+    await expect(page).toHaveURL("/");
   });
 
   test("regular user cannot access admin routes", async ({ page }) => {

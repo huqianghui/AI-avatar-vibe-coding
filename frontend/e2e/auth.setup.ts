@@ -16,8 +16,11 @@ setup("authenticate as regular user", async ({ browser }) => {
   await page.locator("#username").fill("user1");
   await page.locator("#password").fill("user123");
   await page.locator('button[type="submit"]').click();
-  await page.waitForURL("**/user/dashboard");
-  await expect(page).toHaveURL(/\/user\/dashboard/);
+  // LAND-01 (Phase 36): regular-user post-login now lands on `/`, not
+  // `/user/dashboard` -- see login.tsx. The auth token itself (captured
+  // below via storageState) is unaffected by the landing URL.
+  await page.waitForURL("http://localhost:5173/");
+  await expect(page).toHaveURL("/");
   await context.storageState({ path: join(authDir, "user.json") });
   await context.close();
 });
