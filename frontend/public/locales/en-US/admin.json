@@ -709,5 +709,51 @@
     "helper": "Leave a field blank to use the built-in default voice for that language.",
     "save": "Save Voice Settings",
     "error": "Something went wrong. The voice configuration could not be saved. Please check the value and try again."
+  },
+  "personas": {
+    "title": "Avatar Personas",
+    "pageDescription": "Manage the digital-human personas available to users.",
+    "create": "Create Persona",
+    "save": "Save Persona",
+    "saving": "Saving…",
+    "createDialogTitle": "Create Persona",
+    "editDialogTitle": "Edit Persona",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g., Lisa - Casual",
+    "columnName": "Name",
+    "columnCharacterStyle": "Character & Style",
+    "columnDefault": "Default",
+    "columnEnabled": "Enabled",
+    "columnActions": "Actions",
+    "defaultBadge": "Default",
+    "emptyTitle": "No personas yet",
+    "emptyBody": "Create your first digital-human persona to get started.",
+    "defaultGuardError": {
+      "title": "Can't remove the only default persona",
+      "body": "Mark another enabled persona as default first."
+    },
+    "saveError": {
+      "title": "Couldn't save persona",
+      "body": "Check the required fields and try again."
+    },
+    "deletePersona": {
+      "title": "Delete Persona",
+      "body": "Delete persona '{{name}}'? This can't be undone. Any user who selected this persona will fall back to the default persona.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "toggleEnabled": "Enabled",
+    "toggleDefault": "Set as default",
+    "toggleDefaultDisabledTooltip": "Enable this persona first",
+    "deleteDisabledTooltip": "Set another default first",
+    "editAriaLabel": "Edit persona",
+    "deleteAriaLabel": "Delete persona",
+    "characterSectionTitle": "Character & Style",
+    "voiceSectionTitle": "Voice per Language",
+    "greetingLabel": "Greeting",
+    "greetingHelper": "Spoken by the digital human right after the session connects.",
+    "promptFragmentLabel": "Persona Prompt Fragment",
+    "promptFragmentHelper": "Injected into the system prompt alongside the user's CRM/preference context. Sanitized automatically.",
+    "useDefaultVoiceOption": "(use default)"
   }
 }

@@ -709,5 +709,51 @@
     "helper": "留空则使用该语言的内置默认语音。",
     "save": "保存语音设置",
     "error": "出错了，语音配置未能保存，请检查后重试。"
+  },
+  "personas": {
+    "title": "数字人人设",
+    "pageDescription": "管理可供用户选择的数字人人设。",
+    "create": "新建人设",
+    "save": "保存人设",
+    "saving": "保存中…",
+    "createDialogTitle": "新建人设",
+    "editDialogTitle": "编辑人设",
+    "nameLabel": "名称",
+    "namePlaceholder": "例如：Lisa - 休闲风",
+    "columnName": "名称",
+    "columnCharacterStyle": "角色与风格",
+    "columnDefault": "默认",
+    "columnEnabled": "启用",
+    "columnActions": "操作",
+    "defaultBadge": "默认",
+    "emptyTitle": "暂无人设",
+    "emptyBody": "创建第一个数字人人设即可开始使用。",
+    "defaultGuardError": {
+      "title": "无法移除唯一的默认人设",
+      "body": "请先将其他已启用的人设设为默认。"
+    },
+    "saveError": {
+      "title": "人设保存失败",
+      "body": "请检查必填字段后重试。"
+    },
+    "deletePersona": {
+      "title": "删除人设",
+      "body": "确定要删除人设「{{name}}」吗？此操作无法撤销。选择过该人设的用户将回退到默认人设。",
+      "confirm": "删除",
+      "cancel": "取消"
+    },
+    "toggleEnabled": "启用",
+    "toggleDefault": "设为默认",
+    "toggleDefaultDisabledTooltip": "请先启用此人设",
+    "deleteDisabledTooltip": "请先设置另一个默认人设",
+    "editAriaLabel": "编辑人设",
+    "deleteAriaLabel": "删除人设",
+    "characterSectionTitle": "角色与风格",
+    "voiceSectionTitle": "各语言语音",
+    "greetingLabel": "问候语",
+    "greetingHelper": "会话连接后数字人将立即说出此问候语。",
+    "promptFragmentLabel": "人设提示词片段",
+    "promptFragmentHelper": "将与用户的 CRM/偏好上下文一起注入系统提示词，自动进行安全过滤。",
+    "useDefaultVoiceOption": "（使用默认）"
   }
 }

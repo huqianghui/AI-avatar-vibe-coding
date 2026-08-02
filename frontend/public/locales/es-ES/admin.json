@@ -709,5 +709,51 @@
     "helper": "Deje un campo en blanco para usar la voz predeterminada de ese idioma.",
     "save": "Guardar configuración de voz",
     "error": "Algo salió mal. No se pudo guardar la configuración de voz. Compruebe el valor e inténtelo de nuevo."
+  },
+  "personas": {
+    "title": "Personas de Avatar",
+    "pageDescription": "Gestione las personas de avatar disponibles para los usuarios.",
+    "create": "Crear Persona",
+    "save": "Guardar Persona",
+    "saving": "Guardando…",
+    "createDialogTitle": "Crear Persona",
+    "editDialogTitle": "Editar Persona",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "p. ej., Lisa - Informal",
+    "columnName": "Nombre",
+    "columnCharacterStyle": "Personaje y Estilo",
+    "columnDefault": "Predeterminada",
+    "columnEnabled": "Habilitada",
+    "columnActions": "Acciones",
+    "defaultBadge": "Predeterminada",
+    "emptyTitle": "Todavía no hay personas",
+    "emptyBody": "Cree su primera persona de avatar para empezar.",
+    "defaultGuardError": {
+      "title": "No se puede eliminar la única persona predeterminada",
+      "body": "Marque primero otra persona habilitada como predeterminada."
+    },
+    "saveError": {
+      "title": "No se pudo guardar la persona",
+      "body": "Revise los campos obligatorios e inténtelo de nuevo."
+    },
+    "deletePersona": {
+      "title": "Eliminar Persona",
+      "body": "¿Eliminar la persona '{{name}}'? Esta acción no se puede deshacer. Los usuarios que la hayan seleccionado volverán a la persona predeterminada.",
+      "confirm": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "toggleEnabled": "Habilitada",
+    "toggleDefault": "Establecer como predeterminada",
+    "toggleDefaultDisabledTooltip": "Habilite esta persona primero",
+    "deleteDisabledTooltip": "Establezca otra persona predeterminada primero",
+    "editAriaLabel": "Editar persona",
+    "deleteAriaLabel": "Eliminar persona",
+    "characterSectionTitle": "Personaje y Estilo",
+    "voiceSectionTitle": "Voz por Idioma",
+    "greetingLabel": "Saludo",
+    "greetingHelper": "El avatar lo pronuncia justo después de conectarse la sesión.",
+    "promptFragmentLabel": "Fragmento de Prompt de la Persona",
+    "promptFragmentHelper": "Se inyecta en el prompt del sistema junto con el contexto de CRM/preferencias del usuario. Se sanea automáticamente.",
+    "useDefaultVoiceOption": "(usar predeterminada)"
   }
 }

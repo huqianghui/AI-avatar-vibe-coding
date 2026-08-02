@@ -1,0 +1,155 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { AvatarPersona } from "@/api/avatar-personas";
+
+vi.mock("@/api/avatar-personas", () => ({
+  avatarPersonasApi: {
+    list: vi.fn(),
+    get: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    setDefault: vi.fn(),
+  },
+}));
+
+import { avatarPersonasApi } from "@/api/avatar-personas";
+import {
+  useAvatarPersonas,
+  useCreateAvatarPersona,
+  useUpdateAvatarPersona,
+  useDeleteAvatarPersona,
+  useSetDefaultAvatarPersona,
+} from "./use-avatar-personas";
+
+const mockedList = vi.mocked(avatarPersonasApi.list);
+const mockedCreate = vi.mocked(avatarPersonasApi.create);
+const mockedUpdate = vi.mocked(avatarPersonasApi.update);
+const mockedRemove = vi.mocked(avatarPersonasApi.remove);
+const mockedSetDefault = vi.mocked(avatarPersonasApi.setDefault);
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
+function createWrapperWithSpy() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+  const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  }
+  return { Wrapper, invalidateSpy };
+}
+
+const mockPersona: AvatarPersona = {
+  id: "p1",
+  name: "Lisa",
+  character: "lisa",
+  style: "casual-sitting",
+  voice_map: {},
+  greeting: "Hi there!",
+  prompt_fragment: "",
+  enabled: true,
+  is_default: true,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
+describe("useAvatarPersonas", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.list and exposes the returned array via data", async () => {
+    mockedList.mockResolvedValueOnce([mockPersona]);
+
+    const { result } = renderHook(() => useAvatarPersonas(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedList).toHaveBeenCalledWith();
+    expect(result.current.data).toEqual([mockPersona]);
+  });
+});
+
+describe("useCreateAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.create and invalidates the list query key on success", async () => {
+    mockedCreate.mockResolvedValueOnce(mockPersona);
+    const { Wrapper, invalidateSpy } = createWrapperWithSpy();
+
+    const { result } = renderHook(() => useCreateAvatarPersona(), { wrapper: Wrapper });
+
+    result.current.mutate({ name: "Lisa", character: "lisa" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedCreate).toHaveBeenCalledWith({ name: "Lisa", character: "lisa" });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+});
+
+describe("useUpdateAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.update with { id, data } and invalidates on success", async () => {
+    mockedUpdate.mockResolvedValueOnce(mockPersona);
+    const { Wrapper, invalidateSpy } = createWrapperWithSpy();
+
+    const { result } = renderHook(() => useUpdateAvatarPersona(), { wrapper: Wrapper });
+
+    result.current.mutate({ id: "p1", data: { name: "Lisa 2" } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedUpdate).toHaveBeenCalledWith("p1", { name: "Lisa 2" });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+});
+
+describe("useDeleteAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.remove and invalidates on success", async () => {
+    mockedRemove.mockResolvedValueOnce(undefined);
+    const { Wrapper, invalidateSpy } = createWrapperWithSpy();
+
+    const { result } = renderHook(() => useDeleteAvatarPersona(), { wrapper: Wrapper });
+
+    result.current.mutate({ id: "p1", newDefaultPersonaId: "p2" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedRemove).toHaveBeenCalledWith("p1", "p2");
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+});
+
+describe("useSetDefaultAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.setDefault and invalidates on success", async () => {
+    mockedSetDefault.mockResolvedValueOnce(mockPersona);
+    const { Wrapper, invalidateSpy } = createWrapperWithSpy();
+
+    const { result } = renderHook(() => useSetDefaultAvatarPersona(), { wrapper: Wrapper });
+
+    result.current.mutate("p1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedSetDefault).toHaveBeenCalledWith("p1");
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+});
