@@ -84,9 +84,9 @@ export function UserLayout() {
           </div>
 
           {/* Desktop nav links */}
-          <nav className="ml-8 hidden items-center gap-1 md:flex">
-            {legacy_coach_nav_enabled &&
-              navItems.map((item) => {
+          {legacy_coach_nav_enabled && (
+            <nav className="ml-8 hidden items-center gap-1 md:flex">
+              {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <NavLink
@@ -110,7 +110,8 @@ export function UserLayout() {
                   </NavLink>
                 );
               })}
-          </nav>
+            </nav>
+          )}
 
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2">
@@ -156,9 +157,9 @@ export function UserLayout() {
           <SheetHeader>
             <SheetTitle>AI Coach</SheetTitle>
           </SheetHeader>
-          <nav className="mt-4 flex flex-col gap-1">
-            {legacy_coach_nav_enabled &&
-              navItems.map((item) => {
+          {legacy_coach_nav_enabled && (
+            <nav className="mt-4 flex flex-col gap-1">
+              {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <NavLink
@@ -177,7 +178,8 @@ export function UserLayout() {
                   </NavLink>
                 );
               })}
-          </nav>
+            </nav>
+          )}
         </SheetContent>
       </Sheet>
 

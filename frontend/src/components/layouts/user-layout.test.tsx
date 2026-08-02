@@ -102,6 +102,53 @@ describe("UserLayout", () => {
     expect(screen.queryByText("reports")).not.toBeInTheDocument();
   });
 
+  it("removes both nav landmark elements entirely when legacy_coach_nav_enabled is false", () => {
+    mockUseConfig.mockReturnValueOnce({
+      avatar_enabled: false,
+      voice_enabled: false,
+      realtime_voice_enabled: false,
+      conference_enabled: false,
+      voice_live_enabled: false,
+      legacy_coach_nav_enabled: false,
+      default_voice_mode: "text_only",
+      region: "global",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/user/dashboard"]}>
+        <UserLayout />
+      </MemoryRouter>,
+    );
+
+    // Neither the desktop nor the mobile Sheet <nav> landmark should be
+    // rendered when the flag is off -- avoids an empty accessibility
+    // landmark region with no navigable content. The Sheet content renders
+    // into a portal on document.body, so query document rather than the
+    // local render container.
+    expect(document.querySelectorAll("nav").length).toBe(0);
+  });
+
+  it("renders both nav landmark elements when legacy_coach_nav_enabled is true", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <MemoryRouter initialEntries={["/user/dashboard"]}>
+        <UserLayout />
+      </MemoryRouter>,
+    );
+
+    // Desktop nav is rendered immediately.
+    expect(document.querySelectorAll("nav").length).toBe(1);
+
+    // Mobile Sheet nav (rendered into a document.body portal) is only
+    // mounted once opened (default mock has legacy_coach_nav_enabled:
+    // true, so the hamburger button is present).
+    const hamburger = container.querySelector("button.md\\:hidden");
+    expect(hamburger).toBeInTheDocument();
+    await user.click(hamburger!);
+
+    expect(document.querySelectorAll("nav").length).toBe(2);
+  });
+
   it("renders the user avatar with initials", () => {
     render(
       <MemoryRouter initialEntries={["/user/dashboard"]}>
