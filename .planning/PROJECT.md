@@ -8,20 +8,19 @@ An AI-powered digital human (avatar) platform for BeiGene (百济神州), built 
 
 Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
-## Current Milestone: v2.1 Avatar Persona & Post-Login Experience
+## Current Milestone: v2.2 Persona Fidelity & Hardening (Gap Closure)
 
-**Goal:** 登录后直达数字人页面并加载个人记忆与已选数字人；管理员可配置数字人 Persona 列表并标记默认；普通用户页内切换数字人并记住选择；匿名访客使用默认数字人。
+**Goal:** Persona 切换完全可观察（视觉 + 对话人格 + 按语言问候语），并加固数据完整性（DB 级唯一默认约束 + E2E 数据清理）。
 
 **Target features:**
-- 管理员 Persona 目录 — 名称、Azure 预置 avatar character+style、按语言 voice（复用 Phase 34 voice_map 机制）、问候语/persona prompt 片段、启用/禁用、唯一默认标记
-- 用户 Persona 选择 — avatar 页内切换入口（切换重建会话，沿用西语切换惯例），选择持久化为 `selected_persona_id`（挂在 Phase 33 偏好存储）
-- 默认兜底 — 无强制选择页；匿名访客与未选择用户自动用默认 Persona
-- 登录直达 — 普通用户登录落 `/`（avatar 页）并加载 PERS-02 记忆注入 + 已选 Persona；admin 仍落 /admin/dashboard
+- 视频形象保真 — WebRTC session config 携带 persona 的 avatar character+style，切换 Persona 后屏幕上的数字人形象随之变化（匿名与登录一致）
+- 语音人格保真 — Voice Live session instructions 携带 sanitized persona prompt 片段（登录路径合并 CRM/偏好上下文），复用双闸 sanitization
+- 按语言问候语 — greeting 从单一字符串改为 per-locale map（与 voice_map 同构），按 locale 解析并回退；admin 按语言编辑；迁移保留既有问候语
+- 数据加固 — `is_default` 唯一性提升为 partial unique index（enabled+is_default）；persona E2E 自带 teardown，dev DB 不再被测试污染
 
 **Key context:**
-- 约束：Azure Voice Live 标准 avatar 仅限预置角色（Lisa/Harry/Meg/Max 等 + styles），不做 Custom Avatar 训练
-- 最大化复用：Phase 33 偏好存储与 chat-time 注入、Phase 34 voice_map、Phase 32/35 avatar 页
-- v2.0 Avatar MVP（Phases 32-35，12/12 需求）已于 2026-08-02 完成
+- 来源：Phase 36 后 gap 分析 — Phase 36 交付 audio-first（voice/greeting/chat 注入），session_config 尚无 character/style 与 instructions 字段
+- 约束不变：Azure Voice Live 标准 avatar 仅限预置角色（Lisa/Harry/Meg/Max 等 + styles）
 - 执行遵循 CLAUDE.md 最高优先级规则：逐个需求 实现 → 100% unit test → Playwright E2E → 全通过 → commit → push
 
 ## Requirements
@@ -67,7 +66,10 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 
 ### Active
 
-(none — v2.1 milestone complete, awaiting next milestone)
+- [ ] avatar 会话的数字人视频形象真正应用当前 Persona 的 character/style（WebRTC session config 携带，切换后屏幕形象变化，匿名/登录一致）— v2.2 (Phase 37, PERSONA-05)
+- [ ] persona prompt 片段作用于语音对话通道（Voice Live session instructions 携带 sanitized 片段，登录路径合并 CRM/偏好，双闸 sanitization）— v2.2 (Phase 37, PERSONA-06)
+- [ ] 问候语按语言：greeting → per-locale map（与 voice_map 同构）+ 回退链，admin 按语言编辑，迁移保留既有问候语 — v2.2 (Phase 37, PERSONA-07)
+- [ ] 数据完整性加固：is_default partial unique index（enabled+is_default）+ persona E2E teardown（dev DB 零污染）— v2.2 (Phase 37, HARD-01)
 
 ### Out of Scope
 
@@ -132,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-02 — Phase 36 complete (v2.1 Avatar Persona & Post-Login Experience: PERSONA-01/02/03/04 + LAND-01 全部验证通过, 5/5 plans, VERIFICATION passed 11/11)；v2.1 milestone 完成*
+*Last updated: 2026-08-02 — v2.2 milestone (Persona Fidelity & Hardening) 启动：Phase 37 承接 PERSONA-05/06/07 + HARD-01（Phase 36 gap 分析产物）*

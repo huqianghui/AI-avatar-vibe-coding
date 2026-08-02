@@ -47,6 +47,20 @@
 
 - [x] **LAND-01**: 普通用户登录后直达 avatar 页（`/`）并加载个人记忆（PERS-02 注入）与已记住的 Persona；admin 登录仍落 /admin/dashboard
 
+## v2.2 Requirements — Persona Fidelity & Hardening (Gap Closure)
+
+> Approved 2026-08-02 (post-Phase-36 gap analysis). Phase 36 delivered persona catalog/switching audio-first; v2.2 closes the fidelity gaps so a persona switch is fully observable (visual + conversational) and hardens data integrity.
+
+### Persona 保真 (PERSONA, continued)
+
+- [ ] **PERSONA-05**: avatar 会话的数字人**视频形象**真正应用当前 Persona 的 character/style — WebRTC session config 携带 persona 的 avatar character+style，切换 Persona 后屏幕上的数字人形象随之变化（匿名与登录路径一致）
+- [ ] **PERSONA-06**: persona prompt 片段作用于**语音对话通道** — Voice Live session 的 instructions 携带 sanitized persona 片段（登录路径合并 CRM/偏好上下文），语音问答的人格/语气随 Persona 变化，复用双闸 sanitization
+- [ ] **PERSONA-07**: 问候语按语言 — greeting 从单一字符串改为 per-locale map（与 voice_map 同构），按当前 locale 解析并回退（persona 任一可用 locale → 默认文案）；admin 表单支持按语言编辑问候语，数据迁移保留既有问候语
+
+### 加固 (HARD)
+
+- [ ] **HARD-01**: 数据完整性加固 — `is_default` 唯一性提升为 DB 级约束（partial unique index，enabled+is_default）；persona 相关 E2E 测试自带数据清理（teardown 删除测试创建的 persona 并恢复默认），dev DB 不再被测试运行污染
+
 ## Future Requirements
 
 - **PERS-04**: 后台自动抽取用户偏好（自动 memory 机制）
@@ -83,6 +97,10 @@
 | PERSONA-02 | Phase 36 | Complete |
 | PERSONA-03 | Phase 36 | Complete |
 | PERSONA-04 | Phase 36 | Complete |
+| PERSONA-05 | Phase 37 | Pending |
+| PERSONA-06 | Phase 37 | Pending |
+| PERSONA-07 | Phase 37 | Pending |
+| HARD-01 | Phase 37 | Pending |
 | LAND-01 | Phase 36 | Complete |
 
 **Coverage:**

@@ -4,7 +4,8 @@
 
 - ✅ **v1.0 MR Coach Platform** - Phases 1-31 (shipped; not formally archived, see PROJECT.md)
 - ✅ **v2.0 Avatar MVP** - Phases 32-35 (complete 2026-08-02)
-- 📋 **v2.1 Avatar Persona & Post-Login Experience** - Phase 36 (in progress)
+- ✅ **v2.1 Avatar Persona & Post-Login Experience** - Phase 36 (complete 2026-08-02)
+- 📋 **v2.2 Persona Fidelity & Hardening** - Phase 37 (in progress)
 
 ## Phases
 
@@ -321,10 +322,30 @@ Plans:
 - [x] 36-04-PLAN.md — Self-service selected-persona endpoint + PersonaSwitcher UI, session rebuild + greeting (PERSONA-03)
 - [x] 36-05-PLAN.md — Post-login landing redirect to / for regular users, admin unchanged (LAND-01)
 
+### 📋 v2.2 Persona Fidelity & Hardening (Phase 37)
+
+**Milestone Goal:** 关闭 Phase 36 gap 分析发现的保真缺口：切换 Persona 后数字人视频形象真正变化（character/style 进 session config）、persona prompt 片段作用于语音对话通道（instructions + 双闸 sanitization）、问候语按语言（greeting per-locale map + 迁移）；并加固数据完整性（is_default DB 约束、E2E 数据清理）。
+
+- [ ] **Phase 37: Persona Fidelity & Hardening** - Persona character/style applied to avatar video rendering, prompt fragment shapes the voice channel, per-locale greeting, is_default DB constraint + E2E data hygiene
+
+## Phase Details (v2.2)
+
+### Phase 37: Persona Fidelity & Hardening
+
+**Goal**: A persona switch is fully observable — the on-screen digital human's visual character/style changes, the voice conversation's personality reflects the persona's prompt fragment, and the greeting is spoken in the session's language; persona data integrity is enforced at the DB level and E2E runs leave no residue
+**Depends on**: Phase 36 (persona catalog, resolution, switcher), Phase 29 (Voice Live session config layer)
+**Requirements**: PERSONA-05, PERSONA-06, PERSONA-07, HARD-01
+**Success Criteria** (what must be TRUE):
+  1. Switching persona changes the digital human's on-screen appearance — the WebRTC session config carries the active persona's Azure prebuilt character+style for both anonymous and logged-in paths
+  2. The voice conversation's tone/personality follows the active persona — the Voice Live session instructions carry the sanitized persona prompt fragment (logged-in path merged with CRM/preference context, two-gate sanitization preserved)
+  3. The greeting is spoken in the session's locale — greeting is a per-locale map (same mechanism as voice_map) with graceful fallback, editable per-language in the admin dialog, existing greetings preserved by migration
+  4. Exactly-one-default is enforced by a DB constraint (not only the service-layer guard), and persona E2E specs clean up the personas they create (dev DB state identical before/after a full E2E run)
+**Plans**: TBD (plan-phase)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 → 35 → 36
+Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 → 35 → 36 → 37
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -335,3 +356,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
+| 37. Persona Fidelity & Hardening | v2.2 | 0/? | Not started | - |
