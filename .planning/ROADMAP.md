@@ -288,7 +288,7 @@ Plans:
   2. Users no longer see legacy coach navigation entries in the app nav (feature-flag controlled), while underlying coach routes/code and the existing Playwright suite continue to work unchanged
 **Plans**: 2 plans
 Plans:
-- [ ] 35-01-PLAN.md — AVUI-01 verification lock-in: chrome-absence E2E assertion + pre-change full E2E baseline capture
+- [x] 35-01-PLAN.md — AVUI-01 verification lock-in: chrome-absence E2E assertion + pre-change full E2E baseline capture
 - [ ] 35-02-PLAN.md — AVUI-02 feature-flag pipeline: backend Settings/API + frontend type/context/UserLayout gating + full regression proof
 **UI hint**: yes
 
@@ -304,5 +304,5 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 32. Anonymous Grounded Avatar Q&A | v2.0 | 5/5 | Complete    | 2026-08-01 |
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
-| 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 0/2 | Not started | - |
+| 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 1/2 | In Progress|  |
 </content>

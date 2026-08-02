@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Phase 35 UI-SPEC approved
-last_updated: "2026-08-02T00:45:17.318Z"
-last_activity: 2026-08-02 -- Phase 35 planning complete
+stopped_at: Completed 35-01-PLAN.md
+last_updated: "2026-08-02T01:37:57.892Z"
+last_activity: 2026-08-02
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 25
-  completed_plans: 23
-  percent: 92
+  completed_plans: 24
+  percent: 96
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
-**Current focus:** Phase 32 — anonymous-grounded-avatar-q-a
+**Current focus:** Phase 35 — clean-avatar-ui-legacy-coach-hiding
 
 ## Current Position
 
-Phase: 34
-Plan: 10 of 10
+Phase: 35 (clean-avatar-ui-legacy-coach-hiding) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-08-02 -- Phase 35 planning complete
+Last activity: 2026-08-02
 
 ## Performance Metrics
 
@@ -153,6 +153,7 @@ Last activity: 2026-08-02 -- Phase 35 planning complete
 | Phase 34 P08 | 20min | 2 tasks | 10 files |
 | Phase 34 P09 | 20min | 2 tasks | 5 files |
 | Phase 34 P10 | 70min | 2 tasks | 2 files |
+| Phase 35 P01 | 53min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -339,6 +340,8 @@ Recent decisions affecting current work:
 - [Phase 34]: 34-08: admin voice_map GET/PUT mirrors azure_config.py's singleton-config pattern; GET bundles override + DEFAULT_PUBLIC_VOICE_BY_LOCALE defaults; PUT accepts empty-string values for known locales per D-07
 - [Phase 34]: 34-09: voiceMapValues state seeded via useEffect from useVoiceMap() query data, always sent in full on Save to match backend's full-dict-replace PUT semantics
 - [Phase 34]: 34-10: LANG-02 closed after post-plan gate fixes (SplashScreen h1->p, stale health.spec title); residual 34 full-suite E2E failures triaged as pre-existing legacy-coach debt (deferred-items.md addendum), es-* voice E2E 5/5 green
+- [Phase 35]: 35-01: chrome-absence E2E assertion added to anonymous-avatar-qa.spec.ts (page.locator('nav').toHaveCount(0)); AVUI-01 verification-only, avatar-page.tsx untouched
+- [Phase 35]: 35-01: full E2E baseline captured via 6-way foreground sharding (--shard=N/6) since a single unsharded run exceeds one Bash call and background runs do not survive agent turn boundaries; 421 passed / 9 skipped / 39 failed, committed to 35-E2E-BASELINE.md
 
 ### Pending Todos
 
@@ -379,6 +382,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-02T00:30:56.849Z
-Stopped at: Phase 35 UI-SPEC approved
-Resume file: .planning/phases/35-clean-avatar-ui-legacy-coach-hiding/35-UI-SPEC.md
+Last session: 2026-08-02T01:37:57.889Z
+Stopped at: Completed 35-01-PLAN.md
+Resume file: None
