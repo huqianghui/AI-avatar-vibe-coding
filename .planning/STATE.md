@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Completed 36-01-PLAN.md
-last_updated: "2026-08-02T10:01:46.705Z"
+stopped_at: Completed 36-02-PLAN.md
+last_updated: "2026-08-02T10:46:24.487Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 4
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 36
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-08-02
 
@@ -157,6 +157,7 @@ Last activity: 2026-08-02
 | Phase 35 P01 | 53min | 2 tasks | 2 files |
 | Phase 35 P02 | 65min | 3 tasks | 9 files |
 | Phase 36 P01 | 45min | 3 tasks | 13 files |
+| Phase 36 P02 | 55min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -350,6 +351,7 @@ Recent decisions affecting current work:
 - [Phase 36]: AppException handler returns {code,message,details} at JSON top level, not nested under 'detail'
 - [Phase 36]: Transactional unique-default guard (clear-all-then-set-one bulk UPDATE in one commit) used for AvatarPersona is_default invariant
 - [Phase 36]: Seeded persona uses character='lisa' not 'jeff' (Dec-2026 Azure prebuilt retirement pitfall)
+- [Phase 36]: Deterministic E2E row identity: stamp data-persona-id on table rows to disambiguate ambiguous text matches (character/thumbnail alt collisions)
 
 ### Pending Todos
 
@@ -391,6 +393,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-02T10:01:46.702Z
-Stopped at: Completed 36-01-PLAN.md
+Last session: 2026-08-02T10:46:17.932Z
+Stopped at: Completed 36-02-PLAN.md
 Resume file: None
