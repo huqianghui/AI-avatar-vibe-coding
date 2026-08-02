@@ -340,7 +340,13 @@ Plans:
   2. The voice conversation's tone/personality follows the active persona — the Voice Live session instructions carry the sanitized persona prompt fragment (logged-in path merged with CRM/preference context, two-gate sanitization preserved)
   3. The greeting is spoken in the session's locale — greeting is a per-locale map (same mechanism as voice_map) with graceful fallback, editable per-language in the admin dialog, existing greetings preserved by migration
   4. Exactly-one-default is enforced by a DB constraint (not only the service-layer guard), and persona E2E specs clean up the personas they create (dev DB state identical before/after a full E2E run)
-**Plans**: TBD (plan-phase)
+**Plans**: 4 plans
+
+Plans:
+- [ ] 37-01-PLAN.md — Backend greeting_map column/migration + partial unique index + resolution chain + call-site fixes (PERSONA-07, HARD-01)
+- [ ] 37-02-PLAN.md — Avatar character/style + sanitized instructions in Voice Live session_config, optional-auth CRM merge (PERSONA-05, PERSONA-06)
+- [ ] 37-03-PLAN.md — Admin per-locale greeting editing UI + i18n parity + E2E teardown fix for admin-avatar-personas.spec.ts (PERSONA-07, HARD-01)
+- [ ] 37-04-PLAN.md — Landing-page avatar video transceiver negotiation + persona identity wiring + E2E identity-switch proof (PERSONA-05)
 
 ## Progress
 
