@@ -79,22 +79,53 @@ vi.mock("@/hooks/use-anonymous-avatar-chat", () => ({
 }));
 
 const mockConnect = vi.fn();
+const mockDisconnect = vi.fn();
 const mockToggleMute = vi.fn();
+const mockSendTextMessage = vi.fn();
 let mockConnectionState: "disconnected" | "connecting" | "connected" = "disconnected";
 let mockAudioState: "idle" | "listening" | "speaking" = "idle";
 let mockIsMuted = false;
 vi.mock("@/hooks/use-anonymous-voice-live", () => ({
   useAnonymousVoiceLive: () => ({
     connect: mockConnect,
-    disconnect: vi.fn(),
+    disconnect: mockDisconnect,
     toggleMute: mockToggleMute,
-    sendTextMessage: vi.fn(),
+    sendTextMessage: mockSendTextMessage,
     sendAudio: vi.fn(),
     send: vi.fn(),
     isMuted: mockIsMuted,
     connectionState: mockConnectionState,
     audioState: mockAudioState,
     avatarSdpCallbackRef: { current: null },
+  }),
+}));
+
+// Persona-switcher hooks (Phase 36, PERSONA-03) -- mocked so this
+// hook-composition test never needs a real QueryClientProvider, matching
+// every other hook this page composes.
+let mockSelectedPersona: {
+  id: string;
+  name: string;
+  character: string;
+  style: string;
+  greeting: string;
+} | null = null;
+let mockEnabledPersonas: Array<{
+  id: string;
+  name: string;
+  character: string;
+  style: string;
+  greeting: string;
+  is_default: boolean;
+}> = [];
+const mockSetSelectedPersonaMutate = vi.fn();
+let mockSetSelectedPersonaIsPending = false;
+vi.mock("@/hooks/use-selected-persona", () => ({
+  useSelectedPersona: () => ({ data: mockSelectedPersona, isLoading: false, error: null }),
+  useEnabledPersonas: () => ({ data: mockEnabledPersonas, isLoading: false, error: null }),
+  useSetSelectedPersona: () => ({
+    mutate: mockSetSelectedPersonaMutate,
+    isPending: mockSetSelectedPersonaIsPending,
   }),
 }));
 
@@ -153,6 +184,9 @@ describe("AvatarPage", () => {
     mockAuthUser = null;
     mockPersonalizedSession = null;
     mockPersonalizedIsPending = false;
+    mockSelectedPersona = null;
+    mockEnabledPersonas = [];
+    mockSetSelectedPersonaIsPending = false;
   });
 
   it("renders at / without any auth context and does not redirect", () => {
@@ -515,6 +549,9 @@ describe("AvatarPage — authenticated user (Phase 33, PERS-02)", () => {
     mockAuthUser = { email: "test@x.com" };
     mockPersonalizedSession = { session_id: "psess-1", expires_at: "2026-08-01T12:00:00Z" };
     mockPersonalizedIsPending = false;
+    mockSelectedPersona = null;
+    mockEnabledPersonas = [];
+    mockSetSelectedPersonaIsPending = false;
   });
 
   it('renders the "专属模式" badge + user email instead of the 登录 button when isAuthenticated is true', () => {
@@ -577,6 +614,9 @@ describe("AvatarPage — logged-out user regression guard (Phase 33, PERS-02)", 
     mockAuthUser = null;
     mockPersonalizedSession = null;
     mockPersonalizedIsPending = false;
+    mockSelectedPersona = null;
+    mockEnabledPersonas = [];
+    mockSetSelectedPersonaIsPending = false;
   });
 
   it("still renders the 登录 button and routes chat through the anonymous mutation when logged out", async () => {

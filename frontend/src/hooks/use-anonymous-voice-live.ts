@@ -70,6 +70,11 @@ export function useAnonymousVoiceLive(
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intentionalCloseRef = useRef(false);
   const lastConnectLocaleRef = useRef<string | undefined>(undefined);
+  /** Persona id from the most recent `connect()` call (Phase 36, PERSONA-03)
+   * -- the auto-reconnect path below re-invokes `connect()` with this so a
+   * dropped connection resumes with the same persona rather than silently
+   * falling back to the default. */
+  const lastConnectPersonaIdRef = useRef<string | undefined>(undefined);
   const connectionStateRef = useRef<VoiceConnectionState>("disconnected");
   const transcriptIdCounter = useRef(0);
   const optionsRef = useRef(options);
@@ -222,14 +227,15 @@ export function useAnonymousVoiceLive(
    * @returns avatarEnabled (always false for WebRTC), model name, and empty ICE servers.
    */
   const connect = useCallback(
-    async (locale?: string) => {
+    async (locale?: string, personaId?: string) => {
       const effectiveLocale = locale ?? optionsRef.current.locale ?? "zh-CN";
       const sid = crypto.randomUUID().slice(0, 8);
       setSessionCorrelationId(sid);
       resetEventSummary();
-      log.info("connect() locale=%s sid=%s", effectiveLocale, sid);
+      log.info("connect() locale=%s sid=%s personaId=%s", effectiveLocale, sid, personaId ?? "(none)");
 
       lastConnectLocaleRef.current = effectiveLocale;
+      lastConnectPersonaIdRef.current = personaId;
       reconnectAttemptRef.current = 0;
       intentionalCloseRef.current = false;
       setConnectionState("connecting");
@@ -242,6 +248,7 @@ export function useAnonymousVoiceLive(
         session = await fetchAnonymousWebrtcSession(
           sessionTokenRef.current,
           effectiveLocale,
+          personaId,
         );
         log.info(
           "Anonymous WebRTC session config received: mode=%s model=%s",
@@ -341,9 +348,11 @@ export function useAnonymousVoiceLive(
 
             cleanup();
             reconnectTimerRef.current = setTimeout(() => {
-              void connect(lastConnectLocaleRef.current).catch(() => {
-                // Reconnect attempt failed -- will be retried by next state change
-              });
+              void connect(lastConnectLocaleRef.current, lastConnectPersonaIdRef.current).catch(
+                () => {
+                  // Reconnect attempt failed -- will be retried by next state change
+                },
+              );
             }, delay);
           } else if (reconnectAttemptRef.current >= MAX_RECONNECT) {
             log.error("WebRTC connection failed after 3 attempts");

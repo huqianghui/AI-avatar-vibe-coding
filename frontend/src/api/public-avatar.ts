@@ -48,6 +48,10 @@ export interface WebrtcSessionResponse {
   agent_version?: string | null;
   project_name?: string | null;
   avatar_warning?: string | null;
+  /** The resolved persona's spoken greeting (Phase 36, PERSONA-04). Added to
+   * the backend base `WebRTCSessionResponse` schema by 36-03; this TS
+   * interface catches up here (Phase 36, PERSONA-03). */
+  greeting?: string | null;
 }
 
 /**
@@ -114,10 +118,18 @@ export async function sendAnonymousChat(
   return parseOrThrow<ChatResponse>(res, "send anonymous chat message");
 }
 
-/** POST /public/avatar/webrtc/session — X-Anon-Session header only, no JWT bearer header. */
+/**
+ * POST /public/avatar/webrtc/session — X-Anon-Session header only, no JWT
+ * bearer header. `personaId` (Phase 36, PERSONA-03/D-13) is optional and,
+ * when present, is serialized as `persona_id` — this is still the anonymous
+ * endpoint; a logged-in user's persona choice reaches it via this parameter,
+ * never via a JWT, matching the WebRTC/voice flow's D-13 unconditional-reuse
+ * convention.
+ */
 export async function fetchAnonymousWebrtcSession(
   sessionToken: string,
   locale: string,
+  personaId?: string,
 ): Promise<WebrtcSessionResponse> {
   const res = await fetch("/public/avatar/webrtc/session", {
     method: "POST",
@@ -125,7 +137,7 @@ export async function fetchAnonymousWebrtcSession(
       "Content-Type": "application/json",
       "X-Anon-Session": sessionToken,
     },
-    body: JSON.stringify({ locale }),
+    body: JSON.stringify(personaId ? { locale, persona_id: personaId } : { locale }),
   });
   return parseOrThrow<WebrtcSessionResponse>(res, "fetch anonymous webrtc session");
 }
