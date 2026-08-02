@@ -1,7 +1,7 @@
 ---
 phase: 35
 slug: clean-avatar-ui-legacy-coach-hiding
-status: planned
+status: complete
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-08-02
@@ -39,11 +39,11 @@ updated: 2026-08-02
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 35-01-T1 | 35-01 | 1 | AVUI-01 | T-35-01-02 | No secrets/PII captured in baseline artifact | E2E (baseline capture) | `cd frontend && npm run test:e2e -- --reporter=list` | ✅ spec files exist; baseline file created by this task | ⬜ pending |
-| 35-01-T2 | 35-01 | 1 | AVUI-01 | T-35-01-01 | Chrome-absence assertion, test-only change, no new attack surface | unit + E2E | `cd frontend && npx vitest run src/pages/avatar-page.test.tsx && npx playwright test anonymous-avatar-qa.spec.ts --config=e2e/playwright.config.ts` | ✅ both files exist | ⬜ pending |
-| 35-02-T1 | 35-02 | 2 | AVUI-02 | T-35-02-02, T-35-02-03 | New flag env-only, auth-gated endpoint unchanged; MagicMock/Pydantic bool pitfall fixed | unit (backend) | `cd backend && pytest tests/test_config_api.py -v` | ✅ all 3 files exist | ⬜ pending |
-| 35-02-T2 | 35-02 | 2 | AVUI-02 | T-35-02-01 | UI-visibility-only gating at both render sites; not an access-control boundary | unit (frontend) | `cd frontend && npx vitest run src/components/layouts/user-layout.test.tsx` | ✅ all 4 files exist | ⬜ pending |
-| 35-02-T3 | 35-02 | 2 | AVUI-01, AVUI-02 | T-35-02-01 | Zero newly-failing E2E tests vs. baseline; AdminLayout/redirects/routes untouched | unit + E2E (full regression) | `cd backend && pytest -v && cd ../frontend && npm run test && npx tsc -b && npm run build && npx playwright test navigation.spec.ts admin-navigation.spec.ts routing.spec.ts voice-live-proxy.spec.ts anonymous-avatar-qa.spec.ts --config=e2e/playwright.config.ts && npm run test:e2e` | ✅ all spec files exist | ⬜ pending |
+| 35-01-T1 | 35-01 | 1 | AVUI-01 | T-35-01-02 | No secrets/PII captured in baseline artifact | E2E (baseline capture) | `cd frontend && npm run test:e2e -- --reporter=list` | ✅ spec files exist; baseline file created by this task | ✅ green |
+| 35-01-T2 | 35-01 | 1 | AVUI-01 | T-35-01-01 | Chrome-absence assertion, test-only change, no new attack surface | unit + E2E | `cd frontend && npx vitest run src/pages/avatar-page.test.tsx && npx playwright test anonymous-avatar-qa.spec.ts --config=e2e/playwright.config.ts` | ✅ both files exist | ✅ green |
+| 35-02-T1 | 35-02 | 2 | AVUI-02 | T-35-02-02, T-35-02-03 | New flag env-only, auth-gated endpoint unchanged; MagicMock/Pydantic bool pitfall fixed | unit (backend) | `cd backend && pytest tests/test_config_api.py -v` | ✅ all 3 files exist | ✅ green (3 passed) |
+| 35-02-T2 | 35-02 | 2 | AVUI-02 | T-35-02-01 | UI-visibility-only gating at both render sites; not an access-control boundary | unit (frontend) | `cd frontend && npx vitest run src/components/layouts/user-layout.test.tsx` | ✅ all 4 files exist | ✅ green (9 passed) |
+| 35-02-T3 | 35-02 | 2 | AVUI-01, AVUI-02 | T-35-02-01 | Zero newly-failing E2E tests vs. baseline; AdminLayout/redirects/routes untouched | unit + E2E (full regression) | `cd backend && pytest -v && cd ../frontend && npm run test && npx tsc -b && npm run build && npx playwright test navigation.spec.ts admin-navigation.spec.ts routing.spec.ts voice-live-proxy.spec.ts anonymous-avatar-qa.spec.ts --config=e2e/playwright.config.ts && npm run test:e2e` | ✅ all spec files exist | ✅ green (backend 2829 passed/15 skipped/90.11% cov; frontend 2609 passed, tsc+build clean; targeted 5-spec run 56 passed/4 baseline-matched failed; full 6-shard E2E: zero newly-failing tests vs. 35-01 baseline — 34 failures observed, all present in baseline's 39; the 5 baseline failures not reproduced are the documented hcp-editor-voice-tab.spec.ts sharding-teardown flake) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -75,4 +75,4 @@ updated: 2026-08-02
 - [x] Feedback latency < 300s (per-task commands are quick; full E2E is the explicit phase-gate exception, run once per plan)
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** planned — map filled at plan-authoring time (2026-08-02); Status column will be updated to ✅/❌ during `/gsd-execute-phase` and phase gate verification.
+**Approval:** complete — all 5 tasks across 35-01/35-02 verified green during `/gsd-execute-phase` (2026-08-02). Full backend + frontend unit suites pass; zero E2E tests newly-failing relative to the 35-01 pre-change baseline.
