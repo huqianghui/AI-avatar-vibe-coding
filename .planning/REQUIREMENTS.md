@@ -45,7 +45,7 @@
 
 ### 登录落地 (LAND)
 
-- [ ] **LAND-01**: 普通用户登录后直达 avatar 页（`/`）并加载个人记忆（PERS-02 注入）与已记住的 Persona；admin 登录仍落 /admin/dashboard
+- [x] **LAND-01**: 普通用户登录后直达 avatar 页（`/`）并加载个人记忆（PERS-02 注入）与已记住的 Persona；admin 登录仍落 /admin/dashboard
 
 ## Future Requirements
 
@@ -83,7 +83,7 @@
 | PERSONA-02 | Phase 36 | Complete |
 | PERSONA-03 | Phase 36 | Complete |
 | PERSONA-04 | Phase 36 | Complete |
-| LAND-01 | Phase 36 | Pending |
+| LAND-01 | Phase 36 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 12 total

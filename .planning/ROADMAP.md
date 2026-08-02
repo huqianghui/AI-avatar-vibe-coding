@@ -297,7 +297,7 @@ Plans:
 
 **Milestone Goal:** 登录后直达数字人页面并加载个人记忆与已选数字人；管理员可配置数字人列表（Azure 预置 avatar + 语音 + 问候语）并标记默认；普通用户页内切换数字人并记住选择；匿名访客使用管理员标记的默认数字人。无强制选择页（默认数字人兜底）。
 
-- [ ] **Phase 36: Avatar Persona Selection & Post-Login Landing** - Admin-managed persona catalog, in-page persona switching remembered per user, post-login direct landing on the avatar page
+- [x] **Phase 36: Avatar Persona Selection & Post-Login Landing** - Admin-managed persona catalog, in-page persona switching remembered per user, post-login direct landing on the avatar page (completed 2026-08-02)
 
 ## Phase Details (v2.1)
 
@@ -319,7 +319,7 @@ Plans:
 - [x] 36-02-PLAN.md — Admin frontend persona management page (Table + Dialog) (PERSONA-01, PERSONA-02)
 - [x] 36-03-PLAN.md — Persona resolution wired into WebRTC session config + chat injection, two-gate sanitization (PERSONA-04)
 - [x] 36-04-PLAN.md — Self-service selected-persona endpoint + PersonaSwitcher UI, session rebuild + greeting (PERSONA-03)
-- [ ] 36-05-PLAN.md — Post-login landing redirect to / for regular users, admin unchanged (LAND-01)
+- [x] 36-05-PLAN.md — Post-login landing redirect to / for regular users, admin unchanged (LAND-01)
 
 ## Progress
 
@@ -334,4 +334,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
-| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 4/5 | In Progress|  |
+| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete   | 2026-08-02 |
