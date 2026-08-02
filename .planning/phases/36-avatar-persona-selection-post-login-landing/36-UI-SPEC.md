@@ -60,6 +60,8 @@ Pre-existing global base rules (`frontend/src/styles/index.css` `@layer base`) a
 
 **Weights used (exactly 2):** 400 regular, 600 semibold. (The global `label`/`button` base rule inherits weight 500 from existing tokens app-wide — that is pre-existing app behavior, not introduced by this phase, and is not overridden here.)
 
+**Toggle-label exception (avoid a de-facto 3rd weight):** the two `Switch` field labels introduced by this phase — **"Enabled"** and **"Set as default"** in `PersonaDialog` — must render with an explicit `text-sm font-semibold` (600) class on their `<Label>` element, not the bare unstyled global `label` base rule (which resolves to weight 500). Treat "Enabled"/"Set as default" as instances of the **Label** role declared above, not as plain unclassed `<Label>` elements — this keeps the phase to exactly the 2 declared weights (400/600) instead of silently introducing a 3rd (500).
+
 ---
 
 ## Color
@@ -108,6 +110,8 @@ Source strings are **en-US** (the i18n master for `admin.json` → `personas.*` 
 
 **Rationale:** This is a multi-row CRUD catalog with create/edit/delete/default-toggle semantics (Table + Dialog), matching the Phase 11/14 precedent (`hcp-profiles`, `voice-live` management pages) rather than the Phase 34 singleton-config precedent (`settings.tsx`'s "Voice per Language" Card, which edits exactly one row). Cramming a multi-row CRUD table with a create dialog into `settings.tsx` would break that page's existing "one card per singleton concern" layout convention.
 
+**Focal point:** On `/admin/avatar-personas`, the eye goes first to the primary-accent `Default` badge on whichever single row currently carries it (the only accent-colored badge on the page, unmistakable at a glance), then moves to the `Create Persona` button (top-right, primary-accent, the page's only other accent-colored element) as the clear next action.
+
 **Sidebar entry** (`frontend/src/components/layouts/admin-layout.tsx`): add to the existing `configuration` group's `items` array — this inserts a new `<NavLink>` **inside the already-existing `<nav>` element**, so it does not add a second nav landmark and cannot break `voice-live-proxy.spec.ts:489`'s `getByRole("link", { name: /voice live/i })` assertion (that assertion targets the existing "Voice Live" link by name; adding a sibling link doesn't change its visibility or role).
 
 ```ts
@@ -119,7 +123,7 @@ Position: immediately after `voiceLive`, before `metaSkills` (adjacent admin-man
 
 **Decision:** `frontend/src/components/admin/persona-dialog.tsx`, `sm:max-w-2xl max-h-[90vh] overflow-y-auto` Dialog (exact size class reuse from `vl-instance-dialog.tsx`), with these sections in order:
 
-1. **Identity** — `name` (Input), `enabled` (Switch), `is_default` (Switch, disabled + tooltip when `enabled` is off)
+1. **Identity** — `name` (Input), `enabled` (Switch, label "Enabled" per the Typography Toggle-label exception above), `is_default` (Switch, label "Set as default" per the same exception, disabled + tooltip when `enabled` is off)
 2. **Character & Style** — exact clone of `vl-instance-dialog.tsx`'s filter-tabs (`all`/`photo`/`video`) + 4-column thumbnail grid (`AVATAR_CHARACTERS`, `h-14 w-14` circles, `ring-2 ring-primary` selection state, initials-gradient fallback on image 404)
 3. **Voice per Language** — one row per supported locale (zh-CN/en-US/es-ES/es-MX/es-US), each a `Select` of `VOICE_NAME_OPTIONS` (reuse the Phase 34 `admin.json` `voiceMap.*` Card layout/copy pattern from `settings.tsx`, adapted to a per-persona sub-section instead of the singleton config) — empty selection is valid (falls back per D-07's resolution chain, so leave a "(use default)" option at the top of each `Select`)
 4. **Greeting** — `Textarea` (2 rows), helper caption: *"Spoken by the digital human right after the session connects."*
@@ -127,7 +131,9 @@ Position: immediately after `voiceLive`, before `metaSkills` (adjacent admin-man
 
 Footer: `Cancel` (outline) + `Save Persona` (primary, disabled while `name` empty or mutation pending — exact `isSaving` pattern reuse from `vl-instance-dialog.tsx`).
 
-**Table** (`frontend/src/components/admin/persona-table.tsx`): columns — thumbnail (32px), Name, Character/Style, Default (badge, primary-accent colored, only one row shows it), Enabled (Switch, inline-toggleable), Actions (Edit pencil icon button, Delete trash icon button — trash disabled + tooltip *"Set another default first"* on the current default row, mirroring the defaultGuardError copy).
+**Table** (`frontend/src/components/admin/persona-table.tsx`): columns — thumbnail (32px), Name, Character/Style, Default (badge, primary-accent colored, only one row shows it), Enabled (Switch, inline-toggleable), Actions (Edit pencil icon button, Delete trash icon button).
+
+**Accessible labels on icon-only Actions buttons (normal, non-disabled state):** the Edit and Delete buttons render icon-only (no visible text label), so each MUST carry `aria-label="Edit persona"` and `aria-label="Delete persona"` respectively at all times — not only when disabled. On top of the `aria-label`, both buttons also get a `Tooltip` on hover/focus showing the same text ("Edit persona" / "Delete persona") for sighted-mouse users, exactly mirroring the existing icon-button pattern already used elsewhere in this repo's admin tables (e.g. `hcp-table.tsx`'s row actions). The disabled-Delete state additionally swaps its tooltip text to *"Set another default first"* (already specified below) but its `aria-label` stays `"Delete persona"` — disabled state is conveyed via the native `disabled` attribute + `aria-disabled`, not by changing the accessible name. Trash icon button is disabled + tooltip *"Set another default first"* on the current default row only, mirroring the `defaultGuardError` copy.
 
 **Delete confirmation:** plain `Dialog` (not `AlertDialog` — none exists in this repo, per the Phase 11 precedent noted in STATE.md decisions).
 
@@ -140,6 +146,8 @@ Footer: `Cancel` (outline) + `Save Persona` (primary, disabled while `name` empt
 - A `DropdownMenu` renders via a Radix `Portal` with `role="menu"`, not a `<nav>` element — **confirmed safe against the AVUI-01 chrome-absence assertion** (`avatar-clean-ui`/`anonymous-avatar-qa.spec.ts:127`'s `page.locator("nav")).toHaveCount(0)`).
 
 **Trigger:** a compact `Button variant="ghost"` in the header showing the active persona's 32px thumbnail circle + name + `ChevronDown` icon, positioned to the left of the existing personalization `Badge`.
+
+**Focal point:** in the `PersonaSwitcher` idle state, the thumbnail+name pairing on the trigger is the single visual anchor in that corner of the header — it is the only avatar-image-plus-text control in the header row (the `Badge` and email text next to it are plain text/icon, no photographic thumbnail), so the eye lands on the trigger first before the chevron or the badge.
 
 **Content:** header row *"Switch digital human"*, then one row per enabled persona (32px thumbnail + name + style label), with a `Check` icon (primary-accent color) on the currently-active row. Selecting a different row:
 1. Closes the menu immediately
