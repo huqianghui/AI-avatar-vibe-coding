@@ -312,7 +312,14 @@ Plans:
   3. A logged-in user can switch persona from an in-page entry on the avatar page (switch rebuilds the session, consistent with the language-switch convention) and the choice persists as `selected_persona_id`
   4. After login, a regular user lands directly on the avatar page (`/`) with personalized memory (PERS-02 injection) and their remembered persona active; admins still land on /admin/dashboard
   5. The avatar session actually uses the active persona's character/style/voice and speaks its greeting; persona prompt fragment is injected alongside CRM/preference context with existing sanitization
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 36-01-PLAN.md — Backend AvatarPersona entity, admin CRUD API, seed default persona (PERSONA-01, PERSONA-02)
+- [ ] 36-02-PLAN.md — Admin frontend persona management page (Table + Dialog) (PERSONA-01, PERSONA-02)
+- [ ] 36-03-PLAN.md — Persona resolution wired into WebRTC session config + chat injection, two-gate sanitization (PERSONA-04)
+- [ ] 36-04-PLAN.md — Self-service selected-persona endpoint + PersonaSwitcher UI, session rebuild + greeting (PERSONA-03)
+- [ ] 36-05-PLAN.md — Post-login landing redirect to / for regular users, admin unchanged (LAND-01)
 
 ## Progress
 
@@ -327,4 +334,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
-| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 0/? | Not started | - |
+| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 0/5 | Not started | - |
