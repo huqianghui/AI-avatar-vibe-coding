@@ -318,7 +318,7 @@ Plans:
 - [x] 36-01-PLAN.md — Backend AvatarPersona entity, admin CRUD API, seed default persona (PERSONA-01, PERSONA-02)
 - [x] 36-02-PLAN.md — Admin frontend persona management page (Table + Dialog) (PERSONA-01, PERSONA-02)
 - [x] 36-03-PLAN.md — Persona resolution wired into WebRTC session config + chat injection, two-gate sanitization (PERSONA-04)
-- [ ] 36-04-PLAN.md — Self-service selected-persona endpoint + PersonaSwitcher UI, session rebuild + greeting (PERSONA-03)
+- [x] 36-04-PLAN.md — Self-service selected-persona endpoint + PersonaSwitcher UI, session rebuild + greeting (PERSONA-03)
 - [ ] 36-05-PLAN.md — Post-login landing redirect to / for regular users, admin unchanged (LAND-01)
 
 ## Progress
@@ -334,4 +334,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
-| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 3/5 | In Progress|  |
+| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 4/5 | In Progress|  |

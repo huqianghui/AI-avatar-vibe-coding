@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Completed 36-03-PLAN.md
-last_updated: "2026-08-02T11:34:50.143Z"
+stopped_at: Completed 36-04-PLAN.md
+last_updated: "2026-08-02T12:31:13.879Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 4
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 36
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-02
 
@@ -159,6 +159,7 @@ Last activity: 2026-08-02
 | Phase 36 P01 | 45min | 3 tasks | 13 files |
 | Phase 36 P02 | 55min | 3 tasks | 18 files |
 | Phase 36 P03 | 85min | 3 tasks | 12 files |
+| Phase 36 P4 | 95min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -355,6 +356,8 @@ Recent decisions affecting current work:
 - [Phase 36]: Deterministic E2E row identity: stamp data-persona-id on table rows to disambiguate ambiguous text matches (character/thumbnail alt collisions)
 - [Phase 36]: resolve_active_persona() raises NotFoundException on empty default catalog rather than returning None, matching the plan's non-Optional signature
 - [Phase 36]: WebRTCSessionResponse.greeting added to the base schema class (schemas/voice_live.py), not just the public_avatar.py subclass, since create_public_webrtc_session_config constructs the base type directly
+- [Phase 36]: 36-04: set_selected_persona() upserts UserPreference(category=selected_persona_id) by user_id, rejecting disabled/unknown persona_id with 404 (no partial state)
+- [Phase 36]: 36-04: Persona switch reuses Phase 34 disconnect+reconnect voice-session convention; PersonaSwitcher's active-row state driven by useSelectedPersona() query, not a separate local activePersonaId
 
 ### Pending Todos
 
@@ -396,6 +399,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-02T11:34:50.139Z
-Stopped at: Completed 36-03-PLAN.md
+Last session: 2026-08-02T12:31:13.876Z
+Stopped at: Completed 36-04-PLAN.md
 Resume file: None
