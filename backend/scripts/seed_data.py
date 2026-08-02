@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
+from app.models.avatar_persona import AvatarPersona
 from app.models.message import SessionMessage
 from app.models.scenario import Scenario
 from app.models.score import ScoreDetail, SessionScore
@@ -603,6 +604,32 @@ async def seed_azure_config(session: AsyncSession) -> None:
     await session.commit()
 
 
+async def seed_default_avatar_persona(session: AsyncSession) -> None:
+    """Seed exactly one enabled, default AvatarPersona (Phase 36, D-02) so
+    the anonymous path never falls back to zero personas. Idempotent --
+    skips if any AvatarPersona row already exists. Uses "lisa" (a real
+    prebuilt character from AVATAR_VIDEO_CHARACTERS) -- deliberately not
+    "jeff" per the documented Dec-2026 retirement pitfall."""
+    result = await session.execute(select(func.count()).select_from(AvatarPersona))
+    if (result.scalar() or 0) > 0:
+        print("  [skip] AvatarPersona rows already exist")
+        return
+
+    persona = AvatarPersona(
+        name="Lisa",
+        character="lisa",
+        style="casual-sitting",
+        voice_map=json.dumps({"en-US": "en-US-AvaNeural"}),
+        greeting="Hi, I'm Lisa! How can I help you today?",
+        prompt_fragment="",
+        enabled=True,
+        is_default=True,
+    )
+    session.add(persona)
+    await session.commit()
+    print("  [created] Default AvatarPersona 'Lisa' (enabled, is_default)")
+
+
 async def main() -> None:
     """Create seed users, default rubric, and sample sessions."""
     from app.models.base import Base
@@ -650,6 +677,9 @@ async def main() -> None:
 
         # Seed Azure AI Foundry config from .env (for agent sync)
         await seed_azure_config(session)
+
+        # Seed default AvatarPersona (Phase 36, PERSONA-01/02)
+        await seed_default_avatar_persona(session)
 
     await engine.dispose()
     print("Seed complete.")

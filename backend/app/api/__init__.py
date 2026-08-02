@@ -1,3 +1,4 @@
+from app.api.admin_avatar_personas import router as admin_avatar_personas_router
 from app.api.admin_crm import router as admin_crm_router
 from app.api.admin_public_knowledge_config import (
     router as admin_public_knowledge_config_router,
@@ -7,6 +8,7 @@ from app.api.admin_users import router as admin_users_router
 from app.api.agent_foundation_models import router as agent_foundation_models_router
 from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
+from app.api.avatar_personas import router as avatar_personas_router
 from app.api.azure_config import router as azure_config_router
 from app.api.conference import router as conference_router
 from app.api.config import router as config_router
@@ -30,6 +32,7 @@ from app.api.system_enums import router as system_enums_router
 from app.api.voice_live import router as voice_live_router
 
 __all__ = [
+    "admin_avatar_personas_router",
     "admin_crm_router",
     "admin_public_knowledge_config_router",
     "admin_user_preferences_router",
@@ -37,6 +40,7 @@ __all__ = [
     "agent_foundation_models_router",
     "analytics_router",
     "auth_router",
+    "avatar_personas_router",
     "azure_config_router",
     "conference_router",
     "config_router",
