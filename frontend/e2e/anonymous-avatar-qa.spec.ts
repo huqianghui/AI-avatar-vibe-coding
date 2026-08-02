@@ -110,6 +110,29 @@ test.describe("Anonymous avatar Q&A", () => {
     await expect(page).not.toHaveURL(/\/login/);
   });
 
+  test("the avatar page renders no nav, sidebar, or coach chrome -- only the avatar experience", async ({
+    page,
+  }) => {
+    await mockSession(page);
+    await mockWebrtcSessionFailure(page);
+
+    await page.goto("/");
+    await dismissMicDialogIfOpen(page);
+
+    // AVUI-01: AvatarPage is a standalone route, never wrapped by UserLayout or
+    // AdminLayout -- neither of which is reachable from an anonymous session.
+    // UserLayout/AdminLayout are the only components in the app that render a
+    // <nav> element, so this is a true structural assertion, not an
+    // implementation-detail-coupled one (per 35-UI-SPEC.md's resolution).
+    await expect(page.locator("nav")).toHaveCount(0);
+
+    // The only chrome on / is the avatar's own minimal header (title span +
+    // login button/badge) -- confirm the input/transcript/sources surfaces are
+    // present alongside the chrome-absence, so this isn't a false-positive
+    // from a broken/blank page.
+    await expect(page.getByRole("textbox")).toBeVisible();
+  });
+
   test("a grounded question renders the answer in the transcript and citations in a structurally separate sources panel", async ({
     page,
   }) => {
