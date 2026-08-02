@@ -1,10 +1,11 @@
 ---
 phase: 35
 slug: clean-avatar-ui-legacy-coach-hiding
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: planned
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-08-02
+updated: 2026-08-02
 ---
 
 # Phase 35 — Validation Strategy
@@ -38,7 +39,11 @@ created: 2026-08-02
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (filled by planner) | | | AVUI-01 / AVUI-02 | | Flag is UI-visibility only, not an access-control boundary | unit/E2E | see plans | | ⬜ pending |
+| 35-01-T1 | 35-01 | 1 | AVUI-01 | T-35-01-02 | No secrets/PII captured in baseline artifact | E2E (baseline capture) | `cd frontend && npm run test:e2e -- --reporter=list` | ✅ spec files exist; baseline file created by this task | ⬜ pending |
+| 35-01-T2 | 35-01 | 1 | AVUI-01 | T-35-01-01 | Chrome-absence assertion, test-only change, no new attack surface | unit + E2E | `cd frontend && npx vitest run src/pages/avatar-page.test.tsx && npx playwright test anonymous-avatar-qa.spec.ts --config=e2e/playwright.config.ts` | ✅ both files exist | ⬜ pending |
+| 35-02-T1 | 35-02 | 2 | AVUI-02 | T-35-02-02, T-35-02-03 | New flag env-only, auth-gated endpoint unchanged; MagicMock/Pydantic bool pitfall fixed | unit (backend) | `cd backend && pytest tests/test_config_api.py -v` | ✅ all 3 files exist | ⬜ pending |
+| 35-02-T2 | 35-02 | 2 | AVUI-02 | T-35-02-01 | UI-visibility-only gating at both render sites; not an access-control boundary | unit (frontend) | `cd frontend && npx vitest run src/components/layouts/user-layout.test.tsx` | ✅ all 4 files exist | ⬜ pending |
+| 35-02-T3 | 35-02 | 2 | AVUI-01, AVUI-02 | T-35-02-01 | Zero newly-failing E2E tests vs. baseline; AdminLayout/redirects/routes untouched | unit + E2E (full regression) | `cd backend && pytest -v && cd ../frontend && npm run test && npx tsc -b && npm run build && npx playwright test navigation.spec.ts admin-navigation.spec.ts routing.spec.ts voice-live-proxy.spec.ts anonymous-avatar-qa.spec.ts --config=e2e/playwright.config.ts && npm run test:e2e` | ✅ all spec files exist | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -46,28 +51,28 @@ created: 2026-08-02
 
 ## Wave 0 Requirements
 
-- [ ] New E2E chrome-absence assertion for AVUI-01 (`anonymous-avatar-qa.spec.ts` extension or new `avatar-ui-clean.spec.ts`)
-- [ ] `backend/tests/test_config_api.py` — `mock_settings.feature_legacy_coach_nav_enabled` added to every full mock_settings construction
-- [ ] `frontend/src/components/layouts/user-layout.test.tsx` — mock update (`legacy_coach_nav_enabled: true`) + new flag=false absence test case
-- [ ] Pre-change full E2E baseline capture (one run, record pass/fail list)
+- [x] New E2E chrome-absence assertion for AVUI-01 (`anonymous-avatar-qa.spec.ts` extension) — assigned to 35-01-T2
+- [x] `backend/tests/test_config_api.py` — `mock_settings.feature_legacy_coach_nav_enabled` added to every full mock_settings construction — assigned to 35-02-T1
+- [x] `frontend/src/components/layouts/user-layout.test.tsx` — mock update (`legacy_coach_nav_enabled: true`) + new flag=false absence test case — assigned to 35-02-T2
+- [x] Pre-change full E2E baseline capture (one run, record pass/fail list) — assigned to 35-01-T1
 
 ---
 
 ## Manual-Only Verifications
 
 | Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
+|----------|-------------|------------|--------------------|
 | Visual "decluttered" impression of avatar page on real devices | AVUI-01 | Aesthetic judgment beyond selector assertions | Open `/` on desktop + mobile viewport; confirm only header, avatar, transcript, input bar, sources panel are visible |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 300s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (35-01 has 2 tasks both verified; 35-02 has 3 tasks all verified)
+- [x] Wave 0 covers all MISSING references (baseline capture, mock_settings, user-layout mock — all assigned to concrete tasks above)
+- [x] No watch-mode flags (all commands use `run`/one-shot forms, never `--watch` or `vitest` without `run`)
+- [x] Feedback latency < 300s (per-task commands are quick; full E2E is the explicit phase-gate exception, run once per plan)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planned — map filled at plan-authoring time (2026-08-02); Status column will be updated to ✅/❌ during `/gsd-execute-phase` and phase gate verification.
