@@ -57,12 +57,13 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - ✓ 登录个性化：Excel CRM 对应关系表上传解析入库（userid → CRM 知识/对口支持人）— v2.0 (Phase 33)
 - ✓ 用户偏好注入：chat-time system prompt 注入（CRM 上下文 + 偏好），含 prompt-injection/PII 双闸 sanitization — v2.0 (Phase 33)
 - ✓ 管理员偏好打标签：界面查看/编辑用户偏好标签（人工打标签）— v2.0 (Phase 33)
+- ✓ 西班牙语（es）i18n 支持：UI 全量 es 翻译（key-parity 校验）+ es-* neural voice 数字人语音回答 — v2.0 (Phase 34)
+- ✓ 清爽 Avatar UI：avatar 页仅数字人 + 文档链接面板，语音内容与来源视觉分离，chrome-absence E2E 回归锁定 — v2.0 (Phase 35)
+- ✓ 隐藏旧 coach 功能前端入口：`feature_legacy_coach_nav_enabled` flag（默认隐藏，env-only），代码与路由保留，零新增 E2E 失败 — v2.0 (Phase 35)
 
 ### Active
 
-- [ ] 西班牙语（es）i18n 支持
-- [ ] 清爽 UI：仅数字人 + 文档链接
-- [ ] 隐藏旧 coach 功能前端入口（代码保留）
+（无 — v2.0 Avatar MVP 全部 12 项需求已验证完成）
 
 ### Out of Scope
 
