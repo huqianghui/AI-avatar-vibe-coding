@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Avatar Persona & Post-Login Experience
-status: planning
-stopped_at: Phase 36 added to roadmap
-last_updated: "2026-08-02T08:10:40.616Z"
+milestone: v2.0
+milestone_name: Avatar MVP
+status: executing
+stopped_at: Completed 36-01-PLAN.md
+last_updated: "2026-08-02T10:01:46.705Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 4
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 36
-Plan: Not started
-Status: Phase added — research/ui-spec/planning next
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-08-02
 
 ## Performance Metrics
@@ -156,6 +156,7 @@ Last activity: 2026-08-02
 | Phase 34 P10 | 70min | 2 tasks | 2 files |
 | Phase 35 P01 | 53min | 2 tasks | 2 files |
 | Phase 35 P02 | 65min | 3 tasks | 9 files |
+| Phase 36 P01 | 45min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -346,6 +347,9 @@ Recent decisions affecting current work:
 - [Phase 35]: 35-01: full E2E baseline captured via 6-way foreground sharding (--shard=N/6) since a single unsharded run exceeds one Bash call and background runs do not survive agent turn boundaries; 421 passed / 9 skipped / 39 failed, committed to 35-E2E-BASELINE.md
 - [Phase 35]: Env-var-only feature_legacy_coach_nav_enabled flag (default False), no DB override, no admin UI toggle - matches feature_conference_enabled precedent
 - [Phase 35]: UI-visibility-only gating in UserLayout (both desktop and mobile render sites) - never a route guard; all routes/pages/APIs remain reachable
+- [Phase 36]: AppException handler returns {code,message,details} at JSON top level, not nested under 'detail'
+- [Phase 36]: Transactional unique-default guard (clear-all-then-set-one bulk UPDATE in one commit) used for AvatarPersona is_default invariant
+- [Phase 36]: Seeded persona uses character='lisa' not 'jeff' (Dec-2026 Azure prebuilt retirement pitfall)
 
 ### Pending Todos
 
@@ -387,6 +391,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-02T02:44:48.307Z
-Stopped at: Completed 35-02-PLAN.md
+Last session: 2026-08-02T10:01:46.702Z
+Stopped at: Completed 36-01-PLAN.md
 Resume file: None
