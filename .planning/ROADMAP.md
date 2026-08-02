@@ -3,7 +3,8 @@
 ## Milestones
 
 - ✅ **v1.0 MR Coach Platform** - Phases 1-31 (shipped; not formally archived, see PROJECT.md)
-- 📋 **v2.0 Avatar MVP** - Phases 32-35 (planned)
+- ✅ **v2.0 Avatar MVP** - Phases 32-35 (complete 2026-08-02)
+- 📋 **v2.1 Avatar Persona & Post-Login Experience** - Phase 36 (in progress)
 
 ## Phases
 
@@ -292,10 +293,31 @@ Plans:
 - [x] 35-02-PLAN.md — AVUI-02 feature-flag pipeline: backend Settings/API + frontend type/context/UserLayout gating + full regression proof
 **UI hint**: yes
 
+### 📋 v2.1 Avatar Persona & Post-Login Experience (Phase 36)
+
+**Milestone Goal:** 登录后直达数字人页面并加载个人记忆与已选数字人；管理员可配置数字人列表（Azure 预置 avatar + 语音 + 问候语）并标记默认；普通用户页内切换数字人并记住选择；匿名访客使用管理员标记的默认数字人。无强制选择页（默认数字人兜底）。
+
+- [ ] **Phase 36: Avatar Persona Selection & Post-Login Landing** - Admin-managed persona catalog, in-page persona switching remembered per user, post-login direct landing on the avatar page
+
+## Phase Details (v2.1)
+
+### Phase 36: Avatar Persona Selection & Post-Login Landing
+
+**Goal**: Logged-in users land directly on the avatar page with their memory and remembered digital-human persona loaded; admins manage a persona catalog (Azure prebuilt avatar + voice + greeting) with a marked default that also serves anonymous visitors
+**Depends on**: Phase 33 (preference storage + chat-time injection), Phase 34 (voice_map/per-language voice), Phase 35 (clean avatar page as landing surface)
+**Requirements**: PERSONA-01, PERSONA-02, PERSONA-03, PERSONA-04, LAND-01
+**Success Criteria** (what must be TRUE):
+  1. Admin can create/edit/enable/disable avatar personas (name, Azure prebuilt avatar character+style, per-language voice, greeting/persona prompt fragment) and mark exactly one enabled persona as default
+  2. Anonymous visitors and logged-in users without a saved selection get the admin-marked default persona automatically — no forced selection page
+  3. A logged-in user can switch persona from an in-page entry on the avatar page (switch rebuilds the session, consistent with the language-switch convention) and the choice persists as `selected_persona_id`
+  4. After login, a regular user lands directly on the avatar page (`/`) with personalized memory (PERS-02 injection) and their remembered persona active; admins still land on /admin/dashboard
+  5. The avatar session actually uses the active persona's character/style/voice and speaks its greeting; persona prompt fragment is injected alongside CRM/preference context with existing sanitization
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 → 35
+Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 → 35 → 36
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -305,4 +327,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 33. Personalized CRM-Excel Avatar | v2.0 | 8/8 | Complete    | 2026-08-01 |
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
-</content>
+| 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 0/? | Not started | - |

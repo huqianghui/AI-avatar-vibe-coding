@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Avatar MVP
-status: verifying
-stopped_at: Completed 35-02-PLAN.md
+milestone: v2.1
+milestone_name: Avatar Persona & Post-Login Experience
+status: planning
+stopped_at: Phase 36 added to roadmap
 last_updated: "2026-08-02T08:10:40.616Z"
 last_activity: 2026-08-02
 progress:
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
-**Current focus:** Phase 35 — clean-avatar-ui-legacy-coach-hiding
+**Current focus:** Phase 36 — avatar-persona-selection-post-login-landing
 
 ## Current Position
 
-Phase: 35
+Phase: 36
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Phase added — research/ui-spec/planning next
 Last activity: 2026-08-02
 
 ## Performance Metrics
@@ -369,6 +369,7 @@ Recent decisions affecting current work:
 - Phase 28 added: 上传资料转成 SOP Skill 并注册到 AI Foundry；培训过程中将 Skill 挂给 HCP Agent 与用户对话
 - Phase 29 added: Voice Live API 重构与适配 — SDK 1.3.0 + GA 2026-07-15、双路径架构（文本直连 Agent / 语音 Voice Live→Agent）、删 monkey-patch 与 classic agent、VoiceLiveInstance 可选化、移除 HCP 内联 voice 字段、模型目录拆分、文档与测试全面更新
 - v2.0 milestone roadmap created 2026-07-31: Phase 32 (Anonymous Grounded Avatar Q&A: ANON-01..05), Phase 33 (Personalized CRM-Excel Avatar: PERS-01..03), Phase 34 (Spanish i18n: LANG-01..02), Phase 35 (Clean Avatar UI & Legacy Coach Hiding: AVUI-01..02) — continues numbering from v1.0 (ended Phase 31); coarse granularity per config.json
+- Phase 36 added (2026-08-02, v2.1 milestone): Avatar Persona Selection & Post-Login Landing — PERSONA-01..04 + LAND-01; admin persona catalog (Azure prebuilt avatars only), in-page persona switching persisted as selected_persona_id, default-persona fallback (no forced selection page), post-login direct landing on avatar page for regular users
 
 ### Quick Tasks Completed
 

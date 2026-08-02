@@ -8,20 +8,20 @@ An AI-powered digital human (avatar) platform for BeiGene (百济神州), built 
 
 Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
-## Current Milestone: v2.0 Avatar MVP
+## Current Milestone: v2.1 Avatar Persona & Post-Login Experience
 
-**Goal:** 将平台从 MR 教练系统转型为 AI Avatar 助手 — 匿名用户可与数字人对话获取官网知识解答，登录用户获得基于 CRM 数据（Excel POC）的个性化回答，支持西班牙语，UI 只呈现数字人 + 文档来源链接。
+**Goal:** 登录后直达数字人页面并加载个人记忆与已选数字人；管理员可配置数字人 Persona 列表并标记默认；普通用户页内切换数字人并记住选择；匿名访客使用默认数字人。
 
 **Target features:**
-- 匿名官网知识问答 — 无需登录，数字人基于官网内容（Foundry IQ 索引）回答问题，回答附来源（page + document link）
-- 登录个性化 avatar — 基于 userid 的 CRM 知识（Excel 对应关系表 POC，不做 CRM 集成）+ 用户偏好注入（system prompt / prompt template），偏好由后台抽取或人工打标签
-- 西班牙语支持 — 在现有 zh-CN/en-US 基础上新增 es
-- 清爽 UI — 仅数字人 + 文档链接；语音内容与文档展示分离；隐藏旧 coach 功能入口（代码保留）
+- 管理员 Persona 目录 — 名称、Azure 预置 avatar character+style、按语言 voice（复用 Phase 34 voice_map 机制）、问候语/persona prompt 片段、启用/禁用、唯一默认标记
+- 用户 Persona 选择 — avatar 页内切换入口（切换重建会话，沿用西语切换惯例），选择持久化为 `selected_persona_id`（挂在 Phase 33 偏好存储）
+- 默认兜底 — 无强制选择页；匿名访客与未选择用户自动用默认 Persona
+- 登录直达 — 普通用户登录落 `/`（avatar 页）并加载 PERS-02 记忆注入 + 已选 Persona；admin 仍落 /admin/dashboard
 
 **Key context:**
-- 最大化复用 v1.0 底座：Voice Live 数字人（SDK 1.3.0b1 双路径）、Foundry IQ 集成（Phase 17）、i18n 框架、JWT 认证
-- 旧 coach 功能本里程碑仅隐藏前端入口、保留代码；彻底删除留到后续里程碑
-- Phase 编号从 32 继续（v1.0 未正式归档，不重置编号）
+- 约束：Azure Voice Live 标准 avatar 仅限预置角色（Lisa/Harry/Meg/Max 等 + styles），不做 Custom Avatar 训练
+- 最大化复用：Phase 33 偏好存储与 chat-time 注入、Phase 34 voice_map、Phase 32/35 avatar 页
+- v2.0 Avatar MVP（Phases 32-35，12/12 需求）已于 2026-08-02 完成
 - 执行遵循 CLAUDE.md 最高优先级规则：逐个需求 实现 → 100% unit test → Playwright E2E → 全通过 → commit → push
 
 ## Requirements
@@ -63,7 +63,11 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 
 ### Active
 
-（无 — v2.0 Avatar MVP 全部 12 项需求已验证完成）
+**v2.1 Avatar Persona & Post-Login Experience (Phase 36):**
+- 管理员数字人 Persona 目录管理（Azure 预置 avatar character+style + 按语言 voice + 问候语/prompt 片段，启用/禁用，唯一默认标记）— PERSONA-01/02
+- 登录用户页内切换数字人并持久化 `selected_persona_id`；匿名与未选择用户使用默认 Persona 兜底（无强制选择页）— PERSONA-03
+- avatar 会话实际应用 Persona 的 character/style/voice + 问候语，persona prompt 片段随 CRM/偏好上下文注入 — PERSONA-04
+- 普通用户登录直达 avatar 页（`/`）加载记忆与已选 Persona；admin 仍落 /admin/dashboard — LAND-01
 
 ### Out of Scope
 
