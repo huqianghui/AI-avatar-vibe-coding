@@ -179,6 +179,8 @@ export function PersonaTable({ personas, isLoading, onEdit }: PersonaTableProps)
                 return (
                   <tr
                     key={persona.id}
+                    data-testid="persona-row"
+                    data-persona-id={persona.id}
                     className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
                     onDoubleClick={() => onEdit(persona)}
                   >
