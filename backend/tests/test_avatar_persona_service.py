@@ -1,11 +1,16 @@
-"""Unit tests for avatar_persona_service (Phase 36, PERSONA-01/02)."""
+"""Unit tests for avatar_persona_service (Phase 36, PERSONA-01/02/04)."""
 
 import pytest
 from sqlalchemy import func, select
 
 from app.models.avatar_persona import AvatarPersona
+from app.models.public_knowledge_config import PublicKnowledgeConfig
+from app.models.user import User
+from app.models.user_preference import UserPreference
 from app.schemas.avatar_persona import AvatarPersonaCreate, AvatarPersonaUpdate
 from app.services import avatar_persona_service
+from app.services.auth import get_password_hash
+from app.services.voice_live_webrtc import DEFAULT_PUBLIC_VOICE_BY_LOCALE
 from app.utils.exceptions import ConflictException, NotFoundException, ValidationException
 
 
@@ -183,3 +188,174 @@ class TestParsePersonaVoiceMap:
         persona.voice_map = ""
 
         assert avatar_persona_service.parse_persona_voice_map(persona) == {}
+
+
+async def _make_user(db_session, username: str = "persona-user") -> User:
+    user = User(
+        username=username,
+        email=f"{username}@example.com",
+        hashed_password=get_password_hash("password123"),
+    )
+    db_session.add(user)
+    await db_session.flush()
+    return user
+
+
+class TestResolveActivePersona:
+    async def test_both_none_returns_the_default_persona(self, db_session):
+        default = await _create(db_session, name="Default", is_default=True)
+        await _create(db_session, name="Other", is_default=False)
+
+        resolved = await avatar_persona_service.resolve_active_persona(db_session)
+
+        assert resolved.id == default.id
+
+    async def test_requested_enabled_persona_wins_regardless_of_user_id(self, db_session):
+        await _create(db_session, name="Default", is_default=True)
+        requested = await _create(db_session, name="Requested", enabled=True, is_default=False)
+        user = await _make_user(db_session)
+
+        resolved = await avatar_persona_service.resolve_active_persona(
+            db_session, user_id=user.id, requested_persona_id=requested.id
+        )
+
+        assert resolved.id == requested.id
+
+    async def test_requested_disabled_persona_falls_back_to_default_silently(self, db_session):
+        default = await _create(db_session, name="Default", is_default=True)
+        disabled = await _create(db_session, name="Disabled", enabled=False, is_default=False)
+
+        resolved = await avatar_persona_service.resolve_active_persona(
+            db_session, requested_persona_id=disabled.id
+        )
+
+        assert resolved.id == default.id
+
+    async def test_requested_nonexistent_persona_falls_back_to_default_silently(self, db_session):
+        default = await _create(db_session, name="Default", is_default=True)
+
+        resolved = await avatar_persona_service.resolve_active_persona(
+            db_session, requested_persona_id="does-not-exist"
+        )
+
+        assert resolved.id == default.id
+
+    async def test_user_preference_referencing_enabled_persona_wins_over_default(self, db_session):
+        await _create(db_session, name="Default", is_default=True)
+        preferred = await _create(db_session, name="Preferred", is_default=False)
+        user = await _make_user(db_session)
+        db_session.add(
+            UserPreference(user_id=user.id, category="selected_persona_id", value=preferred.id)
+        )
+        await db_session.commit()
+
+        resolved = await avatar_persona_service.resolve_active_persona(db_session, user_id=user.id)
+
+        assert resolved.id == preferred.id
+
+    async def test_user_preference_referencing_disabled_persona_falls_back_to_default(
+        self, db_session
+    ):
+        default = await _create(db_session, name="Default", is_default=True)
+        disabled = await _create(db_session, name="Disabled", enabled=False, is_default=False)
+        user = await _make_user(db_session)
+        db_session.add(
+            UserPreference(user_id=user.id, category="selected_persona_id", value=disabled.id)
+        )
+        await db_session.commit()
+
+        resolved = await avatar_persona_service.resolve_active_persona(db_session, user_id=user.id)
+
+        assert resolved.id == default.id
+
+    async def test_user_id_with_no_preference_row_falls_back_to_default(self, db_session):
+        default = await _create(db_session, name="Default", is_default=True)
+        user = await _make_user(db_session)
+
+        resolved = await avatar_persona_service.resolve_active_persona(db_session, user_id=user.id)
+
+        assert resolved.id == default.id
+
+    async def test_no_default_persona_configured_raises_not_found(self, db_session):
+        with pytest.raises(NotFoundException):
+            await avatar_persona_service.resolve_active_persona(db_session)
+
+
+def _make_public_config(voice_map: dict | None = None) -> PublicKnowledgeConfig:
+    import json
+
+    return PublicKnowledgeConfig(
+        agent_id="public-agent-1",
+        agent_version="1",
+        connection_name="conn",
+        connection_target="https://search.example",
+        index_name="kb1",
+        voice_map=json.dumps(voice_map or {}),
+        is_active=True,
+    )
+
+
+class TestResolveVoiceForLocale:
+    async def test_persona_voice_map_wins_when_locale_present(self, db_session):
+        persona = await _create(db_session, voice_map={"en-US": "en-US-PersonaVoiceNeural"})
+        public_config = _make_public_config({"en-US": "en-US-AdminVoiceNeural"})
+
+        voice = avatar_persona_service.resolve_voice_for_locale(
+            persona, "en-US", public_config=public_config
+        )
+
+        assert voice == "en-US-PersonaVoiceNeural"
+
+    async def test_falls_back_to_admin_public_config_voice_map(self, db_session):
+        persona = await _create(db_session, voice_map={})
+        public_config = _make_public_config({"en-US": "en-US-AdminVoiceNeural"})
+
+        voice = avatar_persona_service.resolve_voice_for_locale(
+            persona, "en-US", public_config=public_config
+        )
+
+        assert voice == "en-US-AdminVoiceNeural"
+
+    async def test_falls_back_to_hardcoded_default_when_no_public_config(self, db_session):
+        persona = await _create(db_session, voice_map={})
+
+        voice = avatar_persona_service.resolve_voice_for_locale(
+            persona, "en-US", public_config=None
+        )
+
+        assert voice == DEFAULT_PUBLIC_VOICE_BY_LOCALE["en-US"]
+
+    async def test_falls_back_to_hardcoded_default_when_public_config_missing_locale(
+        self, db_session
+    ):
+        persona = await _create(db_session, voice_map={})
+        public_config = _make_public_config({"zh-CN": "zh-CN-AdminVoiceNeural"})
+
+        voice = avatar_persona_service.resolve_voice_for_locale(
+            persona, "en-US", public_config=public_config
+        )
+
+        assert voice == DEFAULT_PUBLIC_VOICE_BY_LOCALE["en-US"]
+
+
+class TestGate1PromptFragmentSanitization:
+    async def test_create_persona_sanitizes_pii_in_prompt_fragment(self, db_session):
+        persona = await _create(
+            db_session,
+            prompt_fragment="Contact me at test@example.com for details.",
+        )
+
+        assert "test@example.com" not in persona.prompt_fragment
+        assert "[EMAIL_REDACTED]" in persona.prompt_fragment
+
+    async def test_update_persona_sanitizes_pii_in_prompt_fragment(self, db_session):
+        persona = await _create(db_session)
+
+        updated = await avatar_persona_service.update_persona(
+            db_session,
+            persona.id,
+            AvatarPersonaUpdate(prompt_fragment="Call 13812345678 now."),
+        )
+
+        assert "13812345678" not in updated.prompt_fragment
+        assert "[PHONE_REDACTED]" in updated.prompt_fragment
