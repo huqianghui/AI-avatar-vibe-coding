@@ -27,16 +27,21 @@ vi.mock("@/hooks/use-auth", () => ({
   useLogout: () => mockLogout,
 }));
 
-vi.mock("@/contexts/config-context", () => ({
-  useConfig: () => ({
+const { mockUseConfig } = vi.hoisted(() => ({
+  mockUseConfig: vi.fn(() => ({
     avatar_enabled: false,
     voice_enabled: false,
     realtime_voice_enabled: false,
     conference_enabled: false,
     voice_live_enabled: false,
+    legacy_coach_nav_enabled: true,
     default_voice_mode: "text_only",
     region: "global",
-  }),
+  })),
+}));
+
+vi.mock("@/contexts/config-context", () => ({
+  useConfig: mockUseConfig,
 }));
 
 vi.mock("@/components/shared/language-switcher", () => ({
@@ -71,6 +76,30 @@ describe("UserLayout", () => {
     expect(screen.getAllByText("training").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("history").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("reports").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("hides navigation items on both desktop and mobile when legacy_coach_nav_enabled is false", () => {
+    mockUseConfig.mockReturnValueOnce({
+      avatar_enabled: false,
+      voice_enabled: false,
+      realtime_voice_enabled: false,
+      conference_enabled: false,
+      voice_live_enabled: false,
+      legacy_coach_nav_enabled: false,
+      default_voice_mode: "text_only",
+      region: "global",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/user/dashboard"]}>
+        <UserLayout />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByText("training")).not.toBeInTheDocument();
+    expect(screen.queryByText("history")).not.toBeInTheDocument();
+    expect(screen.queryByText("reports")).not.toBeInTheDocument();
   });
 
   it("renders the user avatar with initials", () => {

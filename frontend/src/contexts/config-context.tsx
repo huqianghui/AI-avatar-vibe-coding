@@ -9,6 +9,7 @@ const defaultFlags: FeatureFlags = {
   realtime_voice_enabled: false,
   conference_enabled: false,
   voice_live_enabled: false,
+  legacy_coach_nav_enabled: false,
   default_voice_mode: "text_only",
   region: "global",
 };

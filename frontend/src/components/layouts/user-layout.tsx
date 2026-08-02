@@ -45,7 +45,7 @@ export function UserLayout() {
   const { t: tCommon } = useTranslation("common");
   const { user } = useAuthStore();
   const logout = useLogout();
-  const { voice_enabled: voiceEnabled } = useConfig();
+  const { voice_enabled: voiceEnabled, legacy_coach_nav_enabled } = useConfig();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -83,30 +83,31 @@ export function UserLayout() {
 
           {/* Desktop nav links */}
           <nav className="ml-8 hidden items-center gap-1 md:flex">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-150",
-                    isActive
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="size-4" />
-                  {t(item.labelKey)}
-                  {item.labelKey === "training" && voiceEnabled && (
-                    <Mic className="size-3 text-success-600" />
-                  )}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                  )}
-                </NavLink>
-              );
-            })}
+            {legacy_coach_nav_enabled &&
+              navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-150",
+                      isActive
+                        ? "text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className="size-4" />
+                    {t(item.labelKey)}
+                    {item.labelKey === "training" && voiceEnabled && (
+                      <Mic className="size-3 text-success-600" />
+                    )}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    )}
+                  </NavLink>
+                );
+              })}
           </nav>
 
           {/* Right side */}
@@ -154,25 +155,26 @@ export function UserLayout() {
             <SheetTitle>AI Coach</SheetTitle>
           </SheetHeader>
           <nav className="mt-4 flex flex-col gap-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-150",
-                    isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  )}
-                >
-                  <item.icon className="size-5" />
-                  {t(item.labelKey)}
-                </NavLink>
-              );
-            })}
+            {legacy_coach_nav_enabled &&
+              navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-150",
+                      isActive
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <item.icon className="size-5" />
+                    {t(item.labelKey)}
+                  </NavLink>
+                );
+              })}
           </nav>
         </SheetContent>
       </Sheet>
