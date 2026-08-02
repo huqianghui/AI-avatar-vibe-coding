@@ -6,6 +6,7 @@ one `UserPreference(category="selected_persona_id")` row scoped to
 `current_user.id` (T-36-20/T-36-21 -- no client-suppliable user_id anywhere).
 """
 
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app.database import get_db
@@ -15,7 +16,6 @@ from app.models.avatar_persona import AvatarPersona
 from app.models.user import User
 from app.models.user_preference import UserPreference
 from app.services.auth import get_password_hash
-from httpx import ASGITransport, AsyncClient
 
 
 async def _create_user(db_session, username: str = "selector") -> User:
@@ -81,9 +81,7 @@ class TestGetSelectedPersona:
         await _create_persona(db_session, name="Default", is_default=True)
         preferred = await _create_persona(db_session, name="Preferred", is_default=False)
         db_session.add(
-            UserPreference(
-                user_id=user.id, category="selected_persona_id", value=preferred.id
-            )
+            UserPreference(user_id=user.id, category="selected_persona_id", value=preferred.id)
         )
         await db_session.commit()
 

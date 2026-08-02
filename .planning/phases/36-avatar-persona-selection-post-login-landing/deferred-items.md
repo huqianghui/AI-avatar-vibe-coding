@@ -25,3 +25,32 @@ and after this plan's fixes.
 None of these block Phase 36 Plan 02's success criteria. The plan's own
 regression guard — `voice-live-proxy.spec.ts:489` "admin sidebar shows
 Voice Live link" — passes.
+
+# Deferred Items — Phase 36 Plan 04
+
+Out-of-scope failures discovered while running the Task 1 backend regression
+gate (`cd backend && pytest -q`) after adding the self-service
+selected-persona endpoint. Confirmed pre-existing and unrelated to 36-04's
+changes (`schemas/user_preference.py`, `services/avatar_persona_service.py`,
+`api/user_persona_selection.py`, `api/__init__.py`, `main.py`,
+`tests/test_user_persona_selection_api.py`) — none of the failing test
+files reference personas, user preferences, or the new endpoint.
+
+1. `test_skill_consumption_service.py::TestMountSkillToolbox::test_typed_kwarg_raises_falls_back_to_raw_dict`
+2. `test_skill_foundry_service.py` — 5 failures under `test_sync_skill_to_foundry_*`
+   (first-sync unique name, success fields, exception handling, timeout
+   handling, called-twice-same-name) — Foundry sync client behavior,
+   unrelated to avatar personas.
+3. `test_skill_text_extractor.py::TestExtractTextFromPdf` — 5 failures
+   (multi-page, none-text pages, empty-text pages, open-raises, no-pages) —
+   PDF extraction library behavior, unrelated to this plan.
+4. `test_voice_live_websocket.py` — 11 failures under
+   `TestRealAzureSessionConfig`/`TestRealVoiceLiveIntegration` — these
+   exercise real Azure Voice Live session-config wiring (model mode, agent
+   mode, transcription, credentials), unrelated to the persona-selection
+   endpoint added by this plan.
+
+Total: 22 pre-existing failures, 2862 passed, 15 skipped. All failures live
+in files never touched by 36-04. `test_user_persona_selection_api.py` (8/8),
+`test_avatar_persona_service.py`, and every other persona/preference test
+pass cleanly.

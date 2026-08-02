@@ -6,8 +6,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-PreferenceCategory = Literal["communication_style", "focus_area", "language_preference"]
+PreferenceCategory = Literal[
+    "communication_style", "focus_area", "language_preference", "selected_persona_id"
+]
 
+# Admin-facing dropdown options only -- stays exactly 3 entries (Phase 36
+# RESEARCH.md Pitfall 2). "selected_persona_id" (Phase 36, PERSONA-03) is a
+# self-service-only category written by `avatar_persona_service.set_selected_persona`,
+# never surfaced in the admin preference-tagging UI.
 PREFERENCE_CATEGORIES: list[str] = ["communication_style", "focus_area", "language_preference"]
 
 

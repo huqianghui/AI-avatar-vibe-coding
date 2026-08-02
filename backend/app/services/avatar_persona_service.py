@@ -23,8 +23,8 @@ from app.utils.exceptions import ConflictException, bad_request, not_found
 logger = logging.getLogger(__name__)
 
 # UserPreference.category value used to store a logged-in user's own selected
-# persona (Phase 36, PERSONA-04). Read-only here -- writing this category is
-# owned by 36-04, which does not exist yet at the time this plan executes.
+# persona (Phase 36, PERSONA-04). Read by resolve_active_persona(); written
+# exclusively by set_selected_persona() below (Phase 36, PERSONA-03).
 SELECTED_PERSONA_PREFERENCE_CATEGORY = "selected_persona_id"
 
 
@@ -236,6 +236,42 @@ async def resolve_active_persona(
                 return candidate
 
     return await _get_default_persona(db)
+
+
+async def set_selected_persona(db: AsyncSession, *, user_id: str, persona_id: str) -> AvatarPersona:
+    """Self-service persona switch (Phase 36, PERSONA-03, T-36-20/T-36-21).
+
+    Validates `persona_id` refers to a currently ENABLED persona (raises 404
+    otherwise, writing no row -- no partial state). Upserts exactly one
+    `UserPreference(category="selected_persona_id")` row scoped to
+    `user_id`: updates the existing row's `value` if one exists for this
+    user+category, else inserts exactly one new row. Never accepts a
+    caller-supplied user_id from outside this function's own signature --
+    the API layer always passes `current_user.id` from the JWT dependency."""
+    persona = await db.get(AvatarPersona, persona_id)
+    if persona is None or not persona.enabled:
+        not_found("Persona not found")
+
+    pref_result = await db.execute(
+        select(UserPreference).where(
+            UserPreference.user_id == user_id,
+            UserPreference.category == SELECTED_PERSONA_PREFERENCE_CATEGORY,
+        )
+    )
+    pref = pref_result.scalars().first()
+    if pref is not None:
+        pref.value = persona_id
+    else:
+        db.add(
+            UserPreference(
+                user_id=user_id,
+                category=SELECTED_PERSONA_PREFERENCE_CATEGORY,
+                value=persona_id,
+            )
+        )
+    await db.commit()
+    await db.refresh(persona)
+    return persona
 
 
 def resolve_voice_for_locale(

@@ -37,6 +37,7 @@ from app.api import (
     skills_router,
     speech_router,
     system_enums_router,
+    user_persona_selection_router,
     voice_live_router,
 )
 from app.api.health import router as health_router
@@ -176,6 +177,7 @@ app.include_router(admin_public_knowledge_config_router, prefix=settings.api_pre
 app.include_router(admin_users_router, prefix=settings.api_prefix)
 app.include_router(admin_user_preferences_router, prefix=settings.api_prefix)
 app.include_router(personalized_avatar_router, prefix=settings.api_prefix)
+app.include_router(user_persona_selection_router, prefix=settings.api_prefix)
 app.include_router(system_enums_router, prefix=settings.api_prefix)
 app.include_router(internal_openai_proxy_router, prefix=settings.api_prefix)
 app.include_router(admin_avatar_personas_router, prefix=settings.api_prefix)
