@@ -15,6 +15,7 @@ import {
   BarChart,
   Cloud,
   Radio,
+  Smile,
   Settings,
   Database,
   ChevronLeft,
@@ -60,6 +61,7 @@ const sidebarGroups: SidebarGroup[] = [
     items: [
       { path: "/admin/azure-config", labelKey: "azureServices", icon: Cloud },
       { path: "/admin/voice-live", labelKey: "voiceLive", icon: Radio },
+      { path: "/admin/avatar-personas", labelKey: "avatarPersonas", icon: Smile },
       { path: "/admin/meta-skills", labelKey: "metaSkills", icon: Wand2 },
       { path: "/admin/settings", labelKey: "settings", icon: Settings },
       { path: "/admin/crm-data", labelKey: "crmData", icon: Database },

@@ -25,6 +25,7 @@ const ScenarioEditorPage = lazy(() => import("@/pages/admin/scenario-editor"));
 const AzureConfigPage = lazy(() => import("@/pages/admin/azure-config"));
 const VoiceLiveManagementPage = lazy(() => import("@/pages/admin/voice-live-management"));
 const VlInstanceEditorPage = lazy(() => import("@/pages/admin/vl-instance-editor"));
+const AvatarPersonasPage = lazy(() => import("@/pages/admin/avatar-personas"));
 const ScoringRubricsPage = lazy(() => import("@/pages/admin/scoring-rubrics"));
 const RubricEditorPage = lazy(() => import("@/pages/admin/rubric-editor"));
 const TrainingMaterialsPage = lazy(() => import("@/pages/admin/training-materials"));
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
               { path: "voice-live", element: <SuspensePage><VoiceLiveManagementPage /></SuspensePage> },
               { path: "voice-live/new", element: <SuspensePage><VlInstanceEditorPage /></SuspensePage> },
               { path: "voice-live/:id/edit", element: <SuspensePage><VlInstanceEditorPage /></SuspensePage> },
+              { path: "avatar-personas", element: <SuspensePage><AvatarPersonasPage /></SuspensePage> },
               { path: "scoring-rubrics", element: <SuspensePage><ScoringRubricsPage /></SuspensePage> },
               { path: "scoring-rubrics/new", element: <SuspensePage><RubricEditorPage /></SuspensePage> },
               { path: "scoring-rubrics/:id", element: <SuspensePage><RubricEditorPage /></SuspensePage> },
