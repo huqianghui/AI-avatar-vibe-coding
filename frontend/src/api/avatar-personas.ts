@@ -6,7 +6,7 @@ export interface AvatarPersona {
   character: string;
   style: string;
   voice_map: Record<string, string>;
-  greeting: string;
+  greeting_map: Record<string, string>;
   prompt_fragment: string;
   enabled: boolean;
   is_default: boolean;
@@ -19,7 +19,7 @@ export interface AvatarPersonaCreate {
   character: string;
   style?: string;
   voice_map?: Record<string, string>;
-  greeting?: string;
+  greeting_map?: Record<string, string>;
   prompt_fragment?: string;
   enabled?: boolean;
   is_default?: boolean;
@@ -30,7 +30,7 @@ export interface AvatarPersonaUpdate {
   character?: string;
   style?: string;
   voice_map?: Record<string, string>;
-  greeting?: string;
+  greeting_map?: Record<string, string>;
   prompt_fragment?: string;
   enabled?: boolean;
   is_default?: boolean;

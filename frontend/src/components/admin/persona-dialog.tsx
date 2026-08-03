@@ -79,7 +79,7 @@ interface PersonaFormState {
   character: string;
   style: string;
   voiceMap: Record<string, string>;
-  greeting: string;
+  greetingMap: Record<string, string>;
   prompt_fragment: string;
   enabled: boolean;
   is_default: boolean;
@@ -91,7 +91,7 @@ function createDefaultPersonaForm(): PersonaFormState {
     character: "lisa",
     style: "casual-sitting",
     voiceMap: {},
-    greeting: "",
+    greetingMap: {},
     prompt_fragment: "",
     enabled: true,
     is_default: false,
@@ -117,7 +117,7 @@ export function PersonaDialog({ open, onOpenChange, persona }: PersonaDialogProp
         character: persona.character,
         style: persona.style,
         voiceMap: { ...persona.voice_map },
-        greeting: persona.greeting,
+        greetingMap: { ...persona.greeting_map },
         prompt_fragment: persona.prompt_fragment,
         enabled: persona.enabled,
         is_default: persona.is_default,
@@ -144,6 +144,18 @@ export function PersonaDialog({ open, onOpenChange, persona }: PersonaDialogProp
         next[locale] = value;
       }
       return { ...prev, voiceMap: next };
+    });
+  }, []);
+
+  const setGreetingForLocale = useCallback((locale: string, value: string) => {
+    setForm((prev) => {
+      const next = { ...prev.greetingMap };
+      if (value.trim() === "") {
+        delete next[locale];
+      } else {
+        next[locale] = value;
+      }
+      return { ...prev, greetingMap: next };
     });
   }, []);
 
@@ -218,7 +230,7 @@ export function PersonaDialog({ open, onOpenChange, persona }: PersonaDialogProp
       character: form.character,
       style: form.style,
       voice_map: form.voiceMap,
-      greeting: form.greeting,
+      greeting_map: form.greetingMap,
       prompt_fragment: form.prompt_fragment,
       enabled: form.enabled,
       is_default: form.is_default,
@@ -401,17 +413,24 @@ export function PersonaDialog({ open, onOpenChange, persona }: PersonaDialogProp
             ))}
           </div>
 
-          {/* ── Section 4: Greeting ──────────────────────────────── */}
-          <div className="space-y-1.5">
-            <Label htmlFor="persona-greeting" className="text-sm font-semibold">
-              {t("personas.greetingLabel")}
-            </Label>
-            <Textarea
-              id="persona-greeting"
-              rows={2}
-              value={form.greeting}
-              onChange={(e) => updateField("greeting", e.target.value)}
-            />
+          {/* ── Section 4: Greeting per Language ─────────────────── */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-foreground">
+              {t("personas.greetingSectionTitle")}
+            </h4>
+            {PERSONA_VOICE_LOCALES.map((locale) => (
+              <div key={locale} className="space-y-1">
+                <Label className="text-sm">
+                  {FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
+                </Label>
+                <Textarea
+                  id={`persona-greeting-${locale}`}
+                  rows={2}
+                  value={form.greetingMap[locale] ?? ""}
+                  onChange={(e) => setGreetingForLocale(locale, e.target.value)}
+                />
+              </div>
+            ))}
             <p className="text-sm text-muted-foreground">{t("personas.greetingHelper")}</p>
           </div>
 

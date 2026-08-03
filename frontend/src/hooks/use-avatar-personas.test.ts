@@ -62,7 +62,7 @@ const mockPersona: AvatarPersona = {
   character: "lisa",
   style: "casual-sitting",
   voice_map: {},
-  greeting: "Hi there!",
+  greeting_map: { "en-US": "Hi there!" },
   prompt_fragment: "",
   enabled: true,
   is_default: true,
