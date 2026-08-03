@@ -12,7 +12,7 @@ class AvatarPersonaCreate(BaseModel):
     character: str
     style: str = ""
     voice_map: dict[str, str] = {}
-    greeting: str = ""
+    greeting_map: dict[str, str] = {}
     prompt_fragment: str = ""
     enabled: bool = True
     is_default: bool = False
@@ -29,7 +29,7 @@ class AvatarPersonaUpdate(BaseModel):
     character: str | None = None
     style: str | None = None
     voice_map: dict[str, str] | None = None
-    greeting: str | None = None
+    greeting_map: dict[str, str] | None = None
     prompt_fragment: str | None = None
     enabled: bool | None = None
     is_default: bool | None = None
@@ -37,14 +37,14 @@ class AvatarPersonaUpdate(BaseModel):
 
 
 class AvatarPersonaOut(BaseModel):
-    """AvatarPersona response with the JSON voice_map field parsed."""
+    """AvatarPersona response with the JSON voice_map/greeting_map fields parsed."""
 
     id: str
     name: str
     character: str
     style: str
     voice_map: dict[str, str]
-    greeting: str
+    greeting_map: dict[str, str]
     prompt_fragment: str
     enabled: bool
     is_default: bool
@@ -56,6 +56,18 @@ class AvatarPersonaOut(BaseModel):
     @field_validator("voice_map", mode="before")
     @classmethod
     def parse_voice_map(cls, v: str | dict[str, str]) -> dict[str, str]:
+        """Parse the JSON Text column into a dict; malformed/empty JSON falls
+        back to `{}` rather than crashing (mirrors parse_voice_map())."""
+        if isinstance(v, str):
+            try:
+                return json.loads(v or "{}")
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return v
+
+    @field_validator("greeting_map", mode="before")
+    @classmethod
+    def parse_greeting_map(cls, v: str | dict[str, str]) -> dict[str, str]:
         """Parse the JSON Text column into a dict; malformed/empty JSON falls
         back to `{}` rather than crashing (mirrors parse_voice_map())."""
         if isinstance(v, str):
