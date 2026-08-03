@@ -12,8 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.dependencies import get_anonymous_session
+from app.dependencies import get_anonymous_session, get_optional_current_user
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
+from app.models.user import User
 from app.schemas.public_avatar import (
     AnonymousSessionResponse,
     ChatRequest,
@@ -28,6 +29,8 @@ from app.services.avatar_persona_service import (
     resolve_voice_for_locale,
 )
 from app.services.avatar_service import handle_anonymous_turn
+from app.services.personalization_injection_service import build_personalization_context
+from app.services.personalization_sanitizer import sanitize_free_text_with_pii
 from app.services.public_knowledge_config_service import get_active_public_config
 from app.services.rate_limit import limiter_ip, limiter_session
 from app.services.voice_live_webrtc import create_public_webrtc_session_config
@@ -75,23 +78,40 @@ async def webrtc_session(
     request: Request,
     body: WebrtcSessionRequest,
     session: AnonymousAvatarSession = Depends(get_anonymous_session),
+    current_user: User | None = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Anonymous WebRTC ephemeral-credential issuance (ANON-04) — the avatar
-    character/style/agent are always resolved server-side from the active
-    `PublicKnowledgeConfig` row; `get_anonymous_session` runs before any
-    Azure credential call is attempted (T-32-14). Voice and greeting are
-    resolved from the active persona (Phase 36, PERSONA-04) -- a client-
-    supplied `persona_id` that is disabled/unknown silently falls back to
-    the default persona (T-36-10/T-36-11)."""
+    """Anonymous-capable, optionally-authenticated WebRTC ephemeral-credential
+    issuance (ANON-04; PERSONA-05/06) — the avatar character/style/agent are
+    always resolved server-side from the active `PublicKnowledgeConfig` row
+    and the resolved persona; `get_anonymous_session` runs before any Azure
+    credential call is attempted (T-32-14) and its `X-Anon-Session`
+    requirement is unaffected by whether a JWT was also supplied. Voice and
+    greeting are resolved from the active persona (Phase 36, PERSONA-04) --
+    a client-supplied `persona_id` that is disabled/unknown silently falls
+    back to the default persona (T-36-10/T-36-11). When `current_user` is
+    resolved from a valid JWT (D-13/D-37-1: never required), the SAME shared
+    endpoint additionally scopes persona resolution to their `user_id` and
+    merges their CRM/preference context into `instructions` (D-37-2,
+    T-37-06) -- an anonymous caller never triggers that CRM lookup at all."""
     public_config = await get_active_public_config(db)
-    persona = await resolve_active_persona(db, user_id=None, requested_persona_id=body.persona_id)
+    persona = await resolve_active_persona(
+        db,
+        user_id=(current_user.id if current_user else None),
+        requested_persona_id=body.persona_id,
+    )
     voice = resolve_voice_for_locale(persona, body.locale, public_config=public_config)
+    sanitized_fragment = sanitize_free_text_with_pii(persona.prompt_fragment)
+    crm_context = await build_personalization_context(db, current_user.id) if current_user else None
+    instructions = "\n\n".join(filter(None, [sanitized_fragment, crm_context]))
     credential = await create_public_webrtc_session_config(
         db,
         agent_id=public_config.agent_id,
         voice_name=voice,
         locale=body.locale,
         greeting=resolve_greeting_for_locale(persona, body.locale),
+        character=persona.character,
+        style=persona.style,
+        instructions=instructions or None,
     )
     return WebrtcSessionResponse(**credential.model_dump())

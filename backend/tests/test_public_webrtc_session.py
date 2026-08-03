@@ -14,9 +14,13 @@ import pytest
 from app.config import get_settings
 from app.models.avatar_persona import AvatarPersona
 from app.models.public_knowledge_config import PublicKnowledgeConfig
+from app.models.user import User
+from app.models.user_crm_context import UserCrmContext
 from app.schemas.avatar_persona import AvatarPersonaCreate
 from app.services import avatar_persona_service
+from app.services.auth import create_access_token, get_password_hash
 from app.services.rate_limit import limiter_ip
+from tests.conftest import TestSessionLocal
 
 settings = get_settings()
 
@@ -78,6 +82,37 @@ async def _anon_session_and_header(client) -> dict:
     response = await client.post("/public/avatar/session")
     token = response.json()["session_token"]
     return {"X-Anon-Session": token}
+
+
+async def _create_user_and_token(username="webrtc_persona_user") -> tuple[str, str]:
+    async with TestSessionLocal() as session:
+        user = User(
+            username=username,
+            email=f"{username}@test.com",
+            hashed_password=get_password_hash("pass"),
+            full_name="Persona User",
+            role="user",
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        token = create_access_token(data={"sub": user.id})
+        return user.id, token
+
+
+async def _create_crm_context(user_id: str, **overrides) -> None:
+    defaults = {
+        "user_id": user_id,
+        "customer_name": "Alice",
+        "company": "Acme",
+        "role": "Buyer",
+        "crm_notes": "",
+        "contact_person": "",
+    }
+    defaults.update(overrides)
+    async with TestSessionLocal() as session:
+        session.add(UserCrmContext(**defaults))
+        await session.commit()
 
 
 class TestWebrtcSessionSuccess:
@@ -424,3 +459,133 @@ class TestWebrtcSessionPersonaResolution:
 
         assert response.status_code == 200
         assert response.json()["greeting"] == "Default greeting"
+
+
+class TestWebrtcSessionInstructionsAndCrmMerge:
+    """Phase 37, PERSONA-05/06: session_config["instructions"] carries the
+    sanitized persona prompt fragment for anonymous callers, and is merged
+    with CRM/preference context (same convention as text chat, D-37-2) for
+    a genuinely JWT-authenticated caller on this SAME shared endpoint."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_anonymous_caller_gets_persona_fragment_only(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(db_session, prompt_fragment="You are a cheerful, casual friend.")
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-anon-instructions"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "zh-CN"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_config"]["instructions"] == "You are a cheerful, casual friend."
+        assert data["character"] == "lisa"
+        assert data["style"] == "casual-sitting"
+        assert data["session_config"]["avatar"] == {
+            "character": "lisa",
+            "style": "casual-sitting",
+            "customized": False,
+        }
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_authenticated_caller_with_crm_context_gets_merged_instructions(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(db_session, prompt_fragment="You are a strict, formal tutor.")
+        user_id, token = await _create_user_and_token()
+        await _create_crm_context(user_id, customer_name="Bob", company="Widget Co")
+        headers = await _anon_session_and_header(client)
+        headers["Authorization"] = f"Bearer {token}"
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-crm-merge"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "zh-CN"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        instructions = response.json()["session_config"]["instructions"]
+        assert "You are a strict, formal tutor." in instructions
+        assert "## User Background" in instructions
+        assert "Bob" in instructions
+        assert "Widget Co" in instructions
+        # Merge convention: two segments joined by a blank line.
+        assert "\n\n" in instructions
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_invalid_authorization_header_falls_back_to_anonymous_default(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        """An invalid/expired Authorization header must behave identically
+        to no header at all -- degrade to anonymous, never error (T-37-04)."""
+        await _create_persona(db_session, prompt_fragment="You are a strict, formal tutor.")
+        headers = await _anon_session_and_header(client)
+        headers["Authorization"] = "Bearer not.a.valid.jwt"
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-invalid-auth"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "zh-CN"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_config"]["instructions"] == "You are a strict, formal tutor."
+        assert "## User Background" not in data["session_config"]["instructions"]
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config")
+    async def test_authenticated_caller_without_crm_context_gets_persona_fragment_only(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        """A resolved user with no CRM/preference rows must not have a stray
+        '## User Background' segment appended (D-08 silent '' fallback)."""
+        await _create_persona(db_session, prompt_fragment="You are a strict, formal tutor.")
+        _, token = await _create_user_and_token("webrtc_no_crm")
+        headers = await _anon_session_and_header(client)
+        headers["Authorization"] = f"Bearer {token}"
+        mock_get_config.return_value = _make_public_config()
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-no-crm"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "zh-CN"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_config"]["instructions"] == "You are a strict, formal tutor."
