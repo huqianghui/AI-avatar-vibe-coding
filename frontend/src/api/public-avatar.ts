@@ -52,6 +52,12 @@ export interface WebrtcSessionResponse {
    * the backend base `WebRTCSessionResponse` schema by 36-03; this TS
    * interface catches up here (Phase 36, PERSONA-03). */
   greeting?: string | null;
+  /** Mirrors the backend's `character`/`style` fields added to
+   * `WebRTCSessionResponse` by 37-02 (Phase 37, PERSONA-05). */
+  character?: string | null;
+  /** Mirrors the backend's `character`/`style` fields added to
+   * `WebRTCSessionResponse` by 37-02 (Phase 37, PERSONA-05). */
+  style?: string | null;
 }
 
 /**

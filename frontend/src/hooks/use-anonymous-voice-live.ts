@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import type {
   VoiceConnectionState,
   AudioState,
@@ -32,6 +33,10 @@ export interface AnonymousVoiceLiveOptions {
   onAudioStateChange?: (state: AudioState) => void;
   onResponseDone?: () => void;
   onError?: (error: Error) => void;
+  /** Attached via `ontrack` when Azure Voice Live sends an avatar video track
+   * (Phase 37, PERSONA-05) -- optional because not every caller needs
+   * digital-human video. */
+  videoRef?: RefObject<HTMLVideoElement | null>;
 }
 
 /**
@@ -60,6 +65,18 @@ export function useAnonymousVoiceLive(
     useState<VoiceConnectionState>("disconnected");
   const [audioState, setAudioState] = useState<AudioState>("idle");
   const [isMuted, setIsMuted] = useState(false);
+  /** Resolved persona identity from the most recent `connect()` call (Phase
+   * 37, PERSONA-05) -- intentionally NOT reset on disconnect/cleanup so the
+   * static-preview layer doesn't flash to the audio-orb mid-reconnect. */
+  const [avatarCharacter, setAvatarCharacter] = useState<string | undefined>(
+    undefined,
+  );
+  const [avatarStyle, setAvatarStyle] = useState<string | undefined>(
+    undefined,
+  );
+  /** True once a real avatar video track has arrived via `ontrack` (Phase 37,
+   * PERSONA-05). Reset on `disconnect()`. */
+  const [isAvatarConnected, setIsAvatarConnected] = useState(false);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const signalingWsRef = useRef<WebSocket | null>(null);
@@ -255,6 +272,8 @@ export function useAnonymousVoiceLive(
           session.mode,
           session.model,
         );
+        setAvatarCharacter(session.character ?? undefined);
+        setAvatarStyle(session.style ?? undefined);
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error("Failed to fetch anonymous WebRTC session config");
@@ -292,6 +311,11 @@ export function useAnonymousVoiceLive(
         pc.addTrack(track, micStream);
       });
 
+      // Step 4b: Negotiate a receive-only video transceiver so a real avatar
+      // video track from Azure Voice Live (if sent) is not silently dropped
+      // (Phase 37, PERSONA-05).
+      pc.addTransceiver("video", { direction: "recvonly" });
+
       // Step 5: Create data channel BEFORE createOffer
       const dc = pc.createDataChannel("voice-live-events");
       dataChannelRef.current = dc;
@@ -305,9 +329,18 @@ export function useAnonymousVoiceLive(
         log.info("Data channel closed");
       };
 
-      // Step 7: Set up remote audio playback via ontrack
+      // Step 7: Set up remote audio/video playback via ontrack
       pc.ontrack = (event) => {
-        if (event.track.kind === "audio") {
+        if (event.track.kind === "video") {
+          if (optionsRef.current.videoRef?.current) {
+            optionsRef.current.videoRef.current.srcObject = event.streams[0] ?? null;
+            optionsRef.current.videoRef.current.play().catch((playErr: unknown) => {
+              log.warn("Avatar video play() failed: %o", playErr);
+            });
+          }
+          setIsAvatarConnected(true);
+          log.info("Remote avatar video track received");
+        } else if (event.track.kind === "audio") {
           const audio = document.createElement("audio");
           audio.srcObject = event.streams[0] ?? null;
           audio.autoplay = true;
@@ -562,6 +595,7 @@ export function useAnonymousVoiceLive(
     connectionStateRef.current = "disconnected";
     setAudioState("idle");
     setIsMuted(false);
+    setIsAvatarConnected(false);
     optionsRef.current.onConnectionStateChange?.("disconnected");
   }, [cleanup]);
 
@@ -642,5 +676,8 @@ export function useAnonymousVoiceLive(
     connectionState,
     audioState,
     avatarSdpCallbackRef,
+    avatarCharacter,
+    avatarStyle,
+    isAvatarConnected,
   };
 }

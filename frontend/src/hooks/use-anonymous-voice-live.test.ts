@@ -12,6 +12,7 @@
  *      anywhere in its request path -- only `X-Anon-Session`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { RefObject } from "react";
 import { renderHook, act } from "@testing-library/react";
 import { fetchAnonymousWebrtcSession } from "@/api/public-avatar";
 import { useAnonymousVoiceLive } from "./use-anonymous-voice-live";
@@ -28,6 +29,7 @@ class MockRTCPeerConnection {
   onconnectionstatechange: (() => void) | null = null;
 
   addTrack = vi.fn();
+  addTransceiver = vi.fn();
   createDataChannel = vi.fn(() => ({
     onmessage: null,
     onopen: null,
@@ -99,6 +101,15 @@ const mockWebrtcSessionResponse = {
   agent_version: null,
   project_name: "proj",
   avatar_warning: "Avatar (digital human) is not supported with WebRTC audio transport in preview.",
+};
+
+/** Variant of `mockWebrtcSessionResponse` carrying a resolved persona's
+ * character/style (Phase 37, PERSONA-05) -- used by the video-negotiation
+ * and identity-surfacing test cases below. */
+const mockWebrtcSessionResponseWithAvatar = {
+  ...mockWebrtcSessionResponse,
+  character: "lisa",
+  style: "casual-sitting",
 };
 
 const OriginalRTCPeerConnection = globalThis.RTCPeerConnection;
@@ -198,6 +209,9 @@ describe("useAnonymousVoiceLive", () => {
       "connectionState",
       "audioState",
       "avatarSdpCallbackRef",
+      "avatarCharacter",
+      "avatarStyle",
+      "isAvatarConnected",
     ].sort();
 
     expect(Object.keys(result.current).sort()).toEqual(expectedKeys);
@@ -230,5 +244,111 @@ describe("useAnonymousVoiceLive", () => {
     await vi.waitFor(() => expect(MockWebSocket.instances.length).toBe(1));
     const ws = MockWebSocket.instances[0]!;
     expect(ws.url).not.toContain("Authorization");
+  });
+
+  it("negotiates a receive-only video transceiver on connect()", async () => {
+    const { result } = renderHook(() => useAnonymousVoiceLive("anon-token-123"));
+
+    await act(async () => {
+      result.current.connect("zh-CN").catch(() => {
+        // Intentionally unresolved -- see comment in the Authorization test above.
+      });
+    });
+
+    await vi.waitFor(() => expect(MockRTCPeerConnection.instances.length).toBe(1));
+    const pc = MockRTCPeerConnection.instances[0]!;
+    expect(pc.addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
+  });
+
+  it("attaches a real video track to the caller's videoRef and sets isAvatarConnected", async () => {
+    const videoRef = { current: { srcObject: null, play: vi.fn().mockResolvedValue(undefined) } };
+    const { result } = renderHook(() =>
+      useAnonymousVoiceLive("anon-token-123", {
+        videoRef: videoRef as unknown as RefObject<HTMLVideoElement | null>,
+      }),
+    );
+
+    await act(async () => {
+      result.current.connect("zh-CN").catch(() => {
+        // Intentionally unresolved -- SDP handshake not needed for this assertion.
+      });
+    });
+
+    await vi.waitFor(() => expect(MockRTCPeerConnection.instances.length).toBe(1));
+    const pc = MockRTCPeerConnection.instances[0]!;
+    const fakeStream = {} as MediaStream;
+
+    act(() => {
+      pc.ontrack?.({ track: { kind: "video" }, streams: [fakeStream] });
+    });
+
+    expect(videoRef.current.srcObject).toBe(fakeStream);
+    await vi.waitFor(() => expect(result.current.isAvatarConnected).toBe(true));
+  });
+
+  it("does not throw when a video track arrives with no videoRef option, and still sets isAvatarConnected", async () => {
+    const { result } = renderHook(() => useAnonymousVoiceLive("anon-token-123"));
+
+    await act(async () => {
+      result.current.connect("zh-CN").catch(() => {
+        // Intentionally unresolved.
+      });
+    });
+
+    await vi.waitFor(() => expect(MockRTCPeerConnection.instances.length).toBe(1));
+    const pc = MockRTCPeerConnection.instances[0]!;
+    const fakeStream = {} as MediaStream;
+
+    expect(() => {
+      act(() => {
+        pc.ontrack?.({ track: { kind: "video" }, streams: [fakeStream] });
+      });
+    }).not.toThrow();
+
+    await vi.waitFor(() => expect(result.current.isAvatarConnected).toBe(true));
+  });
+
+  it("surfaces the resolved persona's character/style after connect() resolves the session", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockWebrtcSessionResponseWithAvatar,
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useAnonymousVoiceLive("anon-token-123"));
+
+    await act(async () => {
+      result.current.connect("zh-CN").catch(() => {
+        // Intentionally unresolved.
+      });
+    });
+
+    await vi.waitFor(() => expect(result.current.avatarCharacter).toBe("lisa"));
+    expect(result.current.avatarStyle).toBe("casual-sitting");
+  });
+
+  it("resets isAvatarConnected back to false on disconnect()", async () => {
+    const { result } = renderHook(() => useAnonymousVoiceLive("anon-token-123"));
+
+    await act(async () => {
+      result.current.connect("zh-CN").catch(() => {
+        // Intentionally unresolved.
+      });
+    });
+
+    await vi.waitFor(() => expect(MockRTCPeerConnection.instances.length).toBe(1));
+    const pc = MockRTCPeerConnection.instances[0]!;
+    const fakeStream = {} as MediaStream;
+
+    act(() => {
+      pc.ontrack?.({ track: { kind: "video" }, streams: [fakeStream] });
+    });
+    await vi.waitFor(() => expect(result.current.isAvatarConnected).toBe(true));
+
+    await act(async () => {
+      await result.current.disconnect();
+    });
+
+    expect(result.current.isAvatarConnected).toBe(false);
   });
 });
