@@ -65,9 +65,18 @@ async function mockAnonymousSession(page: Page): Promise<void> {
   );
 }
 
+/**
+ * Resolves the connecting persona's identity from the outgoing request body
+ * (mirroring `mockPersonaSelection`'s `req.postDataJSON()` pattern) so the
+ * webrtc/session response's `character`/`style`/`greeting` genuinely reflect
+ * whichever persona `connect()` was called for -- Lisa on initial mount,
+ * Harry after the switch (Phase 37, PERSONA-05).
+ */
 async function mockWebrtcSessionSuccess(page: Page): Promise<void> {
-  await page.route("**/public/avatar/webrtc/session", (route) =>
-    route.fulfill({
+  await page.route("**/public/avatar/webrtc/session", (route) => {
+    const body = route.request().postDataJSON() as { persona_id?: string };
+    const resolved = body.persona_id === HARRY.id ? HARRY : LISA;
+    return route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
@@ -81,10 +90,12 @@ async function mockWebrtcSessionSuccess(page: Page): Promise<void> {
         agent_version: "1",
         project_name: "test-project",
         avatar_warning: null,
-        greeting: "Hello, I'm Harry.",
+        character: resolved.character,
+        style: resolved.style,
+        greeting: resolved.greeting,
       }),
-    }),
-  );
+    });
+  });
 }
 
 async function mockPersonalizedSession(page: Page): Promise<void> {
@@ -128,6 +139,10 @@ async function installFakeWebrtcTransport(page: Page): Promise<void> {
 
       addTrack(): void {
         /* no-op: no real media track needed for this UI-level proof */
+      }
+
+      addTransceiver(): void {
+        /* no-op: recvonly video transceiver negotiation (Phase 37, PERSONA-05) */
       }
 
       createDataChannel() {
@@ -285,6 +300,13 @@ test.describe("Persona switcher (Phase 36-04, PERSONA-03)", () => {
       await expect(trigger).toBeVisible({ timeout: 10_000 });
       await expect(trigger).toContainText("Lisa");
 
+      // Avatar identity display (static-preview or fallback-initials layer,
+      // both render `charMeta.displayName` unconditionally once
+      // `isDigitalHumanMode` is on) -- proves the identity is genuinely
+      // sourced from the resolved persona, not a hardcoded default.
+      const avatarIdentityContainer = page.locator('[data-testid="avatar-video"]').locator("..");
+      await expect(avatarIdentityContainer).toContainText("Lisa", { timeout: 10_000 });
+
       await trigger.click();
       await expect(page.getByTestId(`persona-switcher-option-${LISA.id}`)).toBeVisible();
       await expect(page.getByTestId(`persona-switcher-option-${HARRY.id}`)).toBeVisible();
@@ -308,6 +330,11 @@ test.describe("Persona switcher (Phase 36-04, PERSONA-03)", () => {
       await expect(trigger).toContainText("Harry", { timeout: 10_000 });
       await expect(page.getByText("Switching to Harry…")).not.toBeVisible();
       await expect(page.getByText("Couldn't switch persona")).not.toBeVisible();
+
+      // The avatar identity display -- not just the switcher trigger's text
+      // label -- also updates to Harry, proving the identity genuinely
+      // changes rather than being hardcoded (Phase 37, PERSONA-05).
+      await expect(avatarIdentityContainer).toContainText("Harry", { timeout: 10_000 });
 
       // Persistence: a fresh page load re-resolves the selection from the
       // backend (mutable `selectedId` fixture above) rather than falling back

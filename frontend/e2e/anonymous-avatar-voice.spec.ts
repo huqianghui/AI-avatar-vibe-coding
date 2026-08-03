@@ -51,6 +51,8 @@ async function mockWebrtcSessionSuccess(page: Page): Promise<void> {
         agent_version: "1",
         project_name: "test-project",
         avatar_warning: null,
+        character: "lisa",
+        style: "casual-sitting",
       }),
     }),
   );
@@ -100,6 +102,10 @@ async function installFakeWebrtcTransport(page: Page): Promise<void> {
 
       addTrack(): void {
         /* no-op: no real media track needed for this UI-level proof */
+      }
+
+      addTransceiver(): void {
+        /* no-op: recvonly video transceiver negotiation (Phase 37, PERSONA-05) */
       }
 
       createDataChannel() {
@@ -223,6 +229,10 @@ test.describe("Anonymous avatar voice connect", () => {
     // `isConnecting`) and the mic-permission dialog never had to open.
     await expect(page.getByText("Connecting voice call...")).not.toBeVisible();
     await expect(page.getByText("Microphone access needed to ask by voice")).not.toBeVisible();
-    await expect(page.getByTestId("audio-orb")).toBeVisible();
+    // With a known persona identity (character="lisa" in the mock above),
+    // `isDigitalHumanMode={true}` renders the static-preview identity layer
+    // instead of the audio orb (Phase 37, PERSONA-05) -- the audio orb only
+    // shows when no character is configured.
+    await expect(page.getByTestId("avatar-static-preview")).toBeVisible();
   });
 });

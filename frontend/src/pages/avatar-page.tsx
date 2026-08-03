@@ -21,11 +21,14 @@
  * `SourcesPanel` only ever receives `data.citations` -- these are NEVER
  * concatenated into a single string. See `handleSend` below.
  *
- * The anonymous WebRTC hook (`useAnonymousVoiceLive`) is audio-only (no
- * video track is ever negotiated -- see its module docstring), so
- * `AvatarView` is composed with `isDigitalHumanMode={false}` to render its
- * `AudioOrb` fallback rather than a (never-arriving) video stream, matching
- * the limitation already documented in 32-03-SUMMARY.md.
+ * The anonymous WebRTC hook (`useAnonymousVoiceLive`) negotiates a
+ * receive-only video transceiver (Phase 37, PERSONA-05) and surfaces the
+ * resolved persona's `avatarCharacter`/`avatarStyle`/`isAvatarConnected`.
+ * `AvatarView` is composed with `isDigitalHumanMode={true}` so the active
+ * persona's identity is always shown -- via real WebRTC avatar video if
+ * Azure actually streams one for this session type, or via `AvatarView`'s
+ * existing static-preview/fallback layer otherwise (both keyed off
+ * `avatarCharacter`/`avatarStyle`, never a hardcoded default).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -142,6 +145,7 @@ export default function AvatarPage() {
   // own voice session in this phase.
   const voiceLive = useAnonymousVoiceLive(sessionToken ?? "", {
     locale: i18n.language,
+    videoRef,
   });
 
   const hasAttemptedConnectRef = useRef(false);
@@ -362,11 +366,13 @@ export default function AvatarPage() {
           <div className="min-h-[240px] flex-1 overflow-hidden">
             <AvatarView
               videoRef={videoRef}
-              isAvatarConnected={false}
+              isAvatarConnected={voiceLive.isAvatarConnected}
               isSessionActive={voiceLive.connectionState === "connected"}
               audioState={voiceLive.audioState}
               isConnecting={voiceLive.connectionState === "connecting"}
-              isDigitalHumanMode={false}
+              isDigitalHumanMode={true}
+              avatarCharacter={voiceLive.avatarCharacter}
+              avatarStyle={voiceLive.avatarStyle}
               hcpName=""
               isFullScreen={false}
             />

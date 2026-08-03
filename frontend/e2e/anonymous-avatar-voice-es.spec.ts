@@ -91,6 +91,8 @@ async function mockWebrtcSessionSuccessEs(
         agent_version: "1",
         project_name: "test-project",
         avatar_warning: null,
+        character: "lisa",
+        style: "casual-sitting",
       }),
     });
   });
@@ -124,6 +126,10 @@ async function installFakeWebrtcTransport(page: Page): Promise<void> {
 
       addTrack(): void {
         /* no-op: no real media track needed for this UI-level proof */
+      }
+
+      addTransceiver(): void {
+        /* no-op: recvonly video transceiver negotiation (Phase 37, PERSONA-05) */
       }
 
       createDataChannel() {
@@ -238,8 +244,11 @@ test.describe("Anonymous avatar voice connect — es-* locales", () => {
       // es-* session config our mock returned.
       await connectedLogSeen;
 
-      // UI proof: the avatar view leaves its connecting state.
-      await expect(page.getByTestId("audio-orb")).toBeVisible();
+      // UI proof: the avatar view leaves its connecting state. With a known
+      // persona identity (character="lisa" in the mock above),
+      // `isDigitalHumanMode={true}` renders the static-preview identity
+      // layer instead of the audio orb (Phase 37, PERSONA-05).
+      await expect(page.getByTestId("avatar-static-preview")).toBeVisible();
 
       // Proof the switched locale was actually forwarded in the outgoing
       // WebrtcSessionRequest body, not just reflected coincidentally in the
