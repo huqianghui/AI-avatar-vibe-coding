@@ -177,7 +177,6 @@ test.describe("Anonymous avatar voice connect", () => {
 
   test("denying microphone permission opens the mic-permission dialog while the textarea stays usable", async ({
     page,
-    context,
   }) => {
     await mockSession(page);
     await mockWebrtcSessionSuccess(page);
