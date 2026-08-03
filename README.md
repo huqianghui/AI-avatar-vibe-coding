@@ -20,131 +20,58 @@
 
 AI Avatar Platform 是一个基于 **Azure AI Services** 的智能数字人问答平台，通过 **实时语音对话 + 数字人形象 (Avatar)** 提供两种交互模式：
 
-- **匿名模式**（无需登录）：数字人基于官方网站内容知识（已索引至 Azure AI Foundry IQ）回答访客问题
+- **匿名模式**（无需登录）：数字人基于官方网站内容知识（已索引至 Azure AI Foundry IQ）回答访客问题，回答附来源文档引用
 - **登录模式**（个性化）：数字人基于 CRM 关联的用户画像回答问题（POC 阶段以 Excel 对应关系表模拟，不做真实 CRM 集成），并记住用户偏好（通过 system prompt / prompt template 按 userid 注入）
-- **多语言**：支持中文、英文、西班牙语
+- **多语言**：支持中文、英文、西班牙语（UI + 数字人语音）
 - **清爽 UI**：仅展示数字人形象与来源文档链接，语音内容与文档展示分离呈现
 
 **核心价值**：访客和登录用户都能获得即时、准确、多语言的数字人问答体验 — 匿名用户基于公开官网知识，登录用户则获得基于个人画像与偏好的个性化回答。
 
 ---
 
-## Highlight: Voice Live + Digital Human Agent / 亮点：实时语音 + 数字人 Agent
+## Screenshots / 界面预览
 
 <p align="center">
-  <img src="docs/screenshots/ui-voice-live-avatar.png" alt="Voice Live + Avatar Playground" width="900"/>
+  <strong>匿名数字人问答（默认 Persona 静态形象 + 来源面板）</strong><br/>
+  <img src="docs/screenshots/ui-avatar-anonymous.png" alt="Anonymous Avatar Q&A" width="900"/>
 </p>
 
-> **与 AI 数字医生面对面实时对话** — 这是平台最核心的旗舰功能
-
-平台集成 **Azure Voice Live API** 和 **Azure AI Avatar**，实现了业界领先的数字人实时语音交互体验：
-
-- **Voice Live Playground** — 完整的实时语音配置与测试工作台
-- **数字人形象 (Avatar)** — 栩栩如生的 3D 虚拟医生形象，支持面部表情和口型同步
-- **GPT Realtime 模型** — 基于 GPT-4o Realtime 的超低延迟对话，自然流畅如真人
-- **VAD 自动检测** — 语音活动检测 (Voice Activity Detection)，无需手动按键，说完即回应
-- **多语言支持** — 中文/英文自动检测，语音输入语言自适应
-- **语音定制** — 可选择不同声线和语言的 TTS 语音角色
-- **HCP Agent 绑定** — 每个 Voice Live 实例可绑定到特定 HCP Agent，继承其角色设定和知识背景
-- **WebSocket 全双工** — 后端 Python SDK 代理，前端通过 WebSocket 实现实时双向音频流
-
-```
-┌──────────────┐     WebSocket      ┌──────────────┐    Voice Live API    ┌──────────────────┐
-│   Browser    │◄──────────────────►│   Backend    │◄───────────────────►│  Azure AI        │
-│  (React +    │   Audio Stream     │  (FastAPI +  │   GPT Realtime      │  Foundry         │
-│   Avatar)    │   + Transcript     │  Python SDK) │   + STT/TTS/VAD     │  Voice Live      │
-└──────────────┘                    └──────────────┘                     └──────────────────┘
-       │                                                                        │
-       │  WebRTC (ICE/SDP)                                                      │
-       └───────────────────────────────► Azure AI Avatar (Digital Human) ◄──────┘
-```
+<p align="center">
+  <strong>管理员数字人 Persona 目录管理</strong><br/>
+  <img src="docs/screenshots/ui-admin-avatar-personas.png" alt="Admin Avatar Personas" width="900"/>
+</p>
 
 ---
 
 ## Key Features / 核心功能
 
-### 7 种 MR-HCP 交互模式
+### 匿名问答（ANON — v2.0）
 
-平台支持 **7 种核心通信模式**，全面覆盖医药代表的培训需求：
+- **免登录直达** — 打开首页 `/` 即可向数字人文字/语音提问，无需任何账号
+- **官网知识 grounding** — 回答基于 Azure AI Foundry IQ 索引的官网内容，仅使用授权知识来源
+- **来源引用分离展示** — 每个回答附 page + document link，与回答内容作为独立 UI 元素展示（Sources 面板）
+- **数字人语音回答** — Azure Voice Live avatar 实时语音（WebRTC），VAD 自动检测
+- **限流与滥用防护** — slowapi IP/会话双层限流 + 匿名会话配额 + 交互审计日志
 
-| # | 模式 | 描述 | 技术基础 |
-|---|------|------|----------|
-| 1 | **Text Chat** 文本对话 | 与数字化 HCP 进行文字实时对话 | Azure OpenAI GPT-4o |
-| 2 | **Voice Chat** 语音对话 | 语音输入，AI 语音回复（ASR + TTS） | Azure Speech Services |
-| 3 | **Voice Live** 实时语音 | 低延迟实时语音交互，VAD 自动检测 | Azure Voice Live API (WebSocket) |
-| 4 | **Avatar Chat** 数字人对话 | 带虚拟形象的语音互动 | Azure AI Avatar + Speech |
-| 5 | **Voice Live + Avatar** 实时语音+数字人 | 实时语音交互配合数字人形象 | Voice Live + Avatar 联动 |
-| 6 | **Conference Text** 学术会议(文本) | 模拟科室学术会议，多 HCP 参与 | Multi-Agent Orchestration |
-| 7 | **Conference Voice** 学术会议(语音) | 语音驱动的学术会议模拟 | Speech + Multi-Agent |
+### 登录个性化（PERS — v2.0）
 
-### Voice Live 实例管理
+- **Excel CRM 对应关系表** — 管理员上传 Excel（userid → CRM 知识 / 对口支持人），系统解析入库
+- **Chat-time 偏好注入** — 登录用户提问时按 userid 将 CRM 上下文与偏好注入 system prompt，含 prompt-injection / PII 双闸 sanitization
+- **管理员偏好打标签** — 界面查看/编辑用户偏好标签（人工打标签，POC 不做自动 memory）
+- **登录直达 avatar 页** — 普通用户登录后直达 `/` 并加载个人记忆与已记住的 Persona；admin 落 `/admin/dashboard`
 
-- **实例生命周期** — 创建、配置、启用/禁用 Voice Live 实例
-- **模型选择** — 支持 GPT Realtime 等实时对话模型
-- **Response Instructions** — 自定义 Agent 响应指令
-- **语音输入配置** — 语言选择、自动语言检测、高级 ASR 参数
-- **语音输出配置** — TTS 声线选择、语速、音调调节
-- **Avatar 配置** — 启用/禁用数字人、照片/视频形象切换
-- **HCP Agent 分配** — 将实例绑定到特定 HCP 角色，继承 Agent 属性
+### 数字人 Persona（PERSONA — v2.1 / v2.2）
 
-### F2F 一对一 HCP 拜访训练
+- **Persona 目录管理** — 管理员增删改/启用禁用 Persona：名称、Azure 预置 avatar character+style（Lisa/Harry/Meg/Max 等）、按语言 voice、按语言问候语、persona prompt 片段
+- **唯一默认 Persona** — 仅一个启用的 Persona 可标记默认（DB 级 partial unique index 加固）；匿名访客与未选择用户自动使用默认
+- **页内切换 + 持久化** — 登录用户在 avatar 页内切换 Persona，选择持久化为 `selected_persona_id`，切换重建 Voice Live 会话并播报问候语
+- **全链路保真** — WebRTC session config 携带 persona 的 character/style（视频形象随切换变化）；Voice Live instructions 携带 sanitized persona prompt 片段（语音人格随切换变化）；voice 三级回退链；greeting 按 locale 解析并回退
+- **进页即显形象** — 匿名页加载即展示已配置 Persona 的静态形象（独立于麦克风授权/WebRTC 连接结果）
 
-<p align="center">
-  <img src="docs/screenshots/ui-f2f-training.png" alt="F2F Training" width="700"/>
-</p>
+### 多语言（LANG — v2.0）
 
-- 模拟真实的医药代表-医生面谈场景
-- 支持文字/语音/实时语音/数字人多种交互方式
-- 场景背景及 HCP 角色信息可见
-- 异议处理训练和关键信息传递练习
-- 历史对话回放与复盘
-
-### 虚拟科室学术会议
-
-<p align="center">
-  <img src="docs/screenshots/ui-conference-mode.png" alt="Conference Mode" width="700"/>
-</p>
-
-- 一对多模式：面对多位虚拟 HCP 进行学术演讲
-- 虚拟听众根据角色性格提出不同问题
-- 实时语音转写显示
-- 自动生成典型异议场景
-
-### 多维度评分与反馈
-
-<p align="center">
-  <img src="docs/screenshots/ui-scoring-feedback.png" alt="Scoring & Feedback" width="700"/>
-</p>
-
-- **关键信息传递** — 产品核心卖点是否清晰传达
-- **异议处理** — 应对 HCP 质疑的能力
-- **沟通技巧** — 对话流畅度、倾听能力、共情表达
-- **产品知识** — 对药品信息的准确掌握
-- **科学信息** — 临床数据引用的准确性
-- 实时建议 + 训练后详细报告
-
-### 数字化 HCP 角色配置
-
-<p align="center">
-  <img src="docs/screenshots/ui-hcp-profile.png" alt="HCP Profile" width="700"/>
-</p>
-
-- 可配置的虚拟 HCP 角色：姓名、专科、性格特征
-- 知识背景和医学观点自定义
-- 不同的情绪状态和沟通风格
-- 与 Azure AI Foundry Agent 深度集成
-- 支持多产品/多疾病领域的训练场景
-
-### 数据看板与报告
-
-<p align="center">
-  <img src="docs/screenshots/ui-admin-dashboard.png" alt="Admin Dashboard" width="700"/>
-</p>
-
-- 个人维度：训练进度、评分趋势、能力雷达图
-- 团队维度：部门排名、完成率统计
-- 按 BU / 职级 / 时间段筛选
-- 支持 PDF / Excel 格式导出
+- **UI 全量三语** — 中文 / 英文 / 西班牙语，locale key-parity 校验保证翻译不缺失
+- **数字人多语言语音** — 按 locale 选择 neural voice（含 es-* 声线），语言切换重建会话
 
 ---
 
@@ -153,39 +80,31 @@ AI Avatar Platform 是一个基于 **Azure AI Services** 的智能数字人问�
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Frontend (React SPA)                      │
-│  React 18 + TypeScript + Vite 6 + Tailwind CSS v4               │
-│  TanStack Query v5 | React Router v7 | Axios                    │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ REST API / WebSocket
-┌────────────────────────┴────────────────────────────────────────┐
-│                     Backend (FastAPI ASGI)                        │
+│  React 18 + TypeScript + Vite 6 + Tailwind CSS v4                │
+│  TanStack Query v5 | React Router v7 | i18next (zh/en/es)        │
+│  Avatar 页: 数字人视图 + 转写 + Sources 面板 + Persona 切换       │
+└────────────┬───────────────────────────────┬─────────────────────┘
+             │ REST (/public/avatar, /api/v1)│ WebRTC (SDP/ICE)
+┌────────────┴───────────────────────────────│─────────────────────┐
+│                     Backend (FastAPI ASGI) │                     │
 │  Python 3.11+ | SQLAlchemy 2.0 (async) | Alembic | JWT Auth      │
-│                                                                   │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │              AI Coaching Service Layer                     │    │
-│  │                                                           │    │
-│  │  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌─────────────┐  │    │
-│  │  │  Text    │ │  Voice   │ │  Avatar  │ │ Voice Live  │  │    │
-│  │  │  Chat    │ │  Chat    │ │  Chat    │ │ (WebSocket) │  │    │
-│  │  └─────────┘ └──────────┘ └──────────┘ └─────────────┘  │    │
-│  │  ┌─────────────────┐  ┌──────────────────────────────┐   │    │
-│  │  │  Conference      │  │  Multi-Agent Orchestration   │   │    │
-│  │  │  (Text + Voice)  │  │  (HCP Agent Registry)        │   │    │
-│  │  └─────────────────┘  └──────────────────────────────┘   │    │
-│  └──────────────────────────────────────────────────────────┘    │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-┌────────────────────────┴────────────────────────────────────────┐
+│                                            │                     │
+│  ┌──────────────────┐  ┌─────────────────┐ │ ┌────────────────┐  │
+│  │ 匿名会话/限流     │  │ Persona 解析     │ │ │ 个性化注入      │  │
+│  │ (session+quota)  │  │ (default/选择)   │ │ │ (CRM+偏好+双闸) │  │
+│  └──────────────────┘  └─────────────────┘ │ └────────────────┘  │
+└────────────┬───────────────────────────────│─────────────────────┘
+             │                               │
+┌────────────┴───────────────────────────────┴─────────────────────┐
 │                      Azure AI Services                            │
-│                                                                   │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
-│  │ Azure OpenAI │  │ Azure Speech │  │  Azure AI Avatar       │  │
-│  │ GPT-4o       │  │ ASR + TTS    │  │  Digital Human         │  │
-│  └──────────────┘  └──────────────┘  └────────────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
-│  │ AI Foundry   │  │ Voice Live   │  │  Content Understanding │  │
-│  │ Agent        │  │ Real-time    │  │  (Document Processing) │  │
-│  └──────────────┘  └──────────────┘  └────────────────────────┘  │
+│  ┌────────────────┐  ┌────────────────────┐  ┌────────────────┐   │
+│  │ AI Foundry IQ  │  │ Voice Live API     │  │ Azure Avatar   │   │
+│  │ (官网知识索引)  │  │ (实时语音 WebRTC)   │  │ (数字人视频)    │   │
+│  └────────────────┘  └────────────────────┘  └────────────────┘   │
+│  ┌────────────────┐  ┌────────────────────┐                       │
+│  │ Azure OpenAI   │  │ Azure Speech       │                       │
+│  │ (GPT-4o chat)  │  │ (STT/TTS fallback) │                       │
+│  └────────────────┘  └────────────────────┘                       │
 └──────────────────────────────────────────────────────────────────┘
                          │
                     PostgreSQL (prod) / SQLite (dev)
@@ -199,37 +118,15 @@ AI Avatar Platform 是一个基于 **Azure AI Services** 的智能数字人问�
 |------|------|------|
 | **Frontend** | React 18, TypeScript (strict), Vite 6, Tailwind CSS v4 | 单页应用 (SPA) |
 | **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0 (async), Alembic | API 服务 |
-| **AI Engine** | Azure OpenAI (GPT-4o), Anthropic Claude, OpenAI | 对话引擎 |
-| **Voice** | Azure Speech Services (ASR/TTS), Voice Live API | 语音交互 |
-| **Avatar** | Azure AI Avatar | 数字人形象 |
-| **Agent** | Azure AI Foundry (AI Projects SDK) | HCP Agent 编排 |
+| **Knowledge** | Azure AI Foundry IQ (agent + 官网内容索引) | 匿名问答 grounding |
+| **AI Engine** | Azure OpenAI (GPT-4o) | 对话引擎 |
+| **Voice** | Azure Voice Live API (WebRTC), Azure Speech (STT/TTS) | 实时语音交互 |
+| **Avatar** | Azure AI Avatar（预置 character+style） | 数字人形象 |
 | **Database** | PostgreSQL (prod), SQLite + aiosqlite (dev) | 数据存储 |
-| **State Mgmt** | TanStack Query v5 (server state), React Context | 前端状态 |
-| **Testing** | pytest + pytest-asyncio, Playwright (E2E) | 测试 |
+| **State Mgmt** | TanStack Query v5 (server state), lightweight auth store | 前端状态 |
+| **i18n** | i18next — 中文 / 英文 / 西班牙语，key-parity 校验 | 国际化 |
+| **Testing** | pytest + pytest-asyncio, Vitest, Playwright (E2E) | 测试 |
 | **Infra** | Docker, Azure Container Apps, GitHub Actions CI/CD | 部署 |
-| **i18n** | 中英文双语支持，架构可扩展至欧洲多语言 | 国际化 |
-
----
-
-## Screenshots / 界面预览
-
-<table>
-  <tr>
-    <td align="center" colspan="2"><strong>Voice Live + 数字人 Playground</strong><br/><img src="docs/screenshots/ui-voice-live-avatar.png" width="780"/></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>MR 工作台</strong><br/><img src="docs/screenshots/ui-mr-dashboard.png" width="380"/></td>
-    <td align="center"><strong>F2F HCP 训练</strong><br/><img src="docs/screenshots/ui-f2f-training.png" width="380"/></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>学术会议模式</strong><br/><img src="docs/screenshots/ui-conference-mode.png" width="380"/></td>
-    <td align="center"><strong>评分与反馈</strong><br/><img src="docs/screenshots/ui-scoring-feedback.png" width="380"/></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>HCP 角色配置</strong><br/><img src="docs/screenshots/ui-hcp-profile.png" width="380"/></td>
-    <td align="center"><strong>管理员看板</strong><br/><img src="docs/screenshots/ui-admin-dashboard.png" width="380"/></td>
-  </tr>
-</table>
 
 ---
 
@@ -271,7 +168,7 @@ uvicorn app.main:app --reload --port 8000
 cd frontend
 npm ci
 npm run dev
-# → http://localhost:5173
+# → http://localhost:5173  （首页 `/` 即匿名数字人问答页）
 ```
 
 ### Docker
@@ -287,9 +184,9 @@ docker compose up --build
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
 | 管理员 | admin | admin123 |
-| 医药代表 | user1 | user123 |
-| 医药代表 | user2 | user123 |
-| 医药代表 | user3 | user123 |
+| 用户 | user1 | user123 |
+| 用户 | user2 | user123 |
+| 用户 | user3 | user123 |
 
 ---
 
@@ -415,21 +312,33 @@ az account show -o table
 
 启动后端后访问 Swagger UI: http://localhost:8000/docs
 
+### 匿名公开接口（无需登录，挂载于根路径）
+
+| 端点 | 方法 | 功能描述 |
+|------|------|----------|
+| `/public/avatar/session` | POST | 签发匿名会话（限流保护） |
+| `/public/avatar/chat` | POST | 匿名 grounded 问答（Foundry IQ，回答附来源引用） |
+| `/public/avatar/persona` | GET | 当前生效 Persona 身份元数据（进页即显数字人形象） |
+| `/public/avatar/webrtc/session` | POST | Voice Live WebRTC 临时凭证（携带 persona character/style/voice/greeting/instructions） |
+| `/api/health` | GET | 健康检查 |
+
+### 认证接口（`/api/v1` 前缀，JWT Bearer）
+
 | 模块 | 路径前缀 | 功能描述 |
 |------|----------|----------|
-| Auth | `/api/v1/auth` | JWT 登录、用户信息、Token 刷新 |
-| HCP Profiles | `/api/v1/hcp-profiles` | 虚拟 HCP 角色配置 CRUD |
-| Scenarios | `/api/v1/scenarios` | 训练场景管理 |
-| Sessions | `/api/v1/sessions` | 训练会话生命周期管理 |
-| Coaching | `/api/v1/coaching` | AI 对话交互（Text/Voice） |
-| Scoring | `/api/v1/scoring` | 多维度评分与反馈 |
-| Voice | `/api/v1/voice` | 语音服务（ASR/TTS/Voice Live） |
-| Avatar | `/api/v1/avatar` | 数字人服务配置 |
-| Config | `/api/v1/config` | 系统配置管理 |
+| Auth | `/api/v1/auth` | JWT 登录、用户信息 |
+| Personalized Avatar | `/api/v1/personalized-avatar` | 登录个性化问答会话（CRM + 偏好注入） |
+| Avatar Personas | `/api/v1/avatar-personas` | 启用 Persona 列表（用户侧） |
+| Persona Selection | `/api/v1/users/me/persona` | 用户 Persona 选择读取/持久化 |
+| Admin: Avatar Personas | `/api/v1/admin/avatar-personas` | Persona 目录 CRUD、启用/禁用、默认标记 |
+| Admin: CRM | `/api/v1/admin/crm` | Excel CRM 对应关系表上传/解析 |
+| Admin: User Preferences | `/api/v1/admin/user-preferences` | 用户偏好标签查看/编辑 |
+| Admin: Public Knowledge | `/api/v1/admin/public-knowledge-config` | 匿名知识库（Foundry IQ agent）配置 |
+| Admin: Users | `/api/v1/admin/users` | 用户管理 |
+| Config | `/api/v1/config` | 系统配置 / feature flags |
 | Azure Config | `/api/v1/azure-config` | Azure AI 服务连接配置 |
-| Materials | `/api/v1/materials` | 培训材料管理 |
-| Reports | `/api/v1/reports` | 报告导出 |
-| Voice Live | `/api/v1/voice-live` | Voice Live 实例管理与 Playground |
+
+> 此外仓库保留 v1.0 教练平台（HCP coaching）的全套 API 与前端代码（sessions/scoring/conference/voice-live 等），其导航入口默认通过 `feature_legacy_coach_nav_enabled` flag 隐藏。
 
 ---
 
@@ -439,30 +348,26 @@ az account show -o table
 AI-avatar-vibe-coding/
 ├── backend/
 │   ├── app/
-│   │   ├── api/              # FastAPI routers (13 modules)
-│   │   ├── models/           # SQLAlchemy ORM (10 models)
+│   │   ├── api/              # FastAPI routers（public_avatar + /api/v1 各域）
+│   │   ├── models/           # SQLAlchemy ORM（persona、匿名会话、CRM、偏好等）
 │   │   ├── schemas/          # Pydantic v2 request/response schemas
-│   │   ├── services/         # Business logic + AI adapters
-│   │   │   └── agents/       # AI coaching adapter framework
-│   │   │       └── adapters/ # Claude, Azure OpenAI, GPT-4, Mock
+│   │   ├── services/         # 业务逻辑（persona 解析、sanitization、限流、Voice Live WebRTC）
 │   │   └── utils/            # Exceptions, pagination
-│   ├── tests/                # 78+ test cases
+│   ├── tests/                # pytest 单元/集成测试
 │   └── alembic/              # Database migrations
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/            # 41 route-level pages (admin + user)
-│   │   ├── components/       # 100+ React components
-│   │   │   ├── shared/       # Reusable UI components
-│   │   │   ├── coach/        # AI coaching components
-│   │   │   ├── voice/        # Voice & Avatar components
-│   │   │   ├── conference/   # Conference mode components
-│   │   │   ├── scoring/      # Scoring & feedback
-│   │   │   └── analytics/    # Dashboard & charts
-│   │   ├── hooks/            # TanStack Query hooks
-│   │   └── api/              # Typed axios client
-│   └── e2e/                  # 31 Playwright E2E tests
-├── docs/                     # Requirements, specs, plans
-├── wiki/                     # Auto-synced to GitHub Wiki
+│   │   ├── pages/            # 路由级页面（avatar 首页、admin 管理页等）
+│   │   ├── components/
+│   │   │   ├── avatar/       # Sources 面板、输入栏、Persona 切换、麦克风对话框
+│   │   │   ├── voice/        # AvatarView、转写组件
+│   │   │   └── shared/       # 通用 UI 组件
+│   │   ├── hooks/            # TanStack Query hooks（匿名/个性化会话、persona）
+│   │   └── api/              # 类型化 API 客户端（JWT axios + 匿名 fetch）
+│   ├── public/locales/       # i18n 资源（zh-CN / en-US / es-ES / es-MX / es-US）
+│   └── e2e/                  # Playwright E2E 测试
+├── docs/                     # Requirements, specs, screenshots
+├── infra/azure/              # Azure Bicep + 部署脚本
 ├── .github/workflows/        # CI/CD pipelines
 └── CLAUDE.md                 # Engineering handbook
 ```
@@ -471,24 +376,14 @@ AI-avatar-vibe-coding/
 
 ## Development Roadmap / 开发路线
 
-v1.0 里程碑已完成全部 12 个阶段（62/62 计划执行完毕）：
+| 里程碑 | 状态 | 关键交付 |
+|--------|------|----------|
+| **v1.0** HCP Coach Platform | ✅ 完成 | F2F/会议训练、评分反馈、HCP 角色、Azure 全栈集成（入口现默认隐藏） |
+| **v2.0** Avatar MVP | ✅ 完成 | 匿名 grounded 问答 + 来源引用（Phase 32）、Excel CRM 个性化注入（Phase 33）、西班牙语（Phase 34）、清爽 Avatar UI（Phase 35） |
+| **v2.1** Persona & 登录体验 | ✅ 完成 | Persona 目录管理与唯一默认（Phase 36）、页内切换持久化、登录直达 avatar 页 |
+| **v2.2** Persona 保真与加固 | ✅ 完成 | WebRTC 视频形象随 Persona 切换、语音通道 persona instructions、按语言问候语、DB 级默认唯一约束 + E2E 数据清理（Phase 37） |
 
-| 阶段 | 名称 | 关键交付 |
-|------|------|----------|
-| 01 | Foundation, Auth & Design System | JWT 认证、设计系统、基础框架 |
-| 01.1 | UI Figma Alignment | Figma 设计稿 1:1 还原 |
-| 02 | F2F Text Coaching | 文本对话 AI 教练核心功能 |
-| 03 | Scoring & Assessment | 多维度评分系统 |
-| 04 | Dashboard & Reporting | 数据看板与报告 |
-| 05 | Training Materials | 培训材料管理 |
-| 06 | Conference Module | 虚拟学术会议功能 |
-| 07 | Azure Service Integration | 7 种 Azure AI 模式集成 |
-| 08 | Voice & Avatar Demo | 语音/数字人交互演示 |
-| 09 | Integration Testing | 真实 Azure 服务集成测试 |
-| 10 | UI Polish | 专业化 UI 统一优化 |
-| 11 | HCP Agent Integration | HCP Agent 自动同步 AI Foundry |
-
-**进行中**: Phase 12-14 — Voice Live 实例管理、Playground、HCP Agent 重构
+后续候选：真实 CRM 集成（替换 Excel POC）、自动偏好抽取（memory 机制）、彻底移除 coach 代码。
 
 ---
 
@@ -511,7 +406,6 @@ Push/PR → Backend Test → Frontend Test → E2E Test → Deploy (main only)
 | [Wiki](../../wiki) | 架构文档、开发者入门、项目路线图 |
 | [Requirements](docs/requirements.md) | 业务需求规格说明 |
 | [Requirements (中文)](docs/requirements-cn.md) | 业务需求（中文版） |
-| [Solution Design](docs/capgemini-ai-coach-solution.md) | 解决方案设计文档 |
 | [Best Practices](docs/best-practices.md) | 工程模式参考 |
 
 ---
