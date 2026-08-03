@@ -750,6 +750,7 @@
     "deleteAriaLabel": "删除人设",
     "characterSectionTitle": "角色与风格",
     "voiceSectionTitle": "各语言语音",
+    "greetingSectionTitle": "各语言问候语",
     "greetingLabel": "问候语",
     "greetingHelper": "会话连接后数字人将立即说出此问候语。",
     "promptFragmentLabel": "人设提示词片段",

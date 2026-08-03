@@ -750,6 +750,7 @@
     "deleteAriaLabel": "Eliminar persona",
     "characterSectionTitle": "Personaje y Estilo",
     "voiceSectionTitle": "Voz por Idioma",
+    "greetingSectionTitle": "Saludo por Idioma",
     "greetingLabel": "Saludo",
     "greetingHelper": "El avatar lo pronuncia justo después de conectarse la sesión.",
     "promptFragmentLabel": "Fragmento de Prompt de la Persona",
