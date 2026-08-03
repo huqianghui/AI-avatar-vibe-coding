@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: completed
-stopped_at: Completed 37-03-PLAN.md
-last_updated: "2026-08-03T01:51:53.868Z"
+stopped_at: Completed 37-02-PLAN.md
+last_updated: "2026-08-03T02:27:06.929Z"
 last_activity: 2026-08-03
 progress:
   total_phases: 4
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 37
-Plan: 03 complete (04 pending)
-Status: Plan 37-03 complete — per-locale greeting admin UI + HARD-01 E2E teardown fix shipped
+Plan: 02 complete (04 pending)
+Status: Plan 37-02 complete — avatar character/style + sanitized instructions wired into public WebRTC session_config (PERSONA-06 done; PERSONA-05 partial, needs 37-04 frontend). Two residual risks unverified against live Azure: (1) avatar video negotiation over WebRTC "calls" transport, (2) instructions effect on conversational tone in agent mode. Both documented in 37-02-SUMMARY.md as acceptable-to-proceed per plan's own resume-signal contract.
 Last activity: 2026-08-03
 
 ## Performance Metrics
@@ -368,6 +368,7 @@ Recent decisions affecting current work:
 - [Phase 37]: 37-01: Backfilled all pre-migration greeting text into the zh-CN locale key (DEFAULT_BACKFILL_LOCALE); fixed a pre-existing dev-DB alembic_version drift via `alembic stamp` (no data loss, DB never deleted)
 - [Phase 37]: 37-03: Per-locale greeting editing added no default-voice-style sentinel -- empty string deletes the locale key, relying on backend any-available-locale fallback
 - [Phase 37]: 37-03: admin-avatar-personas.spec.ts restructured around two throwaway personas (A/B) so the seeded default persona is never a promote/delete target -- verified idempotent via two consecutive full runs with sqlite3 DB-state checks
+- [Phase 37]: 37-02: get_optional_current_user additive-only optional-auth dependency + avatar/instructions session_config wiring shipped; live-Azure video-negotiation and instructions-tone-effect verification documented as unverified residual risks per plan resume-signal contract
 
 ### Pending Todos
 
@@ -408,7 +409,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last activity: 2026-08-03 - Plan 37-01 complete: AvatarPersona.greeting -> greeting_map (per-locale JSON) + DB-level partial unique index enforcing exactly-one-enabled-default (PERSONA-07, HARD-01)
-Last session: 2026-08-03T01:51:53.864Z
-Stopped at: Completed 37-03-PLAN.md
+Last activity: 2026-08-03 - Plan 37-02 complete: get_optional_current_user optional-auth dependency + avatar character/style + sanitized/CRM-merged instructions wired into public WebRTC session_config (PERSONA-06); PERSONA-05 remains partial pending 37-04 frontend transceiver wiring; two live-Azure residual risks documented (video negotiation, instructions-tone effect)
+Last session: 2026-08-03T02:27:06.929Z
+Stopped at: Completed 37-02-PLAN.md
 Resume file: None

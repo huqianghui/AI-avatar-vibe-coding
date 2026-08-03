@@ -54,7 +54,7 @@
 ### Persona 保真 (PERSONA, continued)
 
 - [ ] **PERSONA-05**: avatar 会话的数字人**视频形象**真正应用当前 Persona 的 character/style — WebRTC session config 携带 persona 的 avatar character+style，切换 Persona 后屏幕上的数字人形象随之变化（匿名与登录路径一致）
-- [ ] **PERSONA-06**: persona prompt 片段作用于**语音对话通道** — Voice Live session 的 instructions 携带 sanitized persona 片段（登录路径合并 CRM/偏好上下文），语音问答的人格/语气随 Persona 变化，复用双闸 sanitization
+- [x] **PERSONA-06**: persona prompt 片段作用于**语音对话通道** — Voice Live session 的 instructions 携带 sanitized persona 片段（登录路径合并 CRM/偏好上下文），语音问答的人格/语气随 Persona 变化，复用双闸 sanitization
 - [x] **PERSONA-07**: 问候语按语言 — greeting 从单一字符串改为 per-locale map（与 voice_map 同构），按当前 locale 解析并回退（persona 任一可用 locale → 默认文案）；admin 表单支持按语言编辑问候语，数据迁移保留既有问候语
 
 ### 加固 (HARD)
@@ -98,7 +98,7 @@
 | PERSONA-03 | Phase 36 | Complete |
 | PERSONA-04 | Phase 36 | Complete |
 | PERSONA-05 | Phase 37 | Pending |
-| PERSONA-06 | Phase 37 | Pending |
+| PERSONA-06 | Phase 37 | Complete |
 | PERSONA-07 | Phase 37 | Complete |
 | HARD-01 | Phase 37 | Complete |
 | LAND-01 | Phase 36 | Complete |
