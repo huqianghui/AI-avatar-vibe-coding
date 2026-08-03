@@ -5,8 +5,9 @@ import uuid
 from jose import jwt
 
 from app.config import get_settings
+from app.dependencies import get_optional_current_user
 from app.models.user import User
-from app.services.auth import get_password_hash
+from app.services.auth import create_access_token, get_password_hash
 from tests.conftest import TestSessionLocal
 
 settings = get_settings()
@@ -66,3 +67,58 @@ class TestGetCurrentUserEdgeCases:
             "/api/v1/auth/me", headers={"Authorization": "Bearer not.a.valid.jwt"}
         )
         assert resp.status_code == 401
+
+
+class TestGetOptionalCurrentUser:
+    """Phase 37, PERSONA-05/06 (T-37-04): every failure mode degrades to
+    `None` -- never raises -- since a JWT is never required on the shared
+    anonymous-capable webrtc endpoint this dependency serves."""
+
+    async def test_no_header_returns_none(self, db_session):
+        result = await get_optional_current_user(authorization=None, db=db_session)
+        assert result is None
+
+    async def test_malformed_header_returns_none(self, db_session):
+        result = await get_optional_current_user(authorization="not-a-bearer-token", db=db_session)
+        assert result is None
+
+    async def test_empty_bearer_token_returns_none(self, db_session):
+        result = await get_optional_current_user(authorization="Bearer ", db=db_session)
+        assert result is None
+
+    async def test_expired_token_returns_none(self, db_session):
+        user = await _create_user_in_test_db(username="optional_expired")
+        from datetime import timedelta
+
+        expired_token = create_access_token(
+            data={"sub": user.id}, expires_delta=timedelta(minutes=-5)
+        )
+        result = await get_optional_current_user(
+            authorization=f"Bearer {expired_token}", db=db_session
+        )
+        assert result is None
+
+    async def test_valid_token_for_active_user_returns_user(self, db_session):
+        user = await _create_user_in_test_db(username="optional_active")
+        token = create_access_token(data={"sub": user.id})
+        result = await get_optional_current_user(authorization=f"Bearer {token}", db=db_session)
+        assert result is not None
+        assert result.id == user.id
+
+    async def test_valid_token_for_inactive_user_returns_none(self, db_session):
+        user = await _create_user_in_test_db(username="optional_inactive", is_active=False)
+        token = create_access_token(data={"sub": user.id})
+        result = await get_optional_current_user(authorization=f"Bearer {token}", db=db_session)
+        assert result is None
+
+    async def test_unknown_user_id_returns_none(self, db_session):
+        token = jwt.encode(
+            {"sub": "does-not-exist"}, settings.secret_key, algorithm=settings.algorithm
+        )
+        result = await get_optional_current_user(authorization=f"Bearer {token}", db=db_session)
+        assert result is None
+
+    async def test_token_without_sub_returns_none(self, db_session):
+        token = jwt.encode({"data": "no-sub"}, settings.secret_key, algorithm=settings.algorithm)
+        result = await get_optional_current_user(authorization=f"Bearer {token}", db=db_session)
+        assert result is None
