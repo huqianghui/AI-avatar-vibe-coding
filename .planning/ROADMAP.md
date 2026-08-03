@@ -345,7 +345,7 @@ Plans:
 Plans:
 - [x] 37-01-PLAN.md — Backend greeting_map column/migration + partial unique index + resolution chain + call-site fixes (PERSONA-07, HARD-01)
 - [ ] 37-02-PLAN.md — Avatar character/style + sanitized instructions in Voice Live session_config, optional-auth CRM merge (PERSONA-05, PERSONA-06)
-- [ ] 37-03-PLAN.md — Admin per-locale greeting editing UI + i18n parity + E2E teardown fix for admin-avatar-personas.spec.ts (PERSONA-07, HARD-01)
+- [x] 37-03-PLAN.md — Admin per-locale greeting editing UI + i18n parity + E2E teardown fix for admin-avatar-personas.spec.ts (PERSONA-07, HARD-01)
 - [ ] 37-04-PLAN.md — Landing-page avatar video transceiver negotiation + persona identity wiring + E2E identity-switch proof (PERSONA-05)
 
 ## Progress
@@ -362,4 +362,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
-| 37. Persona Fidelity & Hardening | v2.2 | 1/4 | In Progress|  |
+| 37. Persona Fidelity & Hardening | v2.2 | 2/4 | In Progress|  |

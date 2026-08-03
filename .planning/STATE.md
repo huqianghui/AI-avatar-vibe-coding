@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Persona Fidelity & Hardening
-status: in_progress
-stopped_at: Completed 37-01-PLAN.md
-last_updated: "2026-08-03T09:09:00.000Z"
+milestone: v2.0
+milestone_name: Avatar MVP
+status: completed
+stopped_at: Completed 37-03-PLAN.md
+last_updated: "2026-08-03T01:51:53.868Z"
 last_activity: 2026-08-03
 progress:
-  total_phases: 5
+  total_phases: 4
   completed_phases: 4
-  total_plans: 26
-  completed_plans: 26
+  total_plans: 25
+  completed_plans: 25
   percent: 100
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 37
-Plan: 01 complete (02, 03, 04 pending)
-Status: Plan 37-01 complete — greeting_map + DB-level default-uniqueness hardening shipped
+Plan: 03 complete (04 pending)
+Status: Plan 37-03 complete — per-locale greeting admin UI + HARD-01 E2E teardown fix shipped
 Last activity: 2026-08-03
 
 ## Performance Metrics
@@ -163,6 +163,7 @@ Last activity: 2026-08-03
 | Phase 36 P4 | 95min | 3 tasks | 17 files |
 | Phase 36 P5 | 9min | 2 tasks | 6 files |
 | Phase 37 P01 | 55min | 3 tasks | 11 files |
+| Phase 37 P03 | 35min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -365,6 +366,8 @@ Recent decisions affecting current work:
 - [Phase 37]: 37-01: AvatarPersona.greeting (single Text) -> greeting_map: dict[str,str] (per-locale JSON, isomorphic to voice_map); resolve_greeting_for_locale() 3-tier chain (exact -> any configured -> DEFAULT_GREETING)
 - [Phase 37]: 37-01: DB-level partial unique index (ix_avatar_personas_unique_default, sqlite_where/postgresql_where on enabled+is_default) as defense-in-depth for HARD-01, with IntegrityError -> ConflictException(409) translation in create_persona/set_default_persona
 - [Phase 37]: 37-01: Backfilled all pre-migration greeting text into the zh-CN locale key (DEFAULT_BACKFILL_LOCALE); fixed a pre-existing dev-DB alembic_version drift via `alembic stamp` (no data loss, DB never deleted)
+- [Phase 37]: 37-03: Per-locale greeting editing added no default-voice-style sentinel -- empty string deletes the locale key, relying on backend any-available-locale fallback
+- [Phase 37]: 37-03: admin-avatar-personas.spec.ts restructured around two throwaway personas (A/B) so the seeded default persona is never a promote/delete target -- verified idempotent via two consecutive full runs with sqlite3 DB-state checks
 
 ### Pending Todos
 
@@ -406,6 +409,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last activity: 2026-08-03 - Plan 37-01 complete: AvatarPersona.greeting -> greeting_map (per-locale JSON) + DB-level partial unique index enforcing exactly-one-enabled-default (PERSONA-07, HARD-01)
-Last session: 2026-08-03T09:09:00.000Z
-Stopped at: Completed 37-01-PLAN.md
+Last session: 2026-08-03T01:51:53.864Z
+Stopped at: Completed 37-03-PLAN.md
 Resume file: None
