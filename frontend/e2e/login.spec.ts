@@ -20,6 +20,29 @@ test.describe("Login Page", () => {
     await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
+  test("stale token in localStorage does not block access to /login and user can still log in", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    // A garbage JWT the real backend's /auth/me will reject with 401 (see
+    // backend/app/dependencies.py::get_current_user's JWTError -> 401 INVALID_TOKEN path),
+    // simulating an expired/stale token without needing to mock the network.
+    await page.evaluate(() =>
+      localStorage.setItem("access_token", "stale-invalid-token-e2e"),
+    );
+    // Force the auth store to rehydrate `token` from localStorage on load,
+    // reproducing the exact bug scenario.
+    await page.reload();
+    // Login form must still be reachable and not bounced away.
+    await expect(page.locator("#username")).toBeVisible({ timeout: 10000 });
+    // Prove login still works end-to-end from this state.
+    await page.locator("#username").fill("user1");
+    await page.locator("#password").fill("user123");
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL("http://localhost:5173/");
+    await expect(page).toHaveURL("/");
+  });
+
   test("login form has all required fields", async ({ page }) => {
     await expect(page.locator("#username")).toBeVisible();
     await expect(page.locator("#password")).toBeVisible();
