@@ -7,7 +7,7 @@
  * (those are covered by their own dedicated test files).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
@@ -212,6 +212,24 @@ describe("AvatarPage", () => {
     render(<AvatarPage />, { wrapper });
 
     expect(screen.queryByTestId("avatar-static-preview")).not.toBeInTheDocument();
+  });
+
+  it("shows the resolved persona's display name as the header title instead of the meaningless duplicate 'Sources' label", () => {
+    render(<AvatarPage />, { wrapper });
+
+    // "Lisa" also renders inside the avatar identity display -- scope to the
+    // header itself so this asserts the header's own title, not just that
+    // "Lisa" appears somewhere on the page.
+    const header = screen.getByRole("banner");
+    expect(within(header).getByText("Lisa")).toBeInTheDocument();
+    expect(within(header).queryByText("sourcesPanel.title")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the generic pageTitle key when no persona preview name is available", () => {
+    mockPersonaPreview = null;
+    render(<AvatarPage />, { wrapper });
+
+    expect(screen.getByText("pageTitle")).toBeInTheDocument();
   });
 
   it("renders at / without any auth context and does not redirect", () => {

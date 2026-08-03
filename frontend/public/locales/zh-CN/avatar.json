@@ -1,4 +1,6 @@
 {
+  "pageTitle": "数字人助手",
+  "emptyTranscript": "输入问题或点击麦克风，开始与数字人对话。",
   "sourcesPanel": {
     "title": "参考来源",
     "emptyPreQuestion": {

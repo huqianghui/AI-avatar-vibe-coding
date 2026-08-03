@@ -38,6 +38,20 @@ describe("VoiceTranscript", () => {
     expect(screen.getByText("emptyTranscript")).toBeInTheDocument();
   });
 
+  it("renders the caller-supplied emptyText instead of the default voice-namespace copy when provided", () => {
+    render(
+      <VoiceTranscript
+        transcripts={[]}
+        hcpName="Dr. Wang"
+        emptyText="Ask a question or use the mic to start talking with the avatar."
+      />,
+    );
+    expect(
+      screen.getByText("Ask a question or use the mic to start talking with the avatar."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("emptyTranscript")).not.toBeInTheDocument();
+  });
+
   it("renders transcript segments with correct content", () => {
     const segments = [
       makeSegment({ id: "s1", content: "Hello doctor", role: "user" }),

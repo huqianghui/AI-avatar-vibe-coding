@@ -1,4 +1,6 @@
 {
+  "pageTitle": "Avatar de IA",
+  "emptyTranscript": "Escriba una pregunta o use el micrófono para empezar a hablar con el avatar.",
   "sourcesPanel": {
     "title": "Fuentes",
     "emptyPreQuestion": {

@@ -339,7 +339,9 @@ export default function AvatarPage() {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-        <span className="text-sm font-semibold">{t("sourcesPanel.title")}</span>
+        <span className="text-sm font-semibold">
+          {personaPreviewQuery.data?.name ?? t("pageTitle")}
+        </span>
         {isAuthenticated && user ? (
           <div className="flex items-center gap-2">
             <PersonaSwitcher
@@ -387,7 +389,11 @@ export default function AvatarPage() {
             />
           </div>
           <div className="h-64 overflow-hidden border-t border-border">
-            <VoiceTranscript transcripts={transcript} hcpName="" />
+            <VoiceTranscript
+              transcripts={transcript}
+              hcpName=""
+              emptyText={t("emptyTranscript")}
+            />
           </div>
           <AvatarInputBar
             value={inputValue}

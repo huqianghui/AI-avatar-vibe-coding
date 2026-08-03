@@ -8,6 +8,14 @@ interface VoiceTranscriptProps {
   transcripts: TranscriptSegment[];
   hcpName: string;
   className?: string;
+  /**
+   * Overrides the empty-state copy (Phase 37, UI fidelity fix). Defaults to
+   * the voice-namespace's `emptyTranscript` ("Start speaking...") for the
+   * coach pages this component originated on -- callers outside that
+   * context (e.g. the anonymous avatar page, whose mic may be denied) should
+   * pass their own namespace's copy instead of the coach-era default.
+   */
+  emptyText?: string;
 }
 
 /**
@@ -19,6 +27,7 @@ export function VoiceTranscript({
   transcripts,
   hcpName,
   className,
+  emptyText,
 }: VoiceTranscriptProps) {
   const { t } = useTranslation("voice");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -37,7 +46,7 @@ export function VoiceTranscript({
         aria-live="polite"
       >
         <p className="text-center text-sm text-muted-foreground">
-          {t("emptyTranscript")}
+          {emptyText ?? t("emptyTranscript")}
         </p>
       </div>
     );
