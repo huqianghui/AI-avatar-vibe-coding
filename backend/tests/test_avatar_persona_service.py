@@ -1,7 +1,9 @@
-"""Unit tests for avatar_persona_service (Phase 36, PERSONA-01/02/04)."""
+"""Unit tests for avatar_persona_service (Phase 36, PERSONA-01/02/04; Phase 37,
+PERSONA-07/HARD-01)."""
 
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from app.models.avatar_persona import AvatarPersona
 from app.models.public_knowledge_config import PublicKnowledgeConfig
@@ -20,7 +22,7 @@ async def _create(db, **overrides) -> AvatarPersona:
         "character": "lisa",
         "style": "casual-sitting",
         "voice_map": {"en-US": "en-US-AvaNeural"},
-        "greeting": "Hi there!",
+        "greeting_map": {"zh-CN": "Hi there!"},
         "prompt_fragment": "Be friendly.",
         "enabled": True,
         "is_default": False,
@@ -38,7 +40,7 @@ class TestCreatePersona:
             character="harry",
             style="business",
             voice_map={"en-US": "en-US-GuyNeural"},
-            greeting="Hello!",
+            greeting_map={"en-US": "Hello!"},
             prompt_fragment="Speak formally.",
             enabled=True,
             is_default=False,
@@ -51,7 +53,7 @@ class TestCreatePersona:
         assert avatar_persona_service.parse_persona_voice_map(persona) == {
             "en-US": "en-US-GuyNeural"
         }
-        assert persona.greeting == "Hello!"
+        assert avatar_persona_service.parse_persona_greeting_map(persona) == {"en-US": "Hello!"}
         assert persona.prompt_fragment == "Speak formally."
         assert persona.enabled is True
         assert persona.is_default is False
@@ -132,11 +134,15 @@ class TestUpdatePersona:
         persona = await _create(db_session, name="Original")
 
         updated = await avatar_persona_service.update_persona(
-            db_session, persona.id, AvatarPersonaUpdate(name="Renamed", greeting="New greeting")
+            db_session,
+            persona.id,
+            AvatarPersonaUpdate(name="Renamed", greeting_map={"zh-CN": "New greeting"}),
         )
 
         assert updated.name == "Renamed"
-        assert updated.greeting == "New greeting"
+        assert avatar_persona_service.parse_persona_greeting_map(updated) == {
+            "zh-CN": "New greeting"
+        }
 
 
 class TestDeletePersona:
@@ -336,6 +342,95 @@ class TestResolveVoiceForLocale:
         )
 
         assert voice == DEFAULT_PUBLIC_VOICE_BY_LOCALE["en-US"]
+
+
+class TestParsePersonaGreetingMap:
+    async def test_round_trips_greeting_map(self, db_session):
+        persona = await _create(db_session, greeting_map={"en-US": "Hello there!"})
+
+        assert avatar_persona_service.parse_persona_greeting_map(persona) == {
+            "en-US": "Hello there!"
+        }
+
+    async def test_malformed_json_falls_back_to_empty_dict(self, db_session):
+        persona = await _create(db_session)
+        persona.greeting_map = "{not valid json"
+
+        assert avatar_persona_service.parse_persona_greeting_map(persona) == {}
+
+    async def test_empty_string_falls_back_to_empty_dict(self, db_session):
+        persona = await _create(db_session)
+        persona.greeting_map = ""
+
+        assert avatar_persona_service.parse_persona_greeting_map(persona) == {}
+
+
+class TestResolveGreetingForLocale:
+    async def test_exact_locale_match_wins(self, db_session):
+        persona = await _create(
+            db_session,
+            greeting_map={"zh-CN": "你好！", "en-US": "Hello!"},
+        )
+
+        assert avatar_persona_service.resolve_greeting_for_locale(persona, "en-US") == "Hello!"
+
+    async def test_falls_back_to_any_available_locale_when_exact_missing(self, db_session):
+        persona = await _create(db_session, greeting_map={"zh-CN": "你好！"})
+
+        greeting = avatar_persona_service.resolve_greeting_for_locale(persona, "en-US")
+
+        assert greeting == "你好！"
+
+    async def test_falls_back_to_hardcoded_default_when_no_locales_configured(self, db_session):
+        persona = await _create(db_session, greeting_map={})
+
+        greeting = avatar_persona_service.resolve_greeting_for_locale(persona, "en-US")
+
+        assert greeting == avatar_persona_service.DEFAULT_GREETING
+
+    async def test_never_raises_on_malformed_greeting_map(self, db_session):
+        persona = await _create(db_session)
+        persona.greeting_map = "{not valid json"
+
+        greeting = avatar_persona_service.resolve_greeting_for_locale(persona, "en-US")
+
+        assert greeting == avatar_persona_service.DEFAULT_GREETING
+
+
+class TestUniqueDefaultDatabaseConstraint:
+    """T-HARD-01: the partial unique index rejects a second enabled default
+    even when the service-layer guard (set_default_persona) is bypassed via
+    direct ORM construction."""
+
+    async def test_direct_orm_bypass_of_second_default_raises_integrity_error(self, db_session):
+        db_session.add(
+            AvatarPersona(
+                name="A",
+                character="lisa",
+                style="casual",
+                voice_map="{}",
+                greeting_map="{}",
+                prompt_fragment="",
+                enabled=True,
+                is_default=True,
+            )
+        )
+        await db_session.flush()
+
+        db_session.add(
+            AvatarPersona(
+                name="B",
+                character="harry",
+                style="business",
+                voice_map="{}",
+                greeting_map="{}",
+                prompt_fragment="",
+                enabled=True,
+                is_default=True,
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await db_session.flush()
 
 
 class TestGate1PromptFragmentSanitization:

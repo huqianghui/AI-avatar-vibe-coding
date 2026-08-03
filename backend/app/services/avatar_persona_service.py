@@ -1,14 +1,19 @@
 """AvatarPersona service: CRUD operations plus the unique-default guard
-(Phase 36, PERSONA-01/02, D-02).
+(Phase 36, PERSONA-01/02, D-02; Phase 37, HARD-01).
 
 Exactly one enabled persona is ever flagged `is_default=true`. Disabling or
 deleting the current default persona is rejected with 409 unless a new
-default is designated first via `new_default_persona_id`."""
+default is designated first via `new_default_persona_id`. As of Phase 37,
+this invariant is also enforced at the DB level by a partial unique index
+(`ix_avatar_personas_unique_default`); `create_persona`/`set_default_persona`
+translate any resulting `IntegrityError` into a 409 `ConflictException`
+rather than letting it surface as a raw 500."""
 
 import json
 import logging
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.avatar_persona import AvatarPersona
@@ -27,6 +32,11 @@ logger = logging.getLogger(__name__)
 # exclusively by set_selected_persona() below (Phase 36, PERSONA-03).
 SELECTED_PERSONA_PREFERENCE_CATEGORY = "selected_persona_id"
 
+# Hardcoded last-resort greeting (Phase 37, PERSONA-07): returned by
+# resolve_greeting_for_locale() when a persona has zero greeting_map locales
+# configured. Never an empty string, never a 500.
+DEFAULT_GREETING = "Hello! How can I help you today?"
+
 
 def parse_persona_voice_map(persona: AvatarPersona) -> dict[str, str]:
     """Safely parse `AvatarPersona.voice_map` JSON text into a dict.
@@ -40,11 +50,41 @@ def parse_persona_voice_map(persona: AvatarPersona) -> dict[str, str]:
         return {}
 
 
+def parse_persona_greeting_map(persona: AvatarPersona) -> dict[str, str]:
+    """Safely parse `AvatarPersona.greeting_map` JSON text into a dict.
+
+    Falls back to `{}` on malformed/empty JSON rather than crashing
+    (mirrors `parse_persona_voice_map`)."""
+    try:
+        return json.loads(persona.greeting_map or "{}")
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("Malformed greeting_map JSON on AvatarPersona %s; using {}", persona.id)
+        return {}
+
+
+def resolve_greeting_for_locale(persona: AvatarPersona, locale: str) -> str:
+    """3-tier greeting fallback chain (Phase 37, PERSONA-07):
+    persona.greeting_map[locale] -> any other locale configured on the
+    persona -> the hardcoded DEFAULT_GREETING. Never raises, never returns
+    an empty string for a configured persona."""
+    greeting_map = parse_persona_greeting_map(persona)
+    if locale in greeting_map:
+        return greeting_map[locale]
+    if greeting_map:
+        return next(iter(greeting_map.values()))
+    return DEFAULT_GREETING
+
+
 async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarPersona:
     """Create a new AvatarPersona. If `is_default=True` is requested, promotes
-    it via `set_default_persona` (which also enforces the enabled-only guard)."""
+    it via `set_default_persona` (which also enforces the enabled-only guard).
+
+    Translates a DB-level `IntegrityError` (the partial unique default index,
+    T-HARD-01) into a 409 `ConflictException` -- defense-in-depth, never a
+    raw 500."""
     persona_data = data.model_dump()
     voice_map = persona_data.pop("voice_map", None) or {}
+    greeting_map = persona_data.pop("greeting_map", None) or {}
     want_default = persona_data.pop("is_default", False)
     # Gate 1 (T-36-12): sanitize the free-text prompt_fragment at admin-save
     # time. Gate 2 re-sanitizes again at chat-injection time (see
@@ -53,7 +93,12 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
         persona_data.get("prompt_fragment")
     )
 
-    persona = AvatarPersona(**persona_data, voice_map=json.dumps(voice_map), is_default=False)
+    persona = AvatarPersona(
+        **persona_data,
+        voice_map=json.dumps(voice_map),
+        greeting_map=json.dumps(greeting_map),
+        is_default=False,
+    )
     db.add(persona)
     await db.flush()
     await db.refresh(persona)
@@ -61,7 +106,13 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
     if want_default:
         persona = await set_default_persona(db, persona.id)
     else:
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise ConflictException(
+                message="Another persona is already the enabled default"
+            ) from exc
         await db.refresh(persona)
     return persona
 
@@ -121,6 +172,9 @@ async def update_persona(
     if "voice_map" in update_data and update_data["voice_map"] is not None:
         update_data["voice_map"] = json.dumps(update_data["voice_map"])
 
+    if "greeting_map" in update_data and update_data["greeting_map"] is not None:
+        update_data["greeting_map"] = json.dumps(update_data["greeting_map"])
+
     want_default = update_data.pop("is_default", None)
 
     for field, value in update_data.items():
@@ -163,7 +217,10 @@ async def set_default_persona(db: AsyncSession, persona_id: str) -> AvatarPerson
 
     Single-transaction "clear all, set one" guarantees the unique-default
     invariant (D-02, T-36-03) -- the system never observes a state with zero
-    or more than one default among enabled personas."""
+    or more than one default among enabled personas. Any `IntegrityError`
+    from the partial unique default index (T-HARD-01) is translated into a
+    409 `ConflictException`, defense-in-depth against this guard ever being
+    bypassed."""
     target = await db.get(AvatarPersona, persona_id)
     if target is None:
         not_found("Persona not found")
@@ -171,7 +228,11 @@ async def set_default_persona(db: AsyncSession, persona_id: str) -> AvatarPerson
         bad_request("Cannot set a disabled persona as default")
     await db.execute(update(AvatarPersona).values(is_default=False))
     target.is_default = True
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise ConflictException(message="Another persona is already the enabled default") from exc
     await db.refresh(target)
     return target
 
