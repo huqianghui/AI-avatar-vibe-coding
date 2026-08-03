@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Avatar MVP
-status: verifying
-stopped_at: Completed 36-05-PLAN.md
-last_updated: "2026-08-02T12:52:24.751Z"
-last_activity: 2026-08-02
+milestone: v2.2
+milestone_name: Persona Fidelity & Hardening
+status: in_progress
+stopped_at: Completed 37-01-PLAN.md
+last_updated: "2026-08-03T09:09:00.000Z"
+last_activity: 2026-08-03
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 26
+  completed_plans: 26
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
-**Current focus:** Phase 36 — avatar-persona-selection-post-login-landing
+**Current focus:** Phase 37 — persona-fidelity-hardening
 
 ## Current Position
 
-Phase: 36
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-08-02
+Phase: 37
+Plan: 01 complete (02, 03, 04 pending)
+Status: Plan 37-01 complete — greeting_map + DB-level default-uniqueness hardening shipped
+Last activity: 2026-08-03
 
 ## Performance Metrics
 
@@ -162,6 +162,7 @@ Last activity: 2026-08-02
 | Phase 36 P03 | 85min | 3 tasks | 12 files |
 | Phase 36 P4 | 95min | 3 tasks | 17 files |
 | Phase 36 P5 | 9min | 2 tasks | 6 files |
+| Phase 37 P01 | 55min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -361,6 +362,9 @@ Recent decisions affecting current work:
 - [Phase 36]: 36-04: set_selected_persona() upserts UserPreference(category=selected_persona_id) by user_id, rejecting disabled/unknown persona_id with 404 (no partial state)
 - [Phase 36]: 36-04: Persona switch reuses Phase 34 disconnect+reconnect voice-session convention; PersonaSwitcher's active-row state driven by useSelectedPersona() query, not a separate local activePersonaId
 - [Phase 36]: Fixed auth.setup.ts and login.spec.ts's post-login waitForURL assertions to match the new / landing target for regular users — auth.setup.ts is the Playwright setup project every chromium test depends on; without the fix, all E2E execution would block, and login.spec.ts asserted the now-superseded /user/dashboard redirect
+- [Phase 37]: 37-01: AvatarPersona.greeting (single Text) -> greeting_map: dict[str,str] (per-locale JSON, isomorphic to voice_map); resolve_greeting_for_locale() 3-tier chain (exact -> any configured -> DEFAULT_GREETING)
+- [Phase 37]: 37-01: DB-level partial unique index (ix_avatar_personas_unique_default, sqlite_where/postgresql_where on enabled+is_default) as defense-in-depth for HARD-01, with IntegrityError -> ConflictException(409) translation in create_persona/set_default_persona
+- [Phase 37]: 37-01: Backfilled all pre-migration greeting text into the zh-CN locale key (DEFAULT_BACKFILL_LOCALE); fixed a pre-existing dev-DB alembic_version drift via `alembic stamp` (no data loss, DB never deleted)
 
 ### Pending Todos
 
@@ -401,7 +405,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last activity: 2026-07-31 - v2.0 ROADMAP.md created (Phases 32-35, 12/12 requirements mapped, 0 orphans)
-Last session: 2026-08-02T12:41:11.327Z
-Stopped at: Completed 36-05-PLAN.md
+Last activity: 2026-08-03 - Plan 37-01 complete: AvatarPersona.greeting -> greeting_map (per-locale JSON) + DB-level partial unique index enforcing exactly-one-enabled-default (PERSONA-07, HARD-01)
+Last session: 2026-08-03T09:09:00.000Z
+Stopped at: Completed 37-01-PLAN.md
 Resume file: None
