@@ -5,7 +5,7 @@
 - ✅ **v1.0 MR Coach Platform** - Phases 1-31 (shipped; not formally archived, see PROJECT.md)
 - ✅ **v2.0 Avatar MVP** - Phases 32-35 (complete 2026-08-02)
 - ✅ **v2.1 Avatar Persona & Post-Login Experience** - Phase 36 (complete 2026-08-02)
-- 📋 **v2.2 Persona Fidelity & Hardening** - Phase 37 (in progress)
+- ✅ **v2.2 Persona Fidelity & Hardening** - Phase 37 (complete 2026-08-03)
 
 ## Phases
 
@@ -326,7 +326,7 @@ Plans:
 
 **Milestone Goal:** 关闭 Phase 36 gap 分析发现的保真缺口：切换 Persona 后数字人视频形象真正变化（character/style 进 session config）、persona prompt 片段作用于语音对话通道（instructions + 双闸 sanitization）、问候语按语言（greeting per-locale map + 迁移）；并加固数据完整性（is_default DB 约束、E2E 数据清理）。
 
-- [ ] **Phase 37: Persona Fidelity & Hardening** - Persona character/style applied to avatar video rendering, prompt fragment shapes the voice channel, per-locale greeting, is_default DB constraint + E2E data hygiene
+- [x] **Phase 37: Persona Fidelity & Hardening** - Persona character/style applied to avatar video rendering, prompt fragment shapes the voice channel, per-locale greeting, is_default DB constraint + E2E data hygiene (completed 2026-08-03)
 
 ## Phase Details (v2.2)
 
@@ -346,7 +346,7 @@ Plans:
 - [x] 37-01-PLAN.md — Backend greeting_map column/migration + partial unique index + resolution chain + call-site fixes (PERSONA-07, HARD-01)
 - [x] 37-02-PLAN.md — Avatar character/style + sanitized instructions in Voice Live session_config, optional-auth CRM merge (PERSONA-05, PERSONA-06) — backend shape-complete; live-Azure video negotiation and instructions-tone effect documented as unverified residual risks (see 37-02-SUMMARY.md)
 - [x] 37-03-PLAN.md — Admin per-locale greeting editing UI + i18n parity + E2E teardown fix for admin-avatar-personas.spec.ts (PERSONA-07, HARD-01)
-- [ ] 37-04-PLAN.md — Landing-page avatar video transceiver negotiation + persona identity wiring + E2E identity-switch proof (PERSONA-05)
+- [x] 37-04-PLAN.md — Landing-page avatar video transceiver negotiation + persona identity wiring + E2E identity-switch proof (PERSONA-05)
 
 ## Progress
 
@@ -362,4 +362,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 34. Spanish (es) i18n | v2.0 | 10/10 | Complete   | 2026-08-01 |
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
-| 37. Persona Fidelity & Hardening | v2.2 | 3/4 | In Progress|  |
+| 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
