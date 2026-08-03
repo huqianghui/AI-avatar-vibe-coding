@@ -64,12 +64,14 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - ✓ avatar 会话实际应用 Persona：voice 三级回退链（persona voice_map → Phase 34 voice_map → DEFAULT_PUBLIC_VOICE_BY_LOCALE）+ greeting 下发 + persona prompt 片段双闸 sanitization 注入匿名/个性化 chat — v2.1 (Phase 36, PERSONA-04)
 - ✓ 普通用户登录直达 avatar 页（`/`），admin 仍落 /admin/dashboard，`/user/dashboard` 保持可直达 — v2.1 (Phase 36, LAND-01)
 
+- ✓ avatar 会话的数字人视频形象应用当前 Persona 的 character/style：WebRTC session config 携带 `avatar: {character, style}`，前端协商 recvonly 视频轨并展示 persona 身份（无视频轨时优雅回退 audio orb），切换后屏幕形象变化，匿名/登录一致 — v2.2 (Phase 37, PERSONA-05)
+- ✓ persona prompt 片段作用于语音对话通道：Voice Live session instructions 携带 sanitized 片段，登录路径合并 CRM/偏好，复用双闸 sanitization（残留风险：agent 模式下 instructions 对语气的实际影响未经真实 Azure 验证，见 37-02-SUMMARY）— v2.2 (Phase 37, PERSONA-06)
+- ✓ 问候语按语言：greeting → per-locale greeting_map（与 voice_map 同构）+ 回退链（exact → any → 默认），admin 按语言编辑，Alembic 迁移保留既有问候语 — v2.2 (Phase 37, PERSONA-07)
+- ✓ 数据完整性加固：is_default partial unique index（enabled+is_default）+ persona E2E teardown（dev DB 前后字节一致，零污染）— v2.2 (Phase 37, HARD-01)
+
 ### Active
 
-- [ ] avatar 会话的数字人视频形象真正应用当前 Persona 的 character/style（WebRTC session config 携带，切换后屏幕形象变化，匿名/登录一致）— v2.2 (Phase 37, PERSONA-05)
-- [ ] persona prompt 片段作用于语音对话通道（Voice Live session instructions 携带 sanitized 片段，登录路径合并 CRM/偏好，双闸 sanitization）— v2.2 (Phase 37, PERSONA-06)
-- [ ] 问候语按语言：greeting → per-locale map（与 voice_map 同构）+ 回退链，admin 按语言编辑，迁移保留既有问候语 — v2.2 (Phase 37, PERSONA-07)
-- [ ] 数据完整性加固：is_default partial unique index（enabled+is_default）+ persona E2E teardown（dev DB 零污染）— v2.2 (Phase 37, HARD-01)
+（无 — v2.2 里程碑全部需求已交付）
 
 ### Out of Scope
 
@@ -134,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-02 — v2.2 milestone (Persona Fidelity & Hardening) 启动：Phase 37 承接 PERSONA-05/06/07 + HARD-01（Phase 36 gap 分析产物）*
+*Last updated: 2026-08-03 — v2.2 milestone (Persona Fidelity & Hardening) 完成：Phase 37 交付 PERSONA-05/06/07 + HARD-01，验证 4/4 通过（37-VERIFICATION.md）*
