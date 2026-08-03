@@ -35,6 +35,25 @@ async function mockSession(page: Page): Promise<void> {
   );
 }
 
+/** Mocks GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure) -- the anonymous avatar page fetches this independently of the
+ * WebRTC connect flow to render the resolved persona's static preview
+ * immediately, even before/without a successful mic connect. */
+async function mockPersonaPreview(page: Page): Promise<void> {
+  await page.route("**/public/avatar/persona", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        persona_id: "e2e-persona-lisa",
+        name: "Lisa",
+        character: "lisa",
+        style: "casual-sitting",
+      }),
+    }),
+  );
+}
+
 async function mockWebrtcSessionSuccess(page: Page): Promise<void> {
   await page.route("**/public/avatar/webrtc/session", (route) =>
     route.fulfill({
@@ -179,6 +198,7 @@ test.describe("Anonymous avatar voice connect", () => {
     page,
   }) => {
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionSuccess(page);
     await installDeniedMic(page);
 
@@ -191,6 +211,12 @@ test.describe("Anonymous avatar voice connect", () => {
     await expect(page.getByText("Microphone access needed to ask by voice")).toBeVisible({
       timeout: 10_000,
     });
+
+    // User-reported PERSONA-05 gap: a denied mic must still show the
+    // configured persona's identity (Lisa's static preview), never the
+    // generic fallback orb, since the preview is resolved independently of
+    // the (failed) WebRTC connect attempt.
+    await expect(page.getByTestId("avatar-static-preview")).toBeVisible();
 
     // The dialog is a modal (Radix marks the background `aria-hidden` while
     // open), so the textarea is only usable again once the mic-denial path
@@ -208,6 +234,7 @@ test.describe("Anonymous avatar voice connect", () => {
   }) => {
     await context.grantPermissions(["microphone"]);
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionSuccess(page);
     await installGrantedMic(page);
     await installFakeWebrtcTransport(page);

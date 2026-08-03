@@ -62,6 +62,24 @@ async function mockWebrtcSessionFailure(page: Page): Promise<void> {
   );
 }
 
+/** Mocks GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure) -- fetched independently of the (here, deliberately failing)
+ * WebRTC connect flow, so it must be stubbed too. */
+async function mockPersonaPreview(page: Page): Promise<void> {
+  await page.route("**/public/avatar/persona", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        persona_id: DEFAULT_PERSONA.id,
+        name: DEFAULT_PERSONA.name,
+        character: DEFAULT_PERSONA.character,
+        style: DEFAULT_PERSONA.style,
+      }),
+    }),
+  );
+}
+
 async function mockPersonalizedSession(page: Page): Promise<void> {
   await page.route("**/api/v1/avatar/session", (route) =>
     route.fulfill({
@@ -130,6 +148,7 @@ test.describe("Post-login landing (Phase 36-05, LAND-01)", () => {
     page,
   }) => {
     await mockAnonymousSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionFailure(page);
     await mockPersonalizedSession(page);
     await mockPersonaSelection(page);

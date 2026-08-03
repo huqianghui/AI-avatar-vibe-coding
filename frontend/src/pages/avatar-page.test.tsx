@@ -65,6 +65,13 @@ vi.mock("@/hooks/use-anonymous-avatar-session", () => ({
   }),
 }));
 
+// Persona identity preview (Phase 37, PERSONA-05 fidelity gap closure).
+let mockPersonaPreview: { persona_id: string; name: string; character: string; style: string } | null =
+  { persona_id: "p-default", name: "Lisa", character: "lisa", style: "casual-sitting" };
+vi.mock("@/hooks/use-anonymous-persona-preview", () => ({
+  useAnonymousPersonaPreview: () => ({ data: mockPersonaPreview, isLoading: false, error: null }),
+}));
+
 const mockMutate = vi.fn();
 let mockIsPending = false;
 let capturedOnUnauthorized: (() => void) | null = null;
@@ -187,6 +194,24 @@ describe("AvatarPage", () => {
     mockSelectedPersona = null;
     mockEnabledPersonas = [];
     mockSetSelectedPersonaIsPending = false;
+    mockPersonaPreview = { persona_id: "p-default", name: "Lisa", character: "lisa", style: "casual-sitting" };
+  });
+
+  it("renders the resolved persona's static preview pre-connect, before any WebRTC connect resolves", () => {
+    // Mount effect always fires a connect attempt while sessionToken exists,
+    // but AvatarView must show the persona identity immediately -- it must
+    // not wait on that connect to resolve (the user-reported PERSONA-05 gap:
+    // a denied mic must still show Lisa, never the generic orb).
+    render(<AvatarPage />, { wrapper });
+
+    expect(screen.getByTestId("avatar-static-preview")).toBeInTheDocument();
+  });
+
+  it("falls back to the generic audio orb when no persona preview data is available yet", () => {
+    mockPersonaPreview = null;
+    render(<AvatarPage />, { wrapper });
+
+    expect(screen.queryByTestId("avatar-static-preview")).not.toBeInTheDocument();
   });
 
   it("renders at / without any auth context and does not redirect", () => {
@@ -552,6 +577,7 @@ describe("AvatarPage — authenticated user (Phase 33, PERS-02)", () => {
     mockSelectedPersona = null;
     mockEnabledPersonas = [];
     mockSetSelectedPersonaIsPending = false;
+    mockPersonaPreview = { persona_id: "p-default", name: "Lisa", character: "lisa", style: "casual-sitting" };
   });
 
   it('renders the "专属模式" badge + user email instead of the 登录 button when isAuthenticated is true', () => {
@@ -617,6 +643,7 @@ describe("AvatarPage — logged-out user regression guard (Phase 33, PERS-02)", 
     mockSelectedPersona = null;
     mockEnabledPersonas = [];
     mockSetSelectedPersonaIsPending = false;
+    mockPersonaPreview = { persona_id: "p-default", name: "Lisa", character: "lisa", style: "casual-sitting" };
   });
 
   it("still renders the 登录 button and routes chat through the anonymous mutation when logged out", async () => {

@@ -61,6 +61,19 @@ export interface WebrtcSessionResponse {
 }
 
 /**
+ * Response for GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure). Persona IDENTITY metadata only -- no prompt_fragment, greeting,
+ * or voice_map (those remain session-time-only concerns resolved by
+ * `fetchAnonymousWebrtcSession`).
+ */
+export interface PublicPersonaResponse {
+  persona_id: string;
+  name: string;
+  character: string;
+  style: string;
+}
+
+/**
  * Thrown by `parseOrThrow` on a non-2xx response. Preserves the HTTP status
  * and, when present, the `Retry-After` header (seconds) so callers can drive
  * a rate-limit countdown UI without re-parsing `err.message` (Phase 32-05).
@@ -122,6 +135,22 @@ export async function sendAnonymousChat(
     body: JSON.stringify({ message, locale }),
   });
   return parseOrThrow<ChatResponse>(res, "send anonymous chat message");
+}
+
+/**
+ * GET /public/avatar/persona — X-Anon-Session header only, no JWT bearer
+ * header (an `Authorization` header, if present on the caller's own request
+ * pipeline, is honored server-side, but this client never attaches one --
+ * mirrors every other function in this module). Lets the anonymous avatar
+ * page render the resolved persona's identity (character/style) before any
+ * WebRTC connect attempt (Phase 37, PERSONA-05 fidelity gap closure).
+ */
+export async function fetchAnonymousPersona(sessionToken: string): Promise<PublicPersonaResponse> {
+  const res = await fetch("/public/avatar/persona", {
+    method: "GET",
+    headers: { "X-Anon-Session": sessionToken },
+  });
+  return parseOrThrow<PublicPersonaResponse>(res, "fetch anonymous persona");
 }
 
 /**

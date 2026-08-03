@@ -61,6 +61,23 @@ class WebrtcSessionRequest(BaseModel):
     model_config = ConfigDict(from_attributes=False)
 
 
+class PublicPersonaResponse(BaseModel):
+    """Response for GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity
+    gap closure) — persona IDENTITY metadata only, so the anonymous avatar
+    page can render the resolved persona's static preview before any WebRTC
+    connection attempt/mic permission. Deliberately excludes
+    `prompt_fragment` (must never leak to a pre-connect client), `greeting`,
+    and `voice_map` — those remain session-time-only concerns resolved by
+    `POST /public/avatar/webrtc/session`."""
+
+    persona_id: str
+    name: str
+    character: str
+    style: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class WebrtcSessionResponse(WebRTCSessionResponse):
     """Mirrors the exact field set of the authenticated `/voice-live/webrtc/session`
     response (`WebRTCSessionResponse`) verbatim — same shape, anonymous trust

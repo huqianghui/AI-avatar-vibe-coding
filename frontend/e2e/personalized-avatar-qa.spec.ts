@@ -79,6 +79,26 @@ async function mockAnonymousSession(page: Page): Promise<void> {
   );
 }
 
+/** Mocks GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure) -- fetched independently of the (here, deliberately failing)
+ * WebRTC connect flow, so it must be stubbed too or every scenario below
+ * would otherwise hit the real dev backend with a fake anon-session token
+ * and 401. */
+async function mockPersonaPreview(page: Page): Promise<void> {
+  await page.route("**/public/avatar/persona", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        persona_id: "e2e-persona-lisa",
+        name: "Lisa",
+        character: "lisa",
+        style: "casual-sitting",
+      }),
+    }),
+  );
+}
+
 async function mockWebrtcSessionFailure(page: Page): Promise<void> {
   // The always-connected avatar auto-attempts a WebRTC/mic connection on
   // mount regardless of auth state (D-13). Fail it fast (no getUserMedia
@@ -167,6 +187,7 @@ test.describe("Personalized avatar Q&A (Phase 33-06, PERS-02)", () => {
       page,
     }) => {
       await mockAnonymousSession(page);
+      await mockPersonaPreview(page);
       await mockWebrtcSessionFailure(page);
       await mockPersonalizedSession(page);
       await mockPersonalizedChat(page);
@@ -189,6 +210,7 @@ test.describe("Personalized avatar Q&A (Phase 33-06, PERS-02)", () => {
       page,
     }) => {
       await mockAnonymousSession(page);
+      await mockPersonaPreview(page);
       await mockWebrtcSessionFailure(page);
       await mockPersonalizedSession(page);
       await mockPersonalizedChat(page);
@@ -212,6 +234,7 @@ test.describe("Personalized avatar Q&A (Phase 33-06, PERS-02)", () => {
       page,
     }) => {
       await mockAnonymousSession(page);
+      await mockPersonaPreview(page);
       await mockWebrtcSessionFailure(page);
       await mockAnonymousChat(page);
       // The personalized session hook still fires unconditionally (rules of

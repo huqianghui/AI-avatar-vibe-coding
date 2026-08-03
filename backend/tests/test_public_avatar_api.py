@@ -12,16 +12,54 @@ from jose import jwt
 
 from app.config import get_settings
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
+from app.models.avatar_persona import AvatarPersona
 from app.models.public_knowledge_config import PublicKnowledgeConfig
+from app.models.user import User
+from app.schemas.avatar_persona import AvatarPersonaCreate
+from app.services import avatar_persona_service
 from app.services.anonymous_session_service import (
     create_anonymous_session,
     touch_session,
     verify_anonymous_token,
 )
+from app.services.auth import create_access_token, get_password_hash
 from app.services.avatar_service import REFUSAL_TEMPLATES
 from app.services.rate_limit import limiter_ip
+from tests.conftest import TestSessionLocal
 
 settings = get_settings()
+
+
+async def _create_persona(db_session, **overrides) -> AvatarPersona:
+    defaults = {
+        "name": "Lisa Default",
+        "character": "lisa",
+        "style": "casual-sitting",
+        "voice_map": {},
+        "greeting_map": {"zh-CN": "Hi, I'm Lisa!"},
+        "prompt_fragment": "Be friendly.",
+        "enabled": True,
+        "is_default": True,
+    }
+    defaults.update(overrides)
+    data = AvatarPersonaCreate(**defaults)
+    return await avatar_persona_service.create_persona(db_session, data)
+
+
+async def _create_user_and_token(username="public_persona_user") -> tuple[str, str]:
+    async with TestSessionLocal() as session:
+        user = User(
+            username=username,
+            email=f"{username}@test.com",
+            hashed_password=get_password_hash("pass"),
+            full_name="Persona User",
+            role="user",
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        token = create_access_token(data={"sub": user.id})
+        return user.id, token
 
 
 @pytest.fixture(autouse=True)
@@ -349,3 +387,74 @@ class TestChatEndpointLocale:
         )
 
         assert response.status_code == 422
+
+
+class TestPersonaEndpoint:
+    """GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap closure):
+    lets the anonymous avatar page render the resolved persona's identity
+    (character/style) before any WebRTC connect attempt."""
+
+    async def test_returns_200_with_default_persona_metadata(self, client, db_session):
+        persona = await _create_persona(db_session)
+        headers = await _anon_session_and_header(client)
+
+        response = await client.get("/public/avatar/persona", headers=headers)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["persona_id"] == persona.id
+        assert body["name"] == "Lisa Default"
+        assert body["character"] == "lisa"
+        assert body["style"] == "casual-sitting"
+
+    async def test_missing_session_header_returns_401_structured_error(self, client, db_session):
+        await _create_persona(db_session)
+
+        response = await client.get("/public/avatar/persona")
+
+        assert response.status_code == 401
+        body = response.json()
+        assert "code" in body
+        assert "message" in body
+
+    async def test_response_never_contains_prompt_fragment_or_greeting_or_voice_map(
+        self, client, db_session
+    ):
+        await _create_persona(
+            db_session,
+            prompt_fragment="SECRET: never leak this to a pre-connect client.",
+            greeting_map={"zh-CN": "Hi, I'm Lisa!"},
+            voice_map={"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"},
+        )
+        headers = await _anon_session_and_header(client)
+
+        response = await client.get("/public/avatar/persona", headers=headers)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert "prompt_fragment" not in body
+        assert "greeting" not in body
+        assert "voice_map" not in body
+        assert set(body.keys()) == {"persona_id", "name", "character", "style"}
+
+    async def test_logged_in_user_with_selected_persona_gets_their_persona(
+        self, client, db_session
+    ):
+        await _create_persona(db_session, name="Default", is_default=True)
+        other = await _create_persona(
+            db_session, name="Other", character="lori", style="graceful-sitting", is_default=False
+        )
+        user_id, token = await _create_user_and_token()
+        await avatar_persona_service.set_selected_persona(
+            db_session, user_id=user_id, persona_id=other.id
+        )
+        headers = await _anon_session_and_header(client)
+        headers["Authorization"] = f"Bearer {token}"
+
+        response = await client.get("/public/avatar/persona", headers=headers)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["persona_id"] == other.id
+        assert body["character"] == "lori"
+        assert body["style"] == "graceful-sitting"

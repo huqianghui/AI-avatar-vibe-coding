@@ -42,6 +42,26 @@ async function mockSession(page: Page): Promise<void> {
   );
 }
 
+/** Mocks GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure) -- fetched independently of the (here, deliberately failing)
+ * WebRTC connect flow, so it must be stubbed too or every scenario below
+ * would otherwise hit the real dev backend with a fake anon-session token
+ * and 401. */
+async function mockPersonaPreview(page: Page): Promise<void> {
+  await page.route("**/public/avatar/persona", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        persona_id: "e2e-persona-lisa",
+        name: "Lisa",
+        character: "lisa",
+        style: "casual-sitting",
+      }),
+    }),
+  );
+}
+
 async function mockWebrtcSessionFailure(page: Page): Promise<void> {
   // The voice-connect attempt fires automatically on mount (always-connected
   // avatar). These specs only exercise the text path, so make the WebRTC
@@ -97,6 +117,7 @@ test.describe("Anonymous avatar Q&A", () => {
     });
 
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionFailure(page);
 
     await page.goto("/");
@@ -114,6 +135,7 @@ test.describe("Anonymous avatar Q&A", () => {
     page,
   }) => {
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionFailure(page);
 
     await page.goto("/");
@@ -137,6 +159,7 @@ test.describe("Anonymous avatar Q&A", () => {
     page,
   }) => {
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionFailure(page);
     await mockChat(page, {
       answer: ANSWER_TEXT,
@@ -172,6 +195,7 @@ test.describe("Anonymous avatar Q&A", () => {
     page,
   }) => {
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionFailure(page);
     await mockChat(page, { answer: REFUSAL_TEXT, citations: [], is_refusal: true });
 
@@ -198,6 +222,7 @@ test.describe("Anonymous avatar Q&A", () => {
     page,
   }) => {
     await mockSession(page);
+    await mockPersonaPreview(page);
     await mockWebrtcSessionFailure(page);
     await page.route("**/public/avatar/chat", (route) =>
       route.fulfill({

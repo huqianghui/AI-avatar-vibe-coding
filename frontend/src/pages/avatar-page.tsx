@@ -50,6 +50,7 @@ import { useMe } from "@/hooks/use-auth";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAnonymousAvatarSession } from "@/hooks/use-anonymous-avatar-session";
 import { useAnonymousAvatarChat } from "@/hooks/use-anonymous-avatar-chat";
+import { useAnonymousPersonaPreview } from "@/hooks/use-anonymous-persona-preview";
 import { usePersonalizedAvatarSession } from "@/hooks/use-personalized-avatar-session";
 import { usePersonalizedAvatarChat } from "@/hooks/use-personalized-avatar-chat";
 import { useAnonymousVoiceLive } from "@/hooks/use-anonymous-voice-live";
@@ -123,6 +124,14 @@ export default function AvatarPage() {
   useMe();
 
   const { sessionToken, renewSession } = useAnonymousAvatarSession();
+
+  // Persona identity preview (Phase 37, PERSONA-05 fidelity gap closure):
+  // resolved independently of the WebRTC/mic connect flow, so the page shows
+  // the configured persona's static preview (e.g. Lisa) immediately, even if
+  // mic permission is denied or Azure Voice Live is unavailable. WebRTC's own
+  // `voiceLive.avatarCharacter`/`avatarStyle` still take precedence once a
+  // real session connects (see the `AvatarView` props below).
+  const personaPreviewQuery = useAnonymousPersonaPreview(sessionToken);
 
   const handleUnauthorized = useCallback(() => {
     void renewSession();
@@ -371,8 +380,8 @@ export default function AvatarPage() {
               audioState={voiceLive.audioState}
               isConnecting={voiceLive.connectionState === "connecting"}
               isDigitalHumanMode={true}
-              avatarCharacter={voiceLive.avatarCharacter}
-              avatarStyle={voiceLive.avatarStyle}
+              avatarCharacter={voiceLive.avatarCharacter ?? personaPreviewQuery.data?.character}
+              avatarStyle={voiceLive.avatarStyle ?? personaPreviewQuery.data?.style}
               hcpName=""
               isFullScreen={false}
             />

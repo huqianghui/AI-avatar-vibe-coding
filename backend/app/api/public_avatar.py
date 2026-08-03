@@ -19,6 +19,7 @@ from app.schemas.public_avatar import (
     AnonymousSessionResponse,
     ChatRequest,
     ChatResponse,
+    PublicPersonaResponse,
     WebrtcSessionRequest,
     WebrtcSessionResponse,
 )
@@ -69,6 +70,37 @@ async def chat(
         db, session, body.message, public_config, locale=body.locale
     )
     return ChatResponse(**result)
+
+
+@router.get("/persona", response_model=PublicPersonaResponse)
+@limiter_ip.limit(settings.anon_rate_limit_webrtc_ip)
+async def get_persona(
+    request: Request,
+    session: AnonymousAvatarSession = Depends(get_anonymous_session),
+    current_user: User | None = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Persona IDENTITY metadata only (Phase 37, PERSONA-05 fidelity gap
+    closure) — lets the anonymous avatar page render the resolved persona's
+    static preview (character/style) before any WebRTC connect attempt, so a
+    denied mic permission or absent Azure config never regresses the page to
+    a generic orb instead of the configured default persona. Reuses the same
+    resolution precedence as the WebRTC/chat paths (`resolve_active_persona`)
+    -- a logged-in caller's own `selected_persona_id` preference wins over the
+    catalog default, exactly like the WebRTC session endpoint. Reuses the
+    webrtc IP rate limit rather than inventing a new config knob, since this
+    call happens at the same page-load cadence."""
+    persona = await resolve_active_persona(
+        db,
+        user_id=(current_user.id if current_user else None),
+        requested_persona_id=None,
+    )
+    return PublicPersonaResponse(
+        persona_id=persona.id,
+        name=persona.name,
+        character=persona.character,
+        style=persona.style,
+    )
 
 
 @router.post("/webrtc/session", response_model=WebrtcSessionResponse)

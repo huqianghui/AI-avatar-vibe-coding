@@ -98,6 +98,25 @@ async function mockWebrtcSessionSuccess(page: Page): Promise<void> {
   });
 }
 
+/** Mocks GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure) -- fetched independently of the WebRTC connect flow, always
+ * reflecting the currently-resolved default (Lisa) at mount/reload time in
+ * this fixture, matching `LISA` above. */
+async function mockPersonaPreview(page: Page): Promise<void> {
+  await page.route("**/public/avatar/persona", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        persona_id: LISA.id,
+        name: LISA.name,
+        character: LISA.character,
+        style: LISA.style,
+      }),
+    }),
+  );
+}
+
 async function mockPersonalizedSession(page: Page): Promise<void> {
   await page.route("**/api/v1/avatar/session", (route) =>
     route.fulfill({
@@ -283,6 +302,7 @@ test.describe("Persona switcher (Phase 36-04, PERSONA-03)", () => {
         window.localStorage.setItem("i18nextLng", "en-US");
       });
       await mockAnonymousSession(page);
+      await mockPersonaPreview(page);
       await mockWebrtcSessionSuccess(page);
       await mockPersonalizedSession(page);
       await installGrantedMic(page);
@@ -353,6 +373,7 @@ test.describe("Persona switcher (Phase 36-04, PERSONA-03)", () => {
         window.localStorage.setItem("i18nextLng", "en-US");
       });
       await mockAnonymousSession(page);
+      await mockPersonaPreview(page);
       await mockWebrtcSessionSuccess(page);
       await mockPersonaSelection(page);
       await installGrantedMic(page);

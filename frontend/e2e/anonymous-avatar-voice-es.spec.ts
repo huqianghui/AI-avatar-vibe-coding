@@ -60,6 +60,24 @@ async function mockSession(page: Page): Promise<void> {
   );
 }
 
+/** Mocks GET /public/avatar/persona (Phase 37, PERSONA-05 fidelity gap
+ * closure) -- fetched independently of the WebRTC connect flow, verbatim
+ * copy of `anonymous-avatar-voice.spec.ts`'s helper of the same name. */
+async function mockPersonaPreview(page: Page): Promise<void> {
+  await page.route("**/public/avatar/persona", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        persona_id: "e2e-persona-lisa",
+        name: "Lisa",
+        character: "lisa",
+        style: "casual-sitting",
+      }),
+    }),
+  );
+}
+
 /** Locale-aware variant of `anonymous-avatar-voice.spec.ts`'s
  * `mockWebrtcSessionSuccess` -- stubs `session_config.voice.name` with the
  * target locale's default neural voice (mirroring the real backend's
@@ -214,6 +232,7 @@ test.describe("Anonymous avatar voice connect — es-* locales", () => {
 
       await context.grantPermissions(["microphone"]);
       await mockSession(page);
+      await mockPersonaPreview(page);
       await mockWebrtcSessionSuccessEs(page, voice, (locale) => {
         capturedLocale = locale;
       });
