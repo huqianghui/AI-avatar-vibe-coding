@@ -484,3 +484,112 @@ class TestCreatePublicWebrtcSessionConfigLocaleFallback:
         )
 
         assert result.session_config["voice"]["name"] == "custom-voice-override"
+
+
+class TestPublicWebrtcAvatarAndInstructions:
+    """Phase 37, PERSONA-05/06: session_config gains `avatar`/`modalities`/
+    `instructions` only when the corresponding kwargs are supplied; omitted
+    kwargs leave session_config byte-identical to pre-Phase-37 behavior."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_character_and_style_add_avatar_block(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-avatar"
+
+        result = await create_public_webrtc_session_config(
+            db_session,
+            agent_id="public-agent-1",
+            voice_name="",
+            locale="zh-CN",
+            character="lisa",
+            style="casual-sitting",
+        )
+
+        assert result.session_config["avatar"] == {
+            "character": "lisa",
+            "style": "casual-sitting",
+            "customized": False,
+        }
+        assert "avatar" in result.session_config["modalities"]
+        assert result.character == "lisa"
+        assert result.style == "casual-sitting"
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_character_and_style_omitted_no_avatar_or_modalities_keys(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-no-avatar"
+
+        result = await create_public_webrtc_session_config(
+            db_session, agent_id="public-agent-1", voice_name="", locale="zh-CN"
+        )
+
+        assert "avatar" not in result.session_config
+        assert "modalities" not in result.session_config
+        assert result.character is None
+        assert result.style is None
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_instructions_supplied_adds_instructions_key(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-instructions"
+
+        result = await create_public_webrtc_session_config(
+            db_session,
+            agent_id="public-agent-1",
+            voice_name="",
+            locale="zh-CN",
+            instructions="Be a strict, formal tutor.",
+        )
+
+        assert result.session_config["instructions"] == "Be a strict, formal tutor."
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_instructions_omitted_no_instructions_key(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-no-instructions"
+
+        result = await create_public_webrtc_session_config(
+            db_session, agent_id="public-agent-1", voice_name="", locale="zh-CN"
+        )
+
+        assert "instructions" not in result.session_config

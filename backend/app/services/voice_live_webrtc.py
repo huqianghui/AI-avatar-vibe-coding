@@ -245,9 +245,13 @@ async def create_public_webrtc_session_config(
     voice_name: str,
     locale: str = "zh-CN",
     greeting: str | None = None,
+    character: str | None = None,
+    style: str | None = None,
+    instructions: str | None = None,
 ) -> WebRTCSessionResponse:
     """Build a WebRTC ephemeral-credential session for the anonymous public
-    avatar path (Phase 32, ANON-04; `greeting` added Phase 36, PERSONA-04).
+    avatar path (Phase 32, ANON-04; `greeting` added Phase 36, PERSONA-04;
+    `character`/`style`/`instructions` added Phase 37, PERSONA-05/06).
 
     Reuses the same Azure Voice Live config resolution, agent-mode signaling
     URL construction, and bearer-token exchange as
@@ -256,8 +260,12 @@ async def create_public_webrtc_session_config(
     the active `PublicKnowledgeConfig` row) instead of an HCP profile — the
     caller never supplies a character/style/voice override. `greeting` is
     the resolved active persona's greeting text (caller-resolved via
-    `resolve_active_persona()`); `session_config` shape is otherwise
-    unchanged (still no `instructions` field -- audio/voice only).
+    `resolve_active_persona()`). `character`/`style` (both caller-resolved
+    from the persona) add an `avatar` block + `modalities` key to
+    `session_config` when supplied; `instructions` (the sanitized, optionally
+    CRM-merged persona prompt fragment) adds an `instructions` key when
+    supplied. All three are additive-only: when omitted, `session_config` is
+    byte-identical to pre-Phase-37 behavior.
     """
     vl_config = await config_service.get_config(db, "azure_voice_live")
     if not vl_config or not vl_config.is_active:
@@ -302,6 +310,15 @@ async def create_public_webrtc_session_config(
         "input_audio_noise_reduction": False,
         "input_audio_echo_cancellation": False,
     }
+    if character and style:
+        session_config["avatar"] = {
+            "character": character,
+            "style": style,
+            "customized": False,
+        }
+        session_config["modalities"] = ["text", "audio", "avatar"]
+    if instructions:
+        session_config["instructions"] = instructions
 
     logger.info(
         "Public WebRTC session created: agent=%s, host=%s",
@@ -321,4 +338,6 @@ async def create_public_webrtc_session_config(
         project_name=project_name_val,
         avatar_warning=AVATAR_WARNING,
         greeting=greeting,
+        character=character,
+        style=style,
     )

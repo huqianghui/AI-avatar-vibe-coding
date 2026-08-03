@@ -78,6 +78,12 @@ class WebRTCSessionResponse(BaseModel):
     # can have the digital human speak first. None on the authenticated HCP
     # training path (persona catalog only applies to the public avatar path).
     greeting: str | None = None
+    # Active persona's visual identity (Phase 37, PERSONA-05/D-37-1) so the
+    # frontend can render the same character/style the voice channel's
+    # session_config["avatar"] block carries. None on the authenticated HCP
+    # training path (persona catalog only applies to the public avatar path).
+    character: str | None = None
+    style: str | None = None
 
 
 class AvatarCharacterStyle(BaseModel):
