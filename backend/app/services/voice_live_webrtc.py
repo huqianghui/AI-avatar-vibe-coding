@@ -241,7 +241,8 @@ async def create_webrtc_session_config(
 async def create_public_webrtc_session_config(
     db: AsyncSession,
     *,
-    agent_id: str,
+    agent_id: str | None,
+    agent_version: str | None = None,
     voice_name: str,
     locale: str = "zh-CN",
     greeting: str | None = None,
@@ -282,20 +283,51 @@ async def create_public_webrtc_session_config(
     effective_endpoint = to_cognitive_services_endpoint(raw_endpoint)
     _api_version = get_settings().voice_live_api_version
 
-    master = await config_service.get_master_config(db)
-    project_name_val = master.default_project if master else ""
-    if not str(project_name_val or "").strip():
-        raise AppException(
-            status_code=409,
-            code="AGENT_PROJECT_MISSING",
-            message="Voice Live Agent project is not configured",
-        )
+    # Foundry IQ is OPTIONAL for the anonymous public surface: when no active
+    # PublicKnowledgeConfig supplies an agent_id, fall back to Voice Live
+    # MODEL mode (direct model, no agent/project required) instead of failing
+    # -- the avatar stays usable, just ungrounded. New-version Foundry agents
+    # cannot be applied to a Voice Live instance directly anymore (voice mode
+    # is enabled on the agent itself), so agent-grounded sessions use the
+    # hosted-agent signaling contract (agent_name + agent_version +
+    # project_name), mirroring the HCP training path above.
+    is_agent = bool((agent_id or "").strip())
+    mode_info = parse_voice_live_mode(vl_config.model_or_deployment)
+    voice_live_model = mode_info.get("model") or get_settings().voice_live_default_model
 
     parsed = urlparse(effective_endpoint)
     endpoint_host = parsed.hostname or parsed.netloc
-    query = urlencode(
-        {"api-version": _api_version, "agent_id": agent_id, "project_id": project_name_val}
-    )
+
+    project_name_val: str | None = None
+    resolved_agent_version: str | None = None
+    if is_agent:
+        master = await config_service.get_master_config(db)
+        project_name_val = master.default_project if master else ""
+        if not str(project_name_val or "").strip():
+            raise AppException(
+                status_code=409,
+                code="AGENT_PROJECT_MISSING",
+                message="Voice Live Agent project is not configured",
+            )
+        from app.services.agent_sync_service import get_agent_latest_version
+
+        # Stay in sync with the agent's latest published version in Foundry
+        # rather than pinning a stale stored version. get_agent_latest_version
+        # returns "1" on lookup failure -- in that case prefer the admin-
+        # configured version if one exists.
+        resolved_agent_version = await get_agent_latest_version(db, str(agent_id))
+        if resolved_agent_version == "1" and (agent_version or "").strip():
+            resolved_agent_version = str(agent_version).strip()
+        query = urlencode(
+            {
+                "api-version": _api_version,
+                "agent_name": agent_id,
+                "agent_version": resolved_agent_version,
+                "project_name": project_name_val,
+            }
+        )
+    else:
+        query = urlencode({"api-version": _api_version, "model": voice_live_model})
     signaling_url = f"wss://{endpoint_host}/voice-live/realtime/calls?{query}"
 
     bearer_token = await _exchange_api_key_for_bearer_token(effective_endpoint, api_key)
@@ -321,8 +353,10 @@ async def create_public_webrtc_session_config(
         session_config["instructions"] = instructions
 
     logger.info(
-        "Public WebRTC session created: agent=%s, host=%s",
-        agent_id,
+        "Public WebRTC session created: mode=%s, agent=%s, model=%s, host=%s",
+        "agent" if is_agent else "model",
+        agent_id or "none",
+        voice_live_model if not is_agent else "",
         endpoint_host,
     )
 
@@ -330,11 +364,11 @@ async def create_public_webrtc_session_config(
         signaling_url=signaling_url,
         auth_token=bearer_token,
         auth_type="bearer",
-        model="",
-        mode="agent",
+        model=voice_live_model if not is_agent else "",
+        mode="agent" if is_agent else "model",
         session_config=session_config,
-        agent_id=agent_id,
-        agent_version=None,
+        agent_id=agent_id if is_agent else None,
+        agent_version=resolved_agent_version,
         project_name=project_name_val,
         avatar_warning=AVATAR_WARNING,
         greeting=greeting,

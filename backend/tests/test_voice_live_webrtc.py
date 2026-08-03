@@ -8,9 +8,23 @@ WebRTC connections.
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
+import pytest
+
 from app.models.user import User
 from app.services.auth import create_access_token, get_password_hash
 from tests.conftest import TestSessionLocal
+
+
+@pytest.fixture(autouse=True)
+def _stub_agent_latest_version():
+    """Agent-mode public session config calls get_agent_latest_version, which
+    hits live Azure via DefaultAzureCredential -- tests must never do that.
+    Explicit @patch decorators on individual tests override this stub."""
+    with patch(
+        "app.services.agent_sync_service.get_agent_latest_version",
+        AsyncMock(return_value="1"),
+    ):
+        yield
 
 
 async def _create_user_and_token(username="webrtc_user") -> tuple[str, str]:
@@ -593,3 +607,92 @@ class TestPublicWebrtcAvatarAndInstructions:
         )
 
         assert "instructions" not in result.session_config
+
+
+class TestPublicWebrtcModeSelection:
+    """Foundry IQ is optional: no agent -> Voice Live MODEL mode; with an
+    agent -> hosted-agent signaling (agent_name/agent_version/project_name)
+    mirroring the authenticated HCP training path, with the agent version
+    synced live from Azure."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_no_agent_falls_back_to_model_mode(
+        self, mock_config_svc, mock_exchange, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-model-mode"
+
+        result = await create_public_webrtc_session_config(
+            db_session, agent_id=None, voice_name="", locale="zh-CN"
+        )
+
+        query = parse_qs(urlparse(result.signaling_url).query)
+        assert query["model"] == ["gpt-4o"]
+        assert "agent_name" not in query
+        assert "agent_id" not in query
+        assert result.mode == "model"
+        assert result.model == "gpt-4o"
+        assert result.agent_id is None
+
+    @patch("app.services.agent_sync_service.get_agent_latest_version")
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_agent_mode_uses_hosted_agent_contract_with_synced_version(
+        self, mock_config_svc, mock_exchange, mock_latest, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-agent-mode"
+        mock_latest.return_value = "56"
+
+        result = await create_public_webrtc_session_config(
+            db_session, agent_id="Dr-Zhang-Wei", voice_name="", locale="zh-CN"
+        )
+
+        query = parse_qs(urlparse(result.signaling_url).query)
+        assert query["agent_name"] == ["Dr-Zhang-Wei"]
+        assert query["agent_version"] == ["56"]
+        assert query["project_name"] == ["my-project"]
+        assert "model" not in query
+        assert result.mode == "agent"
+        assert result.agent_version == "56"
+        assert result.project_name == "my-project"
+
+    @patch("app.services.agent_sync_service.get_agent_latest_version")
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    async def test_agent_version_lookup_failure_falls_back_to_configured_version(
+        self, mock_config_svc, mock_exchange, mock_latest, db_session
+    ):
+        from app.services.voice_live_webrtc import create_public_webrtc_session_config
+
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-agent-fallback"
+        mock_latest.return_value = "1"
+
+        result = await create_public_webrtc_session_config(
+            db_session, agent_id="Dr-Zhang-Wei", agent_version="42", voice_name="", locale="zh-CN"
+        )
+
+        query = parse_qs(urlparse(result.signaling_url).query)
+        assert query["agent_version"] == ["42"]
+        assert result.agent_version == "42"

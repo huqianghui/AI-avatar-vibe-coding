@@ -32,7 +32,7 @@ from app.services.avatar_persona_service import (
 from app.services.avatar_service import handle_anonymous_turn
 from app.services.personalization_injection_service import build_personalization_context
 from app.services.personalization_sanitizer import sanitize_free_text_with_pii
-from app.services.public_knowledge_config_service import get_active_public_config
+from app.services.public_knowledge_config_service import get_active_public_config_or_none
 from app.services.rate_limit import limiter_ip, limiter_session
 from app.services.voice_live_webrtc import create_public_webrtc_session_config
 
@@ -63,9 +63,11 @@ async def chat(
     db: AsyncSession = Depends(get_db),
 ):
     """Grounded anonymous Q&A turn (ANON-02/ANON-03) — the agent/KB is always
-    resolved server-side via `get_active_public_config()`; no client-suppliable
-    identifier exists anywhere in `ChatRequest` (T-32-05)."""
-    public_config = await get_active_public_config(db)
+    resolved server-side via `get_active_public_config_or_none()`; no
+    client-suppliable identifier exists anywhere in `ChatRequest` (T-32-05).
+    Foundry IQ is optional: with no active config the turn degrades to an
+    ungrounded plain-model answer (no citations) instead of failing."""
+    public_config = await get_active_public_config_or_none(db)
     result = await handle_anonymous_turn(
         db, session, body.message, public_config, locale=body.locale
     )
@@ -126,7 +128,7 @@ async def webrtc_session(
     endpoint additionally scopes persona resolution to their `user_id` and
     merges their CRM/preference context into `instructions` (D-37-2,
     T-37-06) -- an anonymous caller never triggers that CRM lookup at all."""
-    public_config = await get_active_public_config(db)
+    public_config = await get_active_public_config_or_none(db)
     persona = await resolve_active_persona(
         db,
         user_id=(current_user.id if current_user else None),
@@ -138,7 +140,8 @@ async def webrtc_session(
     instructions = "\n\n".join(filter(None, [sanitized_fragment, crm_context]))
     credential = await create_public_webrtc_session_config(
         db,
-        agent_id=public_config.agent_id,
+        agent_id=(public_config.agent_id if public_config else None),
+        agent_version=(public_config.agent_version if public_config else None),
         voice_name=voice,
         locale=body.locale,
         greeting=resolve_greeting_for_locale(persona, body.locale),

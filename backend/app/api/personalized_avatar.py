@@ -19,7 +19,7 @@ from app.schemas.personalized_avatar import (
 )
 from app.services.personalized_avatar_service import handle_personalized_turn
 from app.services.personalized_session_service import create_personalized_session, get_owned_session
-from app.services.public_knowledge_config_service import get_active_public_config
+from app.services.public_knowledge_config_service import get_active_public_config_or_none
 from app.services.rate_limit import limiter_user
 
 settings = get_settings()
@@ -57,7 +57,7 @@ async def chat(
     always the same server-resolved active `PublicKnowledgeConfig` row Phase
     32's anonymous flow uses, never anything client-suppliable."""
     session = await get_owned_session(db, body.session_id, user)
-    public_config = await get_active_public_config(db)
+    public_config = await get_active_public_config_or_none(db)
     result = await handle_personalized_turn(
         db, session, user, body.message, public_config, locale=body.locale
     )

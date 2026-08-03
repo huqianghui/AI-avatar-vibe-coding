@@ -21,13 +21,24 @@ logger = logging.getLogger(__name__)
 async def get_active_public_config(db: AsyncSession) -> PublicKnowledgeConfig:
     """Return the single active `PublicKnowledgeConfig` row, or fail closed
     with 404 if none is configured."""
-    result = await db.execute(
-        select(PublicKnowledgeConfig).where(PublicKnowledgeConfig.is_active == True)  # noqa: E712
-    )
-    config = result.scalar_one_or_none()
+    config = await get_active_public_config_or_none(db)
     if config is None:
         not_found("No active public knowledge configuration")
     return config
+
+
+async def get_active_public_config_or_none(db: AsyncSession) -> PublicKnowledgeConfig | None:
+    """Return the single active `PublicKnowledgeConfig` row, or None.
+
+    Callers that can degrade gracefully without a Foundry IQ knowledge base
+    (ungrounded model-mode voice/chat) use this instead of the fail-closed
+    variant -- the anonymous surface must stay usable even before an admin
+    has ever configured a public knowledge base.
+    """
+    result = await db.execute(
+        select(PublicKnowledgeConfig).where(PublicKnowledgeConfig.is_active == True)  # noqa: E712
+    )
+    return result.scalar_one_or_none()
 
 
 def parse_voice_map(config: PublicKnowledgeConfig) -> dict[str, str]:

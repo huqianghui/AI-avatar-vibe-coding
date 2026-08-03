@@ -252,7 +252,7 @@ class TestChatEndpoint:
 
         with (
             patch(
-                "app.api.public_avatar.get_active_public_config",
+                "app.api.public_avatar.get_active_public_config_or_none",
                 AsyncMock(return_value=_make_public_config()),
             ),
             patch(
@@ -297,7 +297,7 @@ class TestChatEndpoint:
         statuses = []
         with (
             patch(
-                "app.api.public_avatar.get_active_public_config",
+                "app.api.public_avatar.get_active_public_config_or_none",
                 AsyncMock(return_value=_make_public_config()),
             ),
             patch(
@@ -333,7 +333,7 @@ class TestChatEndpointLocale:
 
         with (
             patch(
-                "app.api.public_avatar.get_active_public_config",
+                "app.api.public_avatar.get_active_public_config_or_none",
                 AsyncMock(return_value=_make_public_config()),
             ),
             patch("app.api.public_avatar.handle_anonymous_turn", mock_turn),
@@ -364,7 +364,7 @@ class TestChatEndpointLocale:
 
         with (
             patch(
-                "app.api.public_avatar.get_active_public_config",
+                "app.api.public_avatar.get_active_public_config_or_none",
                 AsyncMock(return_value=_make_public_config()),
             ),
             patch("app.api.public_avatar.handle_anonymous_turn", mock_turn),
@@ -458,3 +458,38 @@ class TestPersonaEndpoint:
         assert body["persona_id"] == other.id
         assert body["character"] == "lori"
         assert body["style"] == "graceful-sitting"
+
+
+class TestChatEndpointUngroundedFallback:
+    """Foundry IQ is optional: with NO active PublicKnowledgeConfig the chat
+    endpoint still answers (ungrounded) -- handle_anonymous_turn receives
+    public_config=None instead of the request failing with 404."""
+
+    async def test_no_config_forwards_none_and_returns_200(self, client):
+        headers = await _anon_session_and_header(client)
+        result = {
+            "answer": "Ungrounded answer.",
+            "citations": [],
+            "is_refusal": False,
+            "response_id": "resp-model-1",
+        }
+        mock_turn = AsyncMock(return_value=result)
+
+        with (
+            patch(
+                "app.api.public_avatar.get_active_public_config_or_none",
+                AsyncMock(return_value=None),
+            ),
+            patch("app.api.public_avatar.handle_anonymous_turn", mock_turn),
+        ):
+            response = await client.post(
+                "/public/avatar/chat", json={"message": "你好"}, headers=headers
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["answer"] == "Ungrounded answer."
+        assert body["citations"] == []
+        assert body["is_refusal"] is False
+        mock_turn.assert_awaited_once()
+        assert mock_turn.call_args.args[3] is None

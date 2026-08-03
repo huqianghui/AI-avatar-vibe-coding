@@ -51,6 +51,18 @@ def _reset_limiter_storage():
     limiter_ip.reset()
 
 
+@pytest.fixture(autouse=True)
+def _stub_agent_latest_version():
+    """Agent-mode session config calls get_agent_latest_version, which hits
+    live Azure via DefaultAzureCredential -- tests must never do that (it's
+    also slow enough to let rate-limit windows expire mid-test)."""
+    with patch(
+        "app.services.agent_sync_service.get_agent_latest_version",
+        AsyncMock(return_value="1"),
+    ):
+        yield
+
+
 def _make_public_config(voice_map: dict | None = None) -> PublicKnowledgeConfig:
     return PublicKnowledgeConfig(
         agent_id="public-agent-1",
@@ -118,7 +130,7 @@ async def _create_crm_context(user_id: str, **overrides) -> None:
 class TestWebrtcSessionSuccess:
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_valid_session_returns_credential_shape(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -163,7 +175,7 @@ class TestWebrtcSessionSuccess:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_avatar_identity_sourced_from_admin_config_not_client(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -195,7 +207,8 @@ class TestWebrtcSessionSuccess:
         data = response.json()
         assert data["agent_id"] == "public-agent-1"
         assert data["session_config"]["voice"]["name"] == "en-US-AvaNeural"
-        assert "agent_id=public-agent-1" in data["signaling_url"]
+        assert "agent_name=public-agent-1" in data["signaling_url"]
+        assert "project_name=my-project" in data["signaling_url"]
 
 
 class TestWebrtcSessionMalformedVoiceMap:
@@ -205,7 +218,7 @@ class TestWebrtcSessionMalformedVoiceMap:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_malformed_voice_map_json_falls_back_instead_of_500(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -240,7 +253,7 @@ class TestWebrtcSessionLocaleValidation:
     @pytest.mark.parametrize("locale", ["es-ES", "es-MX", "es-US"])
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_es_locales_accepted(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session, locale
     ):
@@ -300,7 +313,7 @@ class TestWebrtcSessionAuthGate:
 class TestWebrtcSessionRateLimit:
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_exceeding_ip_rate_limit_returns_429_structured_error(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -334,7 +347,7 @@ class TestWebrtcSessionPersonaResolution:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_persona_voice_map_wins_over_admin_config_voice_map(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -366,7 +379,7 @@ class TestWebrtcSessionPersonaResolution:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_explicit_enabled_persona_id_is_used(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -403,7 +416,7 @@ class TestWebrtcSessionPersonaResolution:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_disabled_persona_id_falls_back_to_default_without_error(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -434,7 +447,7 @@ class TestWebrtcSessionPersonaResolution:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_unknown_persona_id_falls_back_to_default_without_error(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -469,7 +482,7 @@ class TestWebrtcSessionInstructionsAndCrmMerge:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_anonymous_caller_gets_persona_fragment_only(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -501,7 +514,7 @@ class TestWebrtcSessionInstructionsAndCrmMerge:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_authenticated_caller_with_crm_context_gets_merged_instructions(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -534,7 +547,7 @@ class TestWebrtcSessionInstructionsAndCrmMerge:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_invalid_authorization_header_falls_back_to_anonymous_default(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -563,7 +576,7 @@ class TestWebrtcSessionInstructionsAndCrmMerge:
 
     @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
     @patch("app.services.voice_live_webrtc.config_service")
-    @patch("app.api.public_avatar.get_active_public_config")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
     async def test_authenticated_caller_without_crm_context_gets_persona_fragment_only(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
@@ -589,3 +602,36 @@ class TestWebrtcSessionInstructionsAndCrmMerge:
         assert response.status_code == 200
         data = response.json()
         assert data["session_config"]["instructions"] == "You are a strict, formal tutor."
+
+
+class TestWebrtcSessionModelModeFallback:
+    """Foundry IQ is optional: with NO active PublicKnowledgeConfig the public
+    WebRTC endpoint still issues a credential, in Voice Live MODEL mode."""
+
+    @patch("app.services.voice_live_webrtc._exchange_api_key_for_bearer_token")
+    @patch("app.services.voice_live_webrtc.config_service")
+    @patch("app.api.public_avatar.get_active_public_config_or_none")
+    async def test_no_config_returns_200_model_mode_credential(
+        self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
+    ):
+        await _create_persona(db_session)
+        headers = await _anon_session_and_header(client)
+        mock_get_config.return_value = None
+        mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
+        mock_config_svc.get_effective_key = AsyncMock(return_value="test-key")
+        mock_config_svc.get_effective_endpoint = AsyncMock(
+            return_value="https://test.cognitiveservices.azure.com"
+        )
+        mock_config_svc.get_master_config = AsyncMock(return_value=_mock_master_config())
+        mock_exchange.return_value = "bearer-token-model-fallback"
+
+        response = await client.post(
+            "/public/avatar/webrtc/session", json={"locale": "zh-CN"}, headers=headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["mode"] == "model"
+        assert data["agent_id"] is None
+        assert "model=" in data["signaling_url"]
+        assert "agent_name=" not in data["signaling_url"]

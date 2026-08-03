@@ -892,3 +892,53 @@ class TestRealAgentChatService:
             _created_agents.remove(name)
 
         print(f"  Service cleanup: deleted {deleted} test agents")
+
+
+@pytest.mark.asyncio
+async def test_stream_model_response_omits_agent_reference():
+    """Foundry IQ is optional: plain-model streaming uses the same client and
+    deployment resolution but sends NO agent_reference and never validates an
+    agent name (agent_name=None means model mode, not an error)."""
+    from app.services.agent_chat_service import stream_model_response
+
+    delta = MagicMock(type="response.output_text.delta", delta="Plain answer")
+    completed = MagicMock(type="response.completed")
+    completed.response.id = "resp_model_001"
+    mock_stream = MagicMock()
+    mock_stream.__iter__.return_value = iter([delta, completed])
+    mock_openai_client = MagicMock()
+    mock_openai_client.responses.create.return_value = mock_stream
+    mock_project_client = MagicMock()
+    mock_project_client.get_openai_client.return_value = mock_openai_client
+
+    with (
+        patch(
+            "app.services.agent_chat_service.agent_sync_service.get_project_endpoint",
+            new_callable=AsyncMock,
+            return_value=("https://foundry.test/api/projects/test-prj", "test-key"),
+        ),
+        patch(
+            "app.services.agent_chat_service.agent_sync_service._get_project_client",
+            return_value=mock_project_client,
+        ),
+        _patch_config_service(),
+    ):
+        events = [
+            event
+            async for event in stream_model_response(
+                AsyncMock(),
+                message="Hello",
+            )
+        ]
+
+    assert [(event.kind, event.text, event.response_id) for event in events] == [
+        ("text", "Plain answer", None),
+        ("completed", "", "resp_model_001"),
+    ]
+    call_kwargs = mock_openai_client.responses.create.call_args.kwargs
+    assert call_kwargs == {
+        "model": "gpt-4o",
+        "input": [{"role": "user", "content": "Hello"}],
+        "stream": True,
+    }
+    assert "extra_body" not in call_kwargs

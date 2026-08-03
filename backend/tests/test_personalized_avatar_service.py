@@ -419,3 +419,49 @@ class TestHandlePersonalizedTurnPersonaInjection:
 
         assert "test@example.com" not in captured["personalization_context"]
         assert "[EMAIL_REDACTED]" in captured["personalization_context"]
+
+
+class TestHandlePersonalizedTurnUngroundedFallback:
+    """Foundry IQ is optional: with no active PublicKnowledgeConfig the
+    personalized turn degrades to a plain-model ungrounded answer -- no
+    citations, no zero-citation refusal gating, audit log still written."""
+
+    async def test_no_public_config_returns_plain_model_answer(self, db_session):
+        user = await _make_user(db_session)
+        session = await _make_session(db_session, user)
+        stream_mock = MagicMock(
+            side_effect=lambda *args, **kwargs: _agent_events(
+                AgentResponseEvent(kind="text", text="Ungrounded personalized."),
+                AgentResponseEvent(kind="completed", response_id="resp-model-1"),
+            )
+        )
+        retrieve_mock = AsyncMock()
+
+        with (
+            patch(
+                "app.services.personalized_avatar_service.stream_model_response",
+                stream_mock,
+            ),
+            patch(
+                "app.services.personalized_avatar_service.retrieve_citations",
+                retrieve_mock,
+            ),
+            patch(
+                "app.services.personalized_avatar_service.build_personalization_context",
+                AsyncMock(return_value="## User Background\nCustomer: Acme"),
+            ),
+        ):
+            result = await handle_personalized_turn(db_session, session, user, "hi", None)
+
+        assert result["is_refusal"] is False
+        assert result["answer"] == "Ungrounded personalized."
+        assert result["citations"] == []
+        retrieve_mock.assert_not_awaited()
+        stream_mock.assert_called_once()
+        _, call_kwargs = stream_mock.call_args
+        assert "## User Background" in call_kwargs["personalization_context"]
+
+        logs = (await db_session.execute(select(AvatarInteractionLog))).scalars().all()
+        assert len(logs) == 1
+        assert logs[0].is_refusal is False
+        assert logs[0].user_id == user.id

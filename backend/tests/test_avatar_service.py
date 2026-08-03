@@ -6,7 +6,7 @@ Mocks `stream_agent_response` (async generator stub) and `retrieve_citations`
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -347,3 +347,59 @@ class TestHandleAnonymousTurnPersonaInjection:
 
         assert "test@example.com" not in captured["personalization_context"]
         assert "[EMAIL_REDACTED]" in captured["personalization_context"]
+
+
+class TestHandleAnonymousTurnUngroundedFallback:
+    """Foundry IQ is optional: no active PublicKnowledgeConfig (or one whose
+    agent_id is blank) degrades to a plain-model ungrounded answer -- no
+    citations, no zero-citation refusal gating, audit log still written."""
+
+    async def test_no_public_config_returns_plain_model_answer(self, db_session):
+        session = await _make_session(db_session)
+        stream_mock = MagicMock(
+            side_effect=lambda *args, **kwargs: _agent_events(
+                AgentResponseEvent(kind="text", text="Ungrounded answer."),
+                AgentResponseEvent(kind="completed", response_id="resp-model-1"),
+            )
+        )
+        retrieve_mock = AsyncMock()
+
+        with (
+            patch("app.services.avatar_service.stream_model_response", stream_mock),
+            patch("app.services.avatar_service.retrieve_citations", retrieve_mock),
+        ):
+            result = await handle_anonymous_turn(db_session, session, "你好", None)
+
+        assert result["is_refusal"] is False
+        assert result["answer"] == "Ungrounded answer."
+        assert result["citations"] == []
+        assert result["response_id"] == "resp-model-1"
+        retrieve_mock.assert_not_awaited()
+        stream_mock.assert_called_once()
+
+        logs = (await db_session.execute(select(AvatarInteractionLog))).scalars().all()
+        assert len(logs) == 1
+        assert logs[0].citation_count == 0
+        assert logs[0].is_refusal is False
+
+    async def test_config_with_blank_agent_id_is_also_ungrounded(self, db_session):
+        session = await _make_session(db_session)
+        config = _make_public_config()
+        config.agent_id = "   "
+        stream_mock = MagicMock(
+            side_effect=lambda *args, **kwargs: _agent_events(
+                AgentResponseEvent(kind="text", text="Plain."),
+                AgentResponseEvent(kind="completed", response_id="resp-model-2"),
+            )
+        )
+        retrieve_mock = AsyncMock()
+
+        with (
+            patch("app.services.avatar_service.stream_model_response", stream_mock),
+            patch("app.services.avatar_service.retrieve_citations", retrieve_mock),
+        ):
+            result = await handle_anonymous_turn(db_session, session, "hi", config)
+
+        assert result["is_refusal"] is False
+        assert result["citations"] == []
+        retrieve_mock.assert_not_awaited()

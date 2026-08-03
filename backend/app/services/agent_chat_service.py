@@ -46,8 +46,8 @@ def _validate_agent_reference(agent_name: str, agent_version: str) -> tuple[str,
 
 async def _build_openai_request(
     db: AsyncSession,
-    agent_name: str,
-    agent_version: str,
+    agent_name: str | None,
+    agent_version: str | None,
     message: str,
     previous_response_id: str | None,
     personalization_context: str | None = None,
@@ -59,11 +59,20 @@ async def _build_openai_request(
     a second, clearly-labeled turn segment, never a rewrite of the hosted
     Agent's own configured instructions. Empty/None leaves `input` exactly as
     it is today (D-08 silent fallback, and the required regression guard for
-    the existing anonymous-flow tests)."""
+    the existing anonymous-flow tests).
+
+    When `agent_name` is None the request is built WITHOUT an
+    `agent_reference` (plain-model mode) -- the ungrounded fallback used when
+    no Foundry IQ agent is configured (Foundry IQ is optional). A non-None
+    but empty/invalid reference still fails fast BEFORE any config/Azure
+    lookup (the agent paths must never silently degrade)."""
     from app.config import get_settings
     from app.services import config_service
 
-    name, version = _validate_agent_reference(agent_name, agent_version)
+    use_agent = agent_name is not None
+    name = version = ""
+    if use_agent:
+        name, version = _validate_agent_reference(agent_name or "", agent_version or "")
     project_endpoint, api_key = await agent_sync_service.get_project_endpoint(db)
     client = agent_sync_service._get_project_client(project_endpoint, api_key)
     master = await config_service.get_master_config(db)
@@ -75,14 +84,15 @@ async def _build_openai_request(
     kwargs: dict = {
         "model": model,
         "input": input_items,
-        "extra_body": {
+    }
+    if use_agent:
+        kwargs["extra_body"] = {
             "agent_reference": {
                 "name": name,
                 "version": version,
                 "type": "agent_reference",
             }
-        },
-    }
+        }
     if previous_response_id:
         kwargs["previous_response_id"] = previous_response_id
     return client.get_openai_client(), kwargs, project_endpoint
@@ -142,15 +152,37 @@ async def chat_with_agent(
     }
 
 
-async def stream_agent_response(
+async def stream_model_response(
     db: AsyncSession,
-    agent_name: str,
-    agent_version: str,
     message: str,
     previous_response_id: str | None = None,
     personalization_context: str | None = None,
 ) -> AsyncIterator[AgentResponseEvent]:
-    """Stream an exact Foundry Prompt Agent response without blocking the event loop."""
+    """Stream a plain-model (ungrounded) response -- same Responses API client
+    and deployment resolution as agent mode, but WITHOUT an `agent_reference`.
+    Used when no Foundry IQ agent is configured (Foundry IQ is optional)."""
+    async for event in stream_agent_response(
+        db,
+        None,
+        None,
+        message,
+        previous_response_id,
+        personalization_context=personalization_context,
+    ):
+        yield event
+
+
+async def stream_agent_response(
+    db: AsyncSession,
+    agent_name: str | None,
+    agent_version: str | None,
+    message: str,
+    previous_response_id: str | None = None,
+    personalization_context: str | None = None,
+) -> AsyncIterator[AgentResponseEvent]:
+    """Stream an exact Foundry Prompt Agent response without blocking the event
+    loop. With `agent_name=None`, streams a plain-model (ungrounded) response
+    instead (see `stream_model_response`)."""
     openai_client, kwargs, _ = await _build_openai_request(
         db, agent_name, agent_version, message, previous_response_id, personalization_context
     )
