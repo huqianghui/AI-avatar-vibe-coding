@@ -191,8 +191,54 @@ async function installFakeWebrtcTransport(page: Page): Promise<void> {
   });
 }
 
+/** Mocks POST /public/avatar/webrtc/session failing with the exact 404 the
+ * backend returns when no PublicKnowledgeConfig row is active -- the
+ * user-reported false-positive scenario where a service-side failure was
+ * mispresented as a microphone-permission problem. */
+async function mockWebrtcSessionNotFound(page: Page): Promise<void> {
+  await page.route("**/public/avatar/webrtc/session", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: "NOT_FOUND",
+        message: "No active public knowledge configuration",
+        details: {},
+      }),
+    }),
+  );
+}
+
 test.describe("Anonymous avatar voice connect", () => {
   test.use({ locale: "en-US" });
+
+  test("a webrtc-session service failure (404) never opens the mic-permission dialog and leaves text chat usable", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["microphone"]);
+    await mockSession(page);
+    await mockPersonaPreview(page);
+    await mockWebrtcSessionNotFound(page);
+    await installGrantedMic(page);
+
+    const connectFailureLogged = page.waitForEvent("console", {
+      predicate: (msg) => msg.text().includes("fetchAnonymousWebrtcSession failed"),
+      timeout: 10_000,
+    });
+
+    await page.goto("/");
+
+    // The auto connect attempt on mount fails at Step 1 (backend 404) --
+    // deterministically wait for that failure before asserting UI state.
+    await connectFailureLogged;
+
+    // The persona's static preview still renders and the textarea is usable;
+    // the mic-permission dialog must NOT open (the mic was never the problem).
+    await expect(page.getByTestId("avatar-static-preview")).toBeVisible();
+    await expect(page.getByText("Microphone access needed to ask by voice")).not.toBeVisible();
+    await expect(page.getByRole("textbox")).toBeEnabled();
+  });
 
   test("denying microphone permission opens the mic-permission dialog while the textarea stays usable", async ({
     page,

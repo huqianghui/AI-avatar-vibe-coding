@@ -92,7 +92,12 @@ const mockSendTextMessage = vi.fn();
 let mockConnectionState: "disconnected" | "connecting" | "connected" = "disconnected";
 let mockAudioState: "idle" | "listening" | "speaking" = "idle";
 let mockIsMuted = false;
-vi.mock("@/hooks/use-anonymous-voice-live", () => ({
+vi.mock("@/hooks/use-anonymous-voice-live", async (importOriginal) => ({
+  // Keep the REAL MicAccessError class so the page's `instanceof` failure
+  // classification works against errors thrown by the mocked connect.
+  MicAccessError: (
+    await importOriginal<typeof import("@/hooks/use-anonymous-voice-live")>()
+  ).MicAccessError,
   useAnonymousVoiceLive: () => ({
     connect: mockConnect,
     disconnect: mockDisconnect,
@@ -339,6 +344,42 @@ describe("AvatarPage", () => {
     });
     expect(screen.getByText("micDialog.title")).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toBeEnabled();
+  });
+
+  it("does NOT open the mic dialog when the automatic mount connect fails with a service error (e.g. webrtc session 404)", async () => {
+    const { toast } = await import("sonner");
+    mockConnect.mockRejectedValue(
+      new Error("fetch anonymous webrtc session failed: 404"),
+    );
+
+    render(<AvatarPage />, { wrapper });
+
+    await waitFor(() => expect(mockConnect).toHaveBeenCalledTimes(1));
+
+    // Service failures are silent on the auto attempt: no mic-permission
+    // dialog (the user's mic is fine) and no toast (text chat still works).
+    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toBeEnabled();
+  });
+
+  it("shows a voice-unavailable toast (not the mic dialog) when a manual mic click fails with a service error", async () => {
+    const { toast } = await import("sonner");
+    const user = userEvent.setup();
+    // Prevent the mount effect from auto-attempting so the click is the only
+    // connect under test.
+    mockSessionToken = null;
+    mockConnect.mockRejectedValue(
+      new Error("fetch anonymous webrtc session failed: 404"),
+    );
+
+    render(<AvatarPage />, { wrapper });
+    await user.click(screen.getByRole("button", { name: "input.micIdleAriaLabel" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("error.connectionFailed");
+    });
+    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
   });
 
   it("resolves mic UI state to disabled while connecting", () => {

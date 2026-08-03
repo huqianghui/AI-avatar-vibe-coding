@@ -53,7 +53,7 @@ import { useAnonymousAvatarChat } from "@/hooks/use-anonymous-avatar-chat";
 import { useAnonymousPersonaPreview } from "@/hooks/use-anonymous-persona-preview";
 import { usePersonalizedAvatarSession } from "@/hooks/use-personalized-avatar-session";
 import { usePersonalizedAvatarChat } from "@/hooks/use-personalized-avatar-chat";
-import { useAnonymousVoiceLive } from "@/hooks/use-anonymous-voice-live";
+import { MicAccessError, useAnonymousVoiceLive } from "@/hooks/use-anonymous-voice-live";
 import {
   useEnabledPersonas,
   useSelectedPersona,
@@ -162,32 +162,55 @@ export default function AvatarPage() {
 
   // `personaId` (Phase 36, PERSONA-03) is optional and only ever supplied by
   // `handleSwitchPersona` below -- the mount effect and mic-button click
-  // handler call this with no args, preserving whichever persona the
+  // handler call this with no persona, preserving whichever persona the
   // anonymous session already resolved to. Returns whether the connect
   // succeeded so callers (e.g. the persona-switch flow) can react to failure
   // without this function's own mic-dialog side effects leaking into that
   // unrelated UI.
-  const attemptMicConnect = useCallback((personaId?: string) => {
-    hasAttemptedConnectRef.current = true;
-    return voiceLive
-      .connect(i18n.language, personaId)
-      .then(() => {
-        micAttemptCountRef.current = 0;
-        setMicDialogOpen(false);
-        setMicStillDenied(false);
-        return true;
-      })
-      .catch(() => {
-        micAttemptCountRef.current += 1;
-        setMicStillDenied(micAttemptCountRef.current > 1);
-        setMicDialogOpen(true);
-        return false;
-      });
-    // voiceLive is a fresh object on every render (hook mocked in tests
-    // returns a new literal each call) -- guard via hasAttemptedConnectRef
-    // instead of depending on it here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i18n.language]);
+  //
+  // Failure classification (user-reported bug fix): the mic-permission
+  // dialog must open ONLY for genuine microphone-access failures
+  // (`MicAccessError` from the hook's getUserMedia step). Service-side
+  // failures -- e.g. `/public/avatar/webrtc/session` returning 404 because
+  // no public knowledge config is active, network errors, WebRTC/signaling
+  // failures -- must never be presented as a mic-permission problem:
+  //   - `source="auto"` (mount effect): service failures stay silent (text
+  //     chat is fully usable without voice).
+  //   - `source="manual"` (mic click / dialog retry): service failures show
+  //     a voice-unavailable toast instead of the dialog.
+  //   - `source="silent"` (persona switch): no side effects here at all --
+  //     that flow renders its own error toast.
+  const attemptMicConnect = useCallback(
+    (personaId?: string, source: "auto" | "manual" | "silent" = "manual") => {
+      hasAttemptedConnectRef.current = true;
+      return voiceLive
+        .connect(i18n.language, personaId)
+        .then(() => {
+          micAttemptCountRef.current = 0;
+          setMicDialogOpen(false);
+          setMicStillDenied(false);
+          return true;
+        })
+        .catch((err: unknown) => {
+          const isMicError =
+            err instanceof MicAccessError ||
+            (err instanceof DOMException && err.name === "NotAllowedError");
+          if (source !== "silent" && isMicError) {
+            micAttemptCountRef.current += 1;
+            setMicStillDenied(micAttemptCountRef.current > 1);
+            setMicDialogOpen(true);
+          } else if (source === "manual" && !isMicError) {
+            toast.error(tVoice("error.connectionFailed"));
+          }
+          return false;
+        });
+      // voiceLive is a fresh object on every render (hook mocked in tests
+      // returns a new literal each call) -- guard via hasAttemptedConnectRef
+      // instead of depending on it here.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [i18n.language, tVoice],
+  );
 
   // Persona-switch handler (Phase 36, PERSONA-03): disconnect + reconnect,
   // never a mid-session hot-swap (Phase 34 convention). The trigger's visible
@@ -204,7 +227,7 @@ export default function AvatarPage() {
 
       setSelectedPersonaMutation.mutate(personaId, {
         onSuccess: (data) => {
-          void attemptMicConnect(personaId).then((connected) => {
+          void attemptMicConnect(personaId, "silent").then((connected) => {
             toast.dismiss(toastId);
             if (connected) {
               setActivePersonaId(personaId);
@@ -232,7 +255,7 @@ export default function AvatarPage() {
   // automatically -- text input remains usable regardless.
   useEffect(() => {
     if (!sessionToken || hasAttemptedConnectRef.current) return;
-    void attemptMicConnect();
+    void attemptMicConnect(undefined, "auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
 
@@ -430,7 +453,7 @@ export default function AvatarPage() {
       <MicPermissionDialog
         open={micDialogOpen}
         onOpenChange={setMicDialogOpen}
-        onRetry={attemptMicConnect}
+        onRetry={() => void attemptMicConnect()}
         onUseTextInstead={handleUseTextInstead}
         stillDenied={micStillDenied}
       />

@@ -19,6 +19,19 @@ import {
 const log = createVoiceLogger("AnonymousVoiceLiveWebRTC");
 
 /**
+ * Thrown ONLY when `getUserMedia` itself fails (mic permission denied / no
+ * mic hardware). Lets callers distinguish "the user must grant microphone
+ * access" from service-side failures (backend 404/5xx, WebRTC/signaling
+ * errors) which must NOT be presented as a mic-permission problem.
+ */
+export class MicAccessError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "MicAccessError";
+  }
+}
+
+/**
  * Options for {@link useAnonymousVoiceLive}. Intentionally does NOT include
  * a `systemPrompt` field: the anonymous path has no client-suppliable
  * prompt override — the agent/knowledge-base is always resolved server-side
@@ -292,8 +305,10 @@ export function useAnonymousVoiceLive(
         micStreamRef.current = micStream;
         log.info("Microphone access granted");
       } catch (err) {
-        const error =
-          err instanceof Error ? err : new Error("Microphone access denied");
+        const error = new MicAccessError(
+          err instanceof Error ? err.message : "Microphone access denied",
+          { cause: err },
+        );
         log.error("getUserMedia failed: %o", err);
         setConnectionState("error");
         connectionStateRef.current = "error";
