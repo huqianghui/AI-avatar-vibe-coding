@@ -24,10 +24,16 @@ export function AdminRoute() {
 
 export function GuestRoute() {
   const { token, user } = useAuthStore();
-  if (token) {
-    const target =
-      user?.role === "admin" ? "/admin/dashboard" : "/";
-    return <Navigate to={target} replace />;
-  }
-  return <Outlet />;
+  const { isLoading } = useMe();
+
+  if (!token) return <Outlet />;
+  if (isLoading)
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Loading...
+      </div>
+    );
+  if (!user) return <Outlet />;
+  const target = user.role === "admin" ? "/admin/dashboard" : "/";
+  return <Navigate to={target} replace />;
 }

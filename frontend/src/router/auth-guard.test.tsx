@@ -188,7 +188,7 @@ describe("GuestRoute", () => {
     expect(screen.getByText("Admin Dashboard")).toBeInTheDocument();
   });
 
-  it("redirects regular users to /user/dashboard", async () => {
+  it("redirects regular users to /", async () => {
     mockToken = "valid-token";
     mockUser = { role: "user", full_name: "User" };
     mockIsLoading = false;
@@ -202,12 +202,56 @@ describe("GuestRoute", () => {
             <Route element={<GuestRoute />}>
               <Route path="/login" element={<div>Login Form</div>} />
             </Route>
-            <Route path="/user/dashboard" element={<div>User Dashboard</div>} />
+            <Route path="/" element={<div>Avatar Page</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("User Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Avatar Page")).toBeInTheDocument();
+  });
+
+  it("shows loading state when token exists but identity is still loading", async () => {
+    mockToken = "valid-token";
+    mockUser = null;
+    mockIsLoading = true;
+
+    const { GuestRoute } = await import("./auth-guard");
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route element={<GuestRoute />}>
+              <Route path="/login" element={<div>Login Form</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+  });
+
+  it("stays on /login when token is stale and the identity fetch has failed", async () => {
+    mockToken = "stale-token";
+    mockUser = null;
+    mockIsLoading = false;
+
+    const { GuestRoute } = await import("./auth-guard");
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route element={<GuestRoute />}>
+              <Route path="/login" element={<div>Login Form</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Login Form")).toBeInTheDocument();
   });
 });
