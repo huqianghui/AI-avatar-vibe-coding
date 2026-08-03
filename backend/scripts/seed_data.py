@@ -620,7 +620,7 @@ async def seed_default_avatar_persona(session: AsyncSession) -> None:
         character="lisa",
         style="casual-sitting",
         voice_map=json.dumps({"en-US": "en-US-AvaNeural"}),
-        greeting="Hi, I'm Lisa! How can I help you today?",
+        greeting_map=json.dumps({"en-US": "Hi, I'm Lisa! How can I help you today?"}),
         prompt_fragment="",
         enabled=True,
         is_default=True,

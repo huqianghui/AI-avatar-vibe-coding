@@ -5,16 +5,22 @@ JWT-gated only -- every route here requires a real logged-in user via
 client-supplied `user_id` (T-36-21). Mounted under `settings.api_prefix`
 (unlike the anonymous `/public/avatar/*` surface)."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.services.avatar_persona_service import resolve_active_persona, set_selected_persona
+from app.services.avatar_persona_service import (
+    resolve_active_persona,
+    resolve_greeting_for_locale,
+    set_selected_persona,
+)
 
 router = APIRouter(prefix="/users/me", tags=["user-persona-selection"])
+
+_LOCALE_PATTERN = "^(zh-CN|en-US|es-ES|es-MX|es-US)$"
 
 
 class SelectedPersonaOut(BaseModel):
@@ -32,19 +38,27 @@ class SelectedPersonaOut(BaseModel):
 
 class SelectPersonaRequest(BaseModel):
     persona_id: str = Field(..., min_length=1)
+    locale: str = Field(default="zh-CN", pattern=_LOCALE_PATTERN)
 
     model_config = ConfigDict(from_attributes=False)
 
 
 @router.get("/selected-persona", response_model=SelectedPersonaOut)
 async def get_selected_persona(
+    locale: str = Query(default="zh-CN", pattern=_LOCALE_PATTERN),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SelectedPersonaOut:
     """Always 200 -- resolves to at least the catalog's default persona via
     `resolve_active_persona()`, never 404."""
     persona = await resolve_active_persona(db, user_id=current_user.id)
-    return SelectedPersonaOut.model_validate(persona)
+    return SelectedPersonaOut(
+        id=persona.id,
+        name=persona.name,
+        character=persona.character,
+        style=persona.style,
+        greeting=resolve_greeting_for_locale(persona, locale),
+    )
 
 
 @router.put("/selected-persona", response_model=SelectedPersonaOut)
@@ -56,4 +70,10 @@ async def put_selected_persona(
     """Switch the caller's own active persona (T-36-20: rejects a disabled/
     unknown `persona_id` with 404, no row written -- no partial state)."""
     persona = await set_selected_persona(db, user_id=current_user.id, persona_id=body.persona_id)
-    return SelectedPersonaOut.model_validate(persona)
+    return SelectedPersonaOut(
+        id=persona.id,
+        name=persona.name,
+        character=persona.character,
+        style=persona.style,
+        greeting=resolve_greeting_for_locale(persona, body.locale),
+    )

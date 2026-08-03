@@ -22,7 +22,11 @@ from app.schemas.public_avatar import (
     WebrtcSessionResponse,
 )
 from app.services.anonymous_session_service import create_anonymous_session
-from app.services.avatar_persona_service import resolve_active_persona, resolve_voice_for_locale
+from app.services.avatar_persona_service import (
+    resolve_active_persona,
+    resolve_greeting_for_locale,
+    resolve_voice_for_locale,
+)
 from app.services.avatar_service import handle_anonymous_turn
 from app.services.public_knowledge_config_service import get_active_public_config
 from app.services.rate_limit import limiter_ip, limiter_session
@@ -88,6 +92,6 @@ async def webrtc_session(
         agent_id=public_config.agent_id,
         voice_name=voice,
         locale=body.locale,
-        greeting=persona.greeting,
+        greeting=resolve_greeting_for_locale(persona, body.locale),
     )
     return WebrtcSessionResponse(**credential.model_dump())

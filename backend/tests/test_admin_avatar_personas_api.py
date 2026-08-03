@@ -51,7 +51,7 @@ async def _create_persona(**overrides) -> AvatarPersona:
             "character": "lisa",
             "style": "casual-sitting",
             "voice_map": json.dumps({"en-US": "en-US-AvaNeural"}),
-            "greeting": "Hi!",
+            "greeting_map": json.dumps({"zh-CN": "Hi!"}),
             "prompt_fragment": "",
             "enabled": True,
             "is_default": False,
@@ -78,7 +78,7 @@ class TestCreatePersona:
                 "character": "harry",
                 "style": "business",
                 "voice_map": {"en-US": "en-US-GuyNeural"},
-                "greeting": "Hello!",
+                "greeting_map": {"en-US": "Hello!"},
                 "prompt_fragment": "Be formal.",
                 "enabled": True,
                 "is_default": False,
@@ -90,6 +90,7 @@ class TestCreatePersona:
         data = response.json()
         assert data["name"] == "Harry"
         assert data["voice_map"] == {"en-US": "en-US-GuyNeural"}
+        assert data["greeting_map"] == {"en-US": "Hello!"}
 
     async def test_non_admin_create_returns_403(self, client):
         _, token = await _create_user_and_token()

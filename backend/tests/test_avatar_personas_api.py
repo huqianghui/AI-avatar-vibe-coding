@@ -14,7 +14,7 @@ async def _create_persona(**overrides) -> AvatarPersona:
             "character": "lisa",
             "style": "casual-sitting",
             "voice_map": json.dumps({"en-US": "en-US-AvaNeural"}),
-            "greeting": "Hi!",
+            "greeting_map": json.dumps({"zh-CN": "Hi!"}),
             "prompt_fragment": "",
             "enabled": True,
             "is_default": False,

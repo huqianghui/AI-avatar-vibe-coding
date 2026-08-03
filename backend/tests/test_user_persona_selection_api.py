@@ -36,7 +36,7 @@ async def _create_persona(db_session, **overrides) -> AvatarPersona:
         "character": "lisa",
         "style": "casual",
         "voice_map": "{}",
-        "greeting": "Hi there!",
+        "greeting_map": '{"zh-CN": "Hi there!"}',
         "prompt_fragment": "Be friendly.",
         "enabled": True,
         "is_default": False,

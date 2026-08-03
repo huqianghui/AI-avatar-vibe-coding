@@ -27,7 +27,7 @@ async def _create_persona(db_session, **overrides) -> AvatarPersona:
         "character": "lisa",
         "style": "casual-sitting",
         "voice_map": {},
-        "greeting": "Hi, I'm Lisa!",
+        "greeting_map": {"zh-CN": "Hi, I'm Lisa!"},
         "prompt_fragment": "Be friendly.",
         "enabled": True,
         "is_default": True,
@@ -306,7 +306,7 @@ class TestWebrtcSessionPersonaResolution:
         await _create_persona(
             db_session,
             voice_map={"en-US": "en-US-PersonaVoiceNeural"},
-            greeting="Hello from persona!",
+            greeting_map={"en-US": "Hello from persona!"},
         )
         headers = await _anon_session_and_header(client)
         mock_get_config.return_value = _make_public_config(
@@ -335,12 +335,14 @@ class TestWebrtcSessionPersonaResolution:
     async def test_explicit_enabled_persona_id_is_used(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
-        await _create_persona(db_session, name="Default", greeting="Default greeting")
+        await _create_persona(
+            db_session, name="Default", greeting_map={"zh-CN": "Default greeting"}
+        )
         other = await _create_persona(
             db_session,
             name="Other",
             is_default=False,
-            greeting="Other greeting",
+            greeting_map={"zh-CN": "Other greeting"},
             voice_map={"zh-CN": "zh-CN-OtherVoiceNeural"},
         )
         headers = await _anon_session_and_header(client)
@@ -370,7 +372,9 @@ class TestWebrtcSessionPersonaResolution:
     async def test_disabled_persona_id_falls_back_to_default_without_error(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
-        await _create_persona(db_session, name="Default", greeting="Default greeting")
+        await _create_persona(
+            db_session, name="Default", greeting_map={"zh-CN": "Default greeting"}
+        )
         disabled = await _create_persona(
             db_session, name="Disabled", enabled=False, is_default=False
         )
@@ -399,7 +403,9 @@ class TestWebrtcSessionPersonaResolution:
     async def test_unknown_persona_id_falls_back_to_default_without_error(
         self, mock_get_config, mock_config_svc, mock_exchange, client, db_session
     ):
-        await _create_persona(db_session, name="Default", greeting="Default greeting")
+        await _create_persona(
+            db_session, name="Default", greeting_map={"zh-CN": "Default greeting"}
+        )
         headers = await _anon_session_and_header(client)
         mock_get_config.return_value = _make_public_config()
         mock_config_svc.get_config = AsyncMock(return_value=_mock_vl_config())
