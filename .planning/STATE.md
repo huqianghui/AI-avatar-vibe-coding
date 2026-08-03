@@ -408,10 +408,12 @@ Recent decisions affecting current work:
 | 260718-eha | 修复 backend voice_live 17 个失败测试（az login 环境解耦 + 真实测试改 Entra bearer 认证 + 22866fd 重构后过时断言更新；纯测试侧修改，152/152 通过） | 2026-07-18 | fb121fa | [260718-eha-backend-voice-live-17-az-login-entra-bea](./quick/260718-eha-backend-voice-live-17-az-login-entra-bea/) |
 | 260727-cnd | doc 02 更新至 SDK 1.3.0b1（AgentSessionConfig 移除、connect() 扁平化参数）+ Agent 模式 Foundry IQ grounding 实测（Entra ID 连接成功、mcp_list_tools 触发确认 KB 挂载、AI Search MCP 403 权限待修；API Key 现回归 403） | 2026-07-27 | e8236d0 | [260727-cnd-update-02-model-vs-agent-mode-md-for-lat](./quick/260727-cnd-update-02-model-vs-agent-mode-md-for-lat/) |
 | 260731-q3c | 统一项目名称：AI-Coach-vibe-coding 重命名为 AI-avatar-vibe-coding，产品定位改写为 AI Avatar Platform，更新文档/工具链/标识 | 2026-07-31 | 4d43b25 | [260731-q3c-ai-coach-vibe-coding-ai-avatar-vibe-codi](./quick/260731-q3c-ai-coach-vibe-coding-ai-avatar-vibe-codi/) |
+| 260803-n3n | Fix login redirect loop: validate token via /me in GuestRoute so stale tokens no longer block /login | 2026-08-03 | e06f5f1 | [260803-n3n-fix-login-redirect-loop-validate-token-i](./quick/260803-n3n-fix-login-redirect-loop-validate-token-i/) |
 
 ## Session Continuity
 
-Last activity: 2026-08-03 - Plan 37-04 complete: useAnonymousVoiceLive negotiates a recvonly video transceiver and surfaces avatarCharacter/avatarStyle/isAvatarConnected; avatar-page.tsx always renders the active persona's identity; E2E proves persona switching flips the displayed avatar identity (Lisa->Harry). PERSONA-05 closed end-to-end. Phase 37 (persona-fidelity-hardening) now 4/4 plans complete.
+Last activity: 2026-08-03 - Completed quick task 260803-n3n: fix login redirect loop (GuestRoute now validates token via /me before redirecting away from /login; stale tokens are cleared and login stays reachable)
+Previous: Plan 37-04 complete: useAnonymousVoiceLive negotiates a recvonly video transceiver and surfaces avatarCharacter/avatarStyle/isAvatarConnected; avatar-page.tsx always renders the active persona's identity; E2E proves persona switching flips the displayed avatar identity (Lisa->Harry). PERSONA-05 closed end-to-end. Phase 37 (persona-fidelity-hardening) now 4/4 plans complete.
 Last session: 2026-08-03T03:15:00.000Z
 Stopped at: Completed 37-04-PLAN.md
 Resume file: None
