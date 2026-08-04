@@ -9,6 +9,7 @@ this invariant is also enforced at the DB level by a partial unique index
 translate any resulting `IntegrityError` into a 409 `ConflictException`
 rather than letting it surface as a raw 500."""
 
+import asyncio
 import json
 import logging
 
@@ -16,6 +17,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import AsyncSessionLocal
 from app.models.avatar_persona import AvatarPersona
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.models.user_preference import UserPreference
@@ -76,6 +78,63 @@ def resolve_greeting_for_locale(persona: AvatarPersona, locale: str) -> str:
     return DEFAULT_GREETING
 
 
+async def _run_background_agent_sync(persona_id: str) -> None:
+    """Sync a persona's AI Foundry Agent in the background (perf follow-up to
+    persona-hcp-foundry-alignment: the ~14s+ sync chain no longer blocks the
+    create/update/retry-sync HTTP response).
+
+    Opens its OWN `AsyncSessionLocal` session -- never the request-scoped
+    session passed to `create_persona`/`update_persona`/`retry_agent_sync`,
+    which is already closed by the time this task runs. Mirrors the
+    established `dry_run_engine.run_dry_run_simulation` /
+    `skills._run_agent_creation` background-task pattern: the caller commits
+    the "pending" state on its own session BEFORE scheduling this task (a
+    fresh SQLite connection cannot see an uncommitted row from another
+    connection), and `AsyncSessionLocal` is imported at module scope (not
+    accessed as `app.database.AsyncSessionLocal` at call time) so tests can
+    patch `avatar_persona_service.AsyncSessionLocal` directly.
+
+    The outer try/except wraps the entire body -- a bug in this function
+    itself must never surface as an unhandled asyncio task exception."""
+    try:
+        async with AsyncSessionLocal() as db:
+            persona = await db.get(AvatarPersona, persona_id)
+            if persona is None:
+                logger.warning("Background agent sync: persona %s no longer exists", persona_id)
+                return
+
+            try:
+                endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
+            except Exception:
+                logger.warning(
+                    "Failed to prefetch agent sync config for persona %s background sync",
+                    persona_id,
+                    exc_info=True,
+                )
+                endpoint, api_key, model = None, None, None
+
+            try:
+                result = await agent_sync_service.sync_agent_for_profile(
+                    db,
+                    persona,
+                    prefetched_endpoint=endpoint,
+                    prefetched_key=api_key,
+                    prefetched_model=model,
+                )
+                if result.get("id"):
+                    persona.agent_id = result["id"]
+                persona.agent_version = str(result.get("version", ""))
+                persona.agent_sync_status = "synced"
+                persona.agent_sync_error = ""
+            except Exception as e:
+                persona.agent_sync_status = "failed"
+                persona.agent_sync_error = str(e)[:500]
+
+            await db.commit()
+    except Exception:
+        logger.error("Background agent sync crashed for persona %s", persona_id, exc_info=True)
+
+
 async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarPersona:
     """Create a new AvatarPersona. If `is_default=True` is requested, promotes
     it via `set_default_persona` (which also enforces the enabled-only guard).
@@ -84,19 +143,14 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
     T-HARD-01) into a 409 `ConflictException` -- defense-in-depth, never a
     raw 500.
 
-    Also auto-syncs a real AI Foundry Agent for the persona
-    (persona-hcp-foundry-alignment Increment A), mirroring
-    `hcp_profile_service.create_hcp_profile`. Sync failure never blocks
-    persona creation -- it only sets `agent_sync_status="failed"` with the
-    error recorded, retryable via `retry_agent_sync`."""
-    # Pre-fetch config BEFORE any writes to avoid SQLite locking (mirrors
-    # hcp_profile_service.create_hcp_profile).
-    try:
-        endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
-    except Exception:
-        logger.warning("Failed to prefetch agent sync config for persona create", exc_info=True)
-        endpoint, api_key, model = None, None, None
-
+    Auto-syncs a real AI Foundry Agent for the persona
+    (persona-hcp-foundry-alignment Increment A) in the BACKGROUND (perf
+    follow-up): the response returns immediately with
+    `agent_sync_status="pending"`, and `_run_background_agent_sync` runs the
+    actual ~14s+ sync chain after this function's commit, on its own DB
+    session. Sync failure never blocks persona creation -- it only sets
+    `agent_sync_status="failed"` with the error recorded, retryable via
+    `retry_agent_sync`."""
     persona_data = data.model_dump()
     voice_map = persona_data.pop("voice_map", None) or {}
     greeting_map = persona_data.pop("greeting_map", None) or {}
@@ -113,30 +167,11 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
         voice_map=json.dumps(voice_map),
         greeting_map=json.dumps(greeting_map),
         is_default=False,
+        agent_sync_status="pending",
     )
     db.add(persona)
     await db.flush()
     await db.refresh(persona)
-
-    # Auto-sync agent to AI Foundry (persona-hcp-foundry-alignment Increment A)
-    persona.agent_sync_status = "pending"
-    await db.flush()
-    try:
-        result = await agent_sync_service.sync_agent_for_profile(
-            db,
-            persona,
-            prefetched_endpoint=endpoint,
-            prefetched_key=api_key,
-            prefetched_model=model,
-        )
-        persona.agent_id = result.get("id", "")
-        persona.agent_version = str(result.get("version", ""))
-        persona.agent_sync_status = "synced"
-        persona.agent_sync_error = ""
-    except Exception as e:
-        persona.agent_sync_status = "failed"
-        persona.agent_sync_error = str(e)[:500]
-    await db.flush()
 
     if want_default:
         persona = await set_default_persona(db, persona.id)
@@ -149,6 +184,11 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
                 message="Another persona is already the enabled default"
             ) from exc
         await db.refresh(persona)
+
+    # Schedule the real sync AFTER the commit above -- the background task's
+    # own session must see this row (SQLite cannot see an uncommitted row
+    # from another connection).
+    asyncio.create_task(_run_background_agent_sync(persona.id))
     return persona
 
 
@@ -180,16 +220,10 @@ async def update_persona(
     the current default persona requires `new_default_persona_id` to promote
     a replacement default first (409 otherwise).
 
-    Also re-syncs the persona's AI Foundry Agent on every update
-    (persona-hcp-foundry-alignment Increment A), mirroring
-    `hcp_profile_service.update_hcp_profile`."""
-    # Pre-fetch config BEFORE any writes to avoid SQLite locking.
-    try:
-        endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
-    except Exception:
-        logger.warning("Failed to prefetch agent sync config for persona update", exc_info=True)
-        endpoint, api_key, model = None, None, None
-
+    Re-syncs the persona's AI Foundry Agent on every update
+    (persona-hcp-foundry-alignment Increment A) in the BACKGROUND (perf
+    follow-up), mirroring `create_persona`'s non-blocking flow -- the
+    response returns immediately with `agent_sync_status="pending"`."""
     persona = await get_persona(db, persona_id)
     update_data = data.model_dump(exclude_unset=True)
     new_default_persona_id = update_data.pop("new_default_persona_id", None)
@@ -226,35 +260,21 @@ async def update_persona(
     for field, value in update_data.items():
         setattr(persona, field, value)
 
-    await db.flush()
-
     # Re-sync agent instructions on persona update (persona-hcp-foundry-alignment
-    # Increment A) -- mirrors hcp_profile_service.update_hcp_profile.
+    # Increment A) -- perf follow-up: mark pending and let the background
+    # task do the real sync after this commit.
     persona.agent_sync_status = "pending"
-    await db.flush()
-    try:
-        result = await agent_sync_service.sync_agent_for_profile(
-            db,
-            persona,
-            prefetched_endpoint=endpoint,
-            prefetched_key=api_key,
-            prefetched_model=model,
-        )
-        if not persona.agent_id and result.get("id"):
-            persona.agent_id = result["id"]
-        persona.agent_version = str(result.get("version", ""))
-        persona.agent_sync_status = "synced"
-        persona.agent_sync_error = ""
-    except Exception as e:
-        persona.agent_sync_status = "failed"
-        persona.agent_sync_error = str(e)[:500]
-    await db.flush()
+    persona.agent_sync_error = ""
 
     await db.commit()
     await db.refresh(persona)
 
     if want_default:
         persona = await set_default_persona(db, persona.id)
+
+    # Schedule the real sync AFTER the commit(s) above -- the background
+    # task's own session must see this row.
+    asyncio.create_task(_run_background_agent_sync(persona.id))
 
     return persona
 
@@ -300,37 +320,18 @@ async def delete_persona(
 async def retry_agent_sync(db: AsyncSession, persona_id: str) -> AvatarPersona:
     """Retry agent sync for a persona with failed sync status
     (persona-hcp-foundry-alignment Increment A), mirroring
-    `hcp_profile_service.retry_agent_sync`."""
-    # Pre-fetch config BEFORE any writes to avoid SQLite locking.
-    try:
-        endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
-    except Exception:
-        logger.warning("Failed to prefetch agent sync config for persona retry", exc_info=True)
-        endpoint, api_key, model = None, None, None
-
+    `hcp_profile_service.retry_agent_sync`. Perf follow-up: returns
+    immediately with `agent_sync_status="pending"`; the real sync runs in
+    the background via `_run_background_agent_sync`."""
     persona = await get_persona(db, persona_id)
     persona.agent_sync_status = "pending"
     persona.agent_sync_error = ""
-    await db.flush()
-    try:
-        result = await agent_sync_service.sync_agent_for_profile(
-            db,
-            persona,
-            prefetched_endpoint=endpoint,
-            prefetched_key=api_key,
-            prefetched_model=model,
-        )
-        if result.get("id"):
-            persona.agent_id = result["id"]
-        persona.agent_version = str(result.get("version", ""))
-        persona.agent_sync_status = "synced"
-        persona.agent_sync_error = ""
-    except Exception as e:
-        persona.agent_sync_status = "failed"
-        persona.agent_sync_error = str(e)[:500]
-    await db.flush()
     await db.commit()
     await db.refresh(persona)
+
+    # Schedule AFTER the commit above -- the background task's own session
+    # must see this row.
+    asyncio.create_task(_run_background_agent_sync(persona.id))
     return persona
 
 

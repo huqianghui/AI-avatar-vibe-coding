@@ -161,13 +161,12 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
   test("full create -> set-default -> delete-guard -> delete workflow", async ({
     page,
   }) => {
-    // Creates TWO throwaway personas via createPersonaViaUi, each of which
-    // synchronously provisions a real AI Foundry agent (agent_sync_service,
-    // ~14s+ per create) on top of the Configuration-panel UI steps -- well
-    // over the default 30s test timeout. Extend it rather than racing the
-    // sync (pre-existing risk from increment A, bumped here since this test
-    // is touched by increment D's createPersonaViaUi rewrite).
-    test.setTimeout(90000);
+    // Creates TWO throwaway personas via createPersonaViaUi. The POST now
+    // returns immediately with `agent_sync_status="pending"` -- the real AI
+    // Foundry agent provisioning (agent_sync_service, ~14s+) runs as a
+    // background task after the response (perf follow-up to
+    // persona-hcp-foundry-alignment) -- so the default 30s test timeout is
+    // no longer at risk here.
 
     await page.goto("/admin/dashboard");
     await page.waitForTimeout(1000);
@@ -346,12 +345,12 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
   test("avatar gallery renders as the shared component and a selection persists across save + reload", async ({
     page,
   }) => {
-    // Persona creation synchronously provisions a real AI Foundry agent
-    // (agent_sync_service, ~14s+), plus a page reload through the
-    // Configuration panel re-open -- extend past the default 30s timeout
-    // rather than racing the sync (same pre-existing risk as the test
-    // above, bumped here for the same reason).
-    test.setTimeout(60000);
+    // Persona creation now returns immediately with
+    // `agent_sync_status="pending"` -- the real AI Foundry agent
+    // provisioning (agent_sync_service, ~14s+) runs as a background task
+    // after the response (perf follow-up to persona-hcp-foundry-alignment),
+    // so the default 30s test timeout comfortably covers this test's create
+    // + reload flow.
 
     await page.goto("/admin/avatar-personas");
     await expect(

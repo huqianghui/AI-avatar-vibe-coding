@@ -11,6 +11,7 @@ duplicated here -- those functions are duck-typed against config attributes
 `HcpKnowledgeConfig` specifically, so callers reuse them directly from
 `knowledge_base_service` (see `agent_sync_service.sync_agent_for_profile`)."""
 
+import asyncio
 import logging
 import uuid
 
@@ -85,9 +86,14 @@ async def _trigger_agent_resync(db: AsyncSession, avatar_persona_id: str) -> Non
     change. Mirrors `knowledge_base_service._trigger_agent_resync` for HCP
     profiles -- pending/synced/failed pattern, never swallows the sync result
     silently (agent_sync_status/agent_sync_error stay accurate for the admin
-    UI's retry flow)."""
-    from app.services import agent_sync_service
+    UI's retry flow).
 
+    Perf follow-up to persona-hcp-foundry-alignment: the actual ~14s+ sync
+    chain no longer runs inline here -- this only flips the persona to
+    "pending", commits (so the background task's own DB session can see the
+    row -- SQLite cannot see an uncommitted row from another connection),
+    and schedules `avatar_persona_service._run_background_agent_sync`,
+    consistent with `create_persona`/`update_persona`/`retry_agent_sync`."""
     result = await db.execute(select(AvatarPersona).where(AvatarPersona.id == avatar_persona_id))
     persona = result.scalar_one_or_none()
     if not persona or not persona.agent_id:
@@ -95,21 +101,9 @@ async def _trigger_agent_resync(db: AsyncSession, avatar_persona_id: str) -> Non
 
     persona.agent_sync_status = "pending"
     persona.agent_sync_error = ""
-    await db.flush()
-    try:
-        sync_result = await agent_sync_service.sync_agent_for_profile(db, persona)
-        if sync_result.get("id"):
-            persona.agent_id = sync_result["id"]
-        persona.agent_version = str(sync_result.get("version", ""))
-        persona.agent_sync_status = "synced"
-        persona.agent_sync_error = ""
-        logger.info("KB change triggered agent re-sync for persona %s", avatar_persona_id)
-    except Exception as e:
-        persona.agent_sync_status = "failed"
-        persona.agent_sync_error = str(e)[:500]
-        logger.warning(
-            "Failed to re-sync agent after KB change for persona %s: %s",
-            avatar_persona_id,
-            e,
-        )
-    await db.flush()
+    await db.commit()
+
+    from app.services.avatar_persona_service import _run_background_agent_sync
+
+    asyncio.create_task(_run_background_agent_sync(avatar_persona_id))
+    logger.info("KB change scheduled background agent re-sync for persona %s", avatar_persona_id)

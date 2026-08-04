@@ -119,6 +119,51 @@ describe("useAvatarPersona", () => {
     expect(mockedGet).not.toHaveBeenCalled();
     expect(result.current.fetchStatus).toBe("idle");
   });
+
+  // Perf follow-up to persona-hcp-foundry-alignment: Foundry agent sync now
+  // runs as a background task, so the detail query must poll while pending
+  // and stop polling once the sync reaches a terminal state.
+  it("refetches automatically while agent_sync_status is pending", async () => {
+    vi.useFakeTimers();
+    try {
+      mockedGet
+        .mockResolvedValueOnce({ ...mockPersona, agent_sync_status: "pending" })
+        .mockResolvedValueOnce({ ...mockPersona, agent_sync_status: "synced" });
+
+      const { result } = renderHook(() => useAvatarPersona("p1"), {
+        wrapper: createWrapper(),
+      });
+
+      await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.agent_sync_status).toBe("pending");
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      await vi.waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+      expect(result.current.data?.agent_sync_status).toBe("synced");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not refetch on an interval once agent_sync_status is synced", async () => {
+    vi.useFakeTimers();
+    try {
+      mockedGet.mockResolvedValueOnce({ ...mockPersona, agent_sync_status: "synced" });
+
+      const { result } = renderHook(() => useAvatarPersona("p1"), {
+        wrapper: createWrapper(),
+      });
+
+      await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("useCreateAvatarPersona", () => {

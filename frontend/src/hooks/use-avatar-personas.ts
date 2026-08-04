@@ -19,6 +19,14 @@ export function useAvatarPersona(id: string | undefined) {
     queryKey: [QUERY_KEY, id],
     queryFn: () => avatarPersonasApi.get(id!),
     enabled: !!id,
+    // Foundry agent sync now runs as a background task (perf follow-up to
+    // persona-hcp-foundry-alignment) -- poll while a sync is in flight so
+    // the PersonaAgentStatusSection card picks up the pending -> synced /
+    // failed transition without a manual refresh. Mirrors use-voice-score.ts.
+    refetchInterval: (query) => {
+      const status = query.state.data?.agent_sync_status;
+      return status === "pending" ? 2000 : false;
+    },
   });
 }
 

@@ -2,14 +2,15 @@
 status: awaiting_human_verify
 trigger: "Investigate issue: persona-hcp-foundry-alignment — Avatar Persona admin page still not aligned with HCP profile page and Azure AI Foundry portal design. Three gaps: (1) Foundry-portal voice-mode layout parity (gear Configure button opening right-side Configuration panel) on BOTH HCP and Persona pages; (2) Persona editor missing Foundry features HCP has (Knowledge/Foundry IQ); (3) Persona must be a real Foundry agent, synced like HCP (Agent Synced card, Agent ID, version, Force re-sync, View in Azure Portal)."
 created: 2026-08-04T00:00:00Z
-updated: 2026-08-04T21:10:00Z
+updated: 2026-08-04T22:35:00Z
 ---
 
 ## Current Focus
 <!-- OVERWRITE on each update - reflects NOW -->
 
 hypothesis: CONFIRMED for all 3 gaps (see Resolution). All 4 increments (A/B/C/D) implemented,
-gated, and committed. Awaiting human browser verification before final archive.
+gated, and committed. Perf follow-up (non-blocking Foundry sync) also implemented, gated, and
+verified. Awaiting human browser verification before final archive.
 test: n/a — implementation complete, awaiting human sign-off.
 expecting: n/a
 next_action: |
@@ -26,6 +27,11 @@ next_action: |
       increment's createPersonaViaUi rewrite) fixed by extending test.setTimeout, matching the
       pattern already used elsewhere for the same root cause. All gates green (tsc, build, vitest,
       full E2E re-runs — see Resolution.verification).
+  Perf follow-up DONE (not yet committed): made the ~14s+ Foundry sync non-blocking on all 4
+    persona trigger points (create/update/retry-sync/KB-resync) — see Resolution.fix's "Perf
+    follow-up" entry and Evidence 2026-08-04T22:30:00Z for full gate verification. Remaining
+    step: create the single commit for this follow-up
+    (`perf(persona): make Foundry agent sync non-blocking on persona create/update`), do not push.
   Awaiting the user's own browser walkthrough to confirm the gear->Configuration-panel pattern
   looks and behaves correctly on both pages before archiving this session to resolved/.
 
@@ -115,6 +121,27 @@ started: Longstanding. Phase 38 (2026-08-04) explicitly deferred the Foundry-age
   `test.setTimeout()`, mirroring the fix already applied in the new
   `admin-persona-knowledge.spec.ts`) rather than editing Increment A's test file now.
 
+- timestamp: 2026-08-04T22:30:00Z
+  checked: Perf follow-up to the ~14s+ synchronous Foundry sync flagged above (Evidence
+  2026-08-04T19:55:00Z) — made persona create/update/retry-sync and the KB-triggered resync
+  non-blocking. Verified via full gate run: backend `ruff check .` clean, `ruff format --check .`
+  clean (1 file auto-formatted), full backend `pytest -q` 2965 passed / 1 failed / 15 skipped
+  (the 1 failure, `test_agent_chat_service.py::test_real_chat_with_existing_agent`, is a
+  `[REAL]`-tagged live-Azure-network integration test gated on real `.env` credentials — passed
+  in isolation, passed when re-run together with every persona/agent-sync test file I touched
+  (168/168), confirmed unrelated to this change). Frontend `npx tsc -b` clean, `npm run build`
+  succeeds, full vitest 2738 passed / 1 failed (pre-existing `login.test.tsx` navigate-target
+  mismatch from commit 8a1423f, unrelated — confirmed via `git log` on `login.tsx`, not touched
+  by this change). All 3 named Playwright specs (admin-avatar-personas.spec.ts,
+  hcp-editor-voice-tab.spec.ts, admin-persona-knowledge.spec.ts) 23/23 passed against a freshly
+  restarted backend (confirmed via `lsof`/`ps -ww` it was the correct `.venv` process, no
+  `--reload`, so a restart was required to pick up the new code) — the two-persona-create test
+  that previously needed a 90s timeout bump now completes in 16.0s total.
+  implication: The perf follow-up is verified end-to-end with zero regressions attributable to
+  this change. Both pre-existing failures (live-Azure-network flakiness; an unrelated stale
+  login-redirect test) are documented here so a future session doesn't waste time re-diagnosing
+  them as caused by this work.
+
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->
 
@@ -172,6 +199,29 @@ fix: |
       migrating avatar/voice/language fields out of the always-visible left-panel Cards into this
       panel for both HCP and Persona editors, per the Foundry-portal reference interaction pattern.
   Each increment maps to one CLAUDE.md "requirement" (own unit tests, own E2E coverage, own commit).
+
+  Perf follow-up (post-Increment-D) — APPLIED. Addresses the ~14s+ synchronous Foundry sync
+    latency flagged in Evidence 2026-08-04T19:55:00Z (a regression from the already-committed
+    Increment A, later confirmed to affect Increment C's KB-triggered resync path too). Made
+    `agent_sync_service.sync_agent_for_profile` non-blocking on all four persona trigger points:
+      - `avatar_persona_service.py`: `create_persona`/`update_persona`/`retry_agent_sync` now set
+        `agent_sync_status="pending"`, commit, and `asyncio.create_task(_run_background_agent_sync(...))`
+        instead of awaiting the sync inline. New `_run_background_agent_sync(persona_id)` opens its
+        own `AsyncSessionLocal` session (module-level import, patchable for tests), re-loads the
+        persona, runs the real sync, and writes agent_id/version/status/error + commits — wrapped in
+        an outer try/except so a crash inside it can never surface as an unhandled asyncio task
+        exception. Mirrors the existing `dry_run_engine`/`skills._run_agent_creation` background-task
+        pattern already used elsewhere in this codebase.
+      - `persona_knowledge_service.py`: `_trigger_agent_resync` (called by `add_knowledge_config`/
+        `remove_knowledge_config`) rewritten identically — sets pending, commits, schedules the same
+        `avatar_persona_service._run_background_agent_sync` via `asyncio.create_task` rather than
+        syncing inline, keeping all four trigger points converging on one shared background function.
+      - `frontend/src/hooks/use-avatar-personas.ts`: `useAvatarPersona` now polls via TanStack Query
+        `refetchInterval` (2000ms while `agent_sync_status === "pending"`, else `false`) so the
+        existing `PersonaAgentStatusSection` card picks up the pending -> synced/failed transition
+        without a manual refresh, mirroring `use-voice-score.ts`'s established polling pattern.
+      - HCP's sync path (`hcp_profile_service.py`) is explicitly untouched — this follow-up is
+        persona-only, matching the original ticket's scope.
 verification: |
   Increment A: ruff check + ruff format --check clean on all 8 changed/added files. Targeted
   pytest run (115 tests) covering every touched module plus the full pre-existing HCP agent-sync
@@ -197,6 +247,11 @@ verification: |
   `admin-avatar-personas.spec.ts` for regressions — 2 of its 3 tests now fail on test-timeout,
   traced to a pre-existing Increment-A-caused latency gap (see Evidence), not an Increment C
   regression; left unmodified per this session's C/D-only scope.
+  Perf follow-up: see Evidence 2026-08-04T22:30:00Z for the full gate results (backend ruff/pytest,
+  frontend tsc/build/vitest, 23/23 Playwright across all 3 named specs against a freshly-restarted
+  backend). The test.setTimeout bumps and stale ~14s-sync comments in
+  admin-avatar-personas.spec.ts and admin-persona-knowledge.spec.ts were removed/reduced since the
+  sync no longer blocks the HTTP response.
 files_changed:
   - backend/app/models/avatar_persona.py
   - backend/alembic/versions/h41a_add_persona_agent_sync_fields.py
@@ -223,3 +278,12 @@ files_changed:
   - frontend/src/pages/admin/persona-editor.tsx
   - frontend/src/pages/admin/persona-editor.test.tsx
   - frontend/e2e/admin-persona-knowledge.spec.ts
+  - backend/app/services/avatar_persona_service.py (perf follow-up: non-blocking sync)
+  - backend/app/services/persona_knowledge_service.py (perf follow-up: non-blocking resync)
+  - backend/tests/test_avatar_persona_service.py (perf follow-up: rewritten sync-timing tests)
+  - backend/tests/test_persona_knowledge_service.py (perf follow-up: rewritten resync-timing test)
+  - backend/tests/test_admin_avatar_personas_api.py (perf follow-up: retry-sync route test)
+  - frontend/src/hooks/use-avatar-personas.ts (perf follow-up: refetchInterval polling)
+  - frontend/src/hooks/use-avatar-personas.test.ts (perf follow-up: polling tests)
+  - frontend/e2e/admin-avatar-personas.spec.ts (perf follow-up: removed setTimeout bumps)
+  - frontend/e2e/admin-persona-knowledge.spec.ts (perf follow-up: removed setTimeout bumps)

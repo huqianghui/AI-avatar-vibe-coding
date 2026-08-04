@@ -187,60 +187,56 @@ class TestAvatarPersonaKnowledgeConfigModel:
 
 
 class TestTriggerAgentResync:
+    """Perf follow-up to persona-hcp-foundry-alignment: `_trigger_agent_resync`
+    no longer syncs inline -- it only sets "pending", commits, and schedules
+    `avatar_persona_service._run_background_agent_sync` via
+    `asyncio.create_task`, consistent with create/update/retry-sync. The
+    sync's own success/failure outcome is exercised directly against
+    `_run_background_agent_sync` in `test_avatar_persona_service.py`'s
+    `TestRunBackgroundAgentSync`."""
+
     @pytest.mark.asyncio
-    async def test_marks_synced_on_success(self, db_session, sample_persona):
+    async def test_marks_pending_and_schedules_background_sync(self, db_session, sample_persona):
         from app.services.persona_knowledge_service import _trigger_agent_resync
 
         sample_persona.agent_sync_status = "none"
         sample_persona.agent_id = "existing-agent"
         await db_session.flush()
 
-        with patch(
-            "app.services.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            return_value={"id": "agent-persona-1", "version": "2"},
-        ):
+        # Capture (rather than run) the scheduled coroutine so the real
+        # background function never actually executes against a real
+        # AsyncSessionLocal in this unit test -- close it explicitly to
+        # avoid a "coroutine was never awaited" warning.
+        captured: dict[str, object] = {}
+
+        def capture_task(coro):
+            captured["coro"] = coro
+            return None
+
+        with patch("app.services.persona_knowledge_service.asyncio") as mock_asyncio:
+            mock_asyncio.create_task.side_effect = capture_task
             await _trigger_agent_resync(db_session, sample_persona.id)
 
+        assert "coro" in captured
+        captured["coro"].close()
+
         await db_session.refresh(sample_persona)
-        assert sample_persona.agent_sync_status == "synced"
+        assert sample_persona.agent_sync_status == "pending"
         assert sample_persona.agent_sync_error == ""
-        assert sample_persona.agent_id == "agent-persona-1"
-
-    @pytest.mark.asyncio
-    async def test_marks_failed_on_error(self, db_session, sample_persona):
-        from app.services.persona_knowledge_service import _trigger_agent_resync
-
-        sample_persona.agent_sync_status = "synced"
-        sample_persona.agent_id = "existing-agent"
-        await db_session.flush()
-
-        with patch(
-            "app.services.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("ARM permission denied"),
-        ):
-            await _trigger_agent_resync(db_session, sample_persona.id)
-
-        await db_session.refresh(sample_persona)
-        assert sample_persona.agent_sync_status == "failed"
-        assert "ARM permission denied" in sample_persona.agent_sync_error
+        mock_asyncio.create_task.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_noop_when_no_agent_id(self, db_session, sample_persona):
-        """No-op (no sync attempted) when the persona has never been synced."""
+        """No-op (no sync scheduled) when the persona has never been synced."""
         from app.services.persona_knowledge_service import _trigger_agent_resync
 
         sample_persona.agent_id = ""
         await db_session.flush()
 
-        with patch(
-            "app.services.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-        ) as mock_sync:
+        with patch("app.services.persona_knowledge_service.asyncio") as mock_asyncio:
             await _trigger_agent_resync(db_session, sample_persona.id)
 
-        mock_sync.assert_not_called()
+        mock_asyncio.create_task.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

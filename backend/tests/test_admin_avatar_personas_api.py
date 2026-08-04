@@ -187,9 +187,12 @@ class TestDeletePersona:
 
 class TestRetrySyncEndpoint:
     """Tests for POST /{persona_id}/retry-sync (persona-hcp-foundry-alignment
-    Increment A)."""
+    Increment A; perf follow-up makes the sync non-blocking -- the route now
+    returns immediately with `agent_sync_status="pending"`, and the real
+    sync runs in the background via
+    `avatar_persona_service._run_background_agent_sync`)."""
 
-    async def test_admin_retry_sync_returns_updated_persona(self, client):
+    async def test_admin_retry_sync_returns_immediately_with_pending_status(self, client):
         persona = await _create_persona(
             name="Failed Persona", agent_sync_status="failed", agent_sync_error="boom"
         )
@@ -198,8 +201,7 @@ class TestRetrySyncEndpoint:
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            return_value={"id": "persona-agent-api", "name": "Failed Persona", "model": "gpt-4o"},
-        ):
+        ) as mock_sync:
             response = await client.post(
                 f"{BASE}/{persona.id}/retry-sync",
                 headers={"Authorization": f"Bearer {token}"},
@@ -207,8 +209,11 @@ class TestRetrySyncEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["agent_id"] == "persona-agent-api"
-        assert data["agent_sync_status"] == "synced"
+        assert data["agent_sync_status"] == "pending"
+        assert data["agent_sync_error"] == ""
+        # The real sync only ever runs inside the background task's own
+        # session -- never inline within the request/response cycle.
+        mock_sync.assert_not_awaited()
 
     async def test_non_admin_retry_sync_returns_403(self, client):
         persona = await _create_persona(name="Any")

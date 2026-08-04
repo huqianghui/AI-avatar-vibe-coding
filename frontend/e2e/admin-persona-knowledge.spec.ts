@@ -72,10 +72,11 @@ test.describe("Admin Persona Editor — Knowledge / Foundry IQ section", () => {
   test("knowledge card is hidden while creating, then shown with empty state after save, and the connect dialog opens/cancels", async ({
     page,
   }) => {
-    // Persona creation synchronously provisions a real AI Foundry agent
-    // (agent_sync_service), which can take well over the default 30s test
-    // timeout -- extend it rather than racing the sync.
-    test.setTimeout(60000);
+    // Persona creation now returns immediately with
+    // `agent_sync_status="pending"` -- the real AI Foundry agent
+    // provisioning (agent_sync_service) runs as a background task after the
+    // response (perf follow-up to persona-hcp-foundry-alignment), so the
+    // default 30s test timeout is no longer at risk here.
 
     await page.goto("/admin/avatar-personas");
     await expect(
@@ -111,7 +112,6 @@ test.describe("Admin Persona Editor — Knowledge / Foundry IQ section", () => {
       (response) =>
         response.url().includes("/api/v1/admin/avatar-personas") &&
         response.request().method() === "POST",
-      { timeout: 45000 },
     );
     await page.getByRole("button", { name: /save persona/i }).click();
     const createBody = await (await createResponse).json();

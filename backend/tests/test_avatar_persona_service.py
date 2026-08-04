@@ -473,108 +473,87 @@ class TestToPromptDict:
 
 
 class TestAgentSyncOnCreate:
-    """Tests for agent sync triggered on persona creation
-    (persona-hcp-foundry-alignment Increment A)."""
+    """Tests for agent sync scheduling on persona creation
+    (persona-hcp-foundry-alignment Increment A). Perf follow-up: the real
+    ~14s+ sync chain no longer runs inline inside create_persona -- it only
+    sets "pending" and schedules `_run_background_agent_sync` via
+    `asyncio.create_task`. The sync's own success/failure outcome is
+    exercised directly against `_run_background_agent_sync` in
+    `TestRunBackgroundAgentSync` below."""
 
-    async def test_create_syncs_agent_on_success(self, db_session):
+    async def test_create_returns_pending_status_without_syncing_inline(self, db_session):
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            return_value={"id": "persona-agent-123", "name": "Lisa", "model": "gpt-4o"},
-        ):
+        ) as mock_sync:
             persona = await _create(db_session, name="Lisa")
 
-        assert persona.agent_id == "persona-agent-123"
-        assert persona.agent_sync_status == "synced"
-        assert persona.agent_sync_error == ""
-
-    async def test_create_sets_failed_status_on_sync_error(self, db_session):
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            side_effect=Exception("Network error"),
-        ):
-            persona = await _create(db_session, name="Lisa")
-
+        assert persona.agent_sync_status == "pending"
         assert persona.agent_id in ("", None)
-        assert persona.agent_sync_status == "failed"
-        assert "Network error" in persona.agent_sync_error
+        # The real sync only ever runs inside _run_background_agent_sync's
+        # own DB session (a separately-scheduled asyncio task) -- never
+        # inline within create_persona itself.
+        mock_sync.assert_not_awaited()
 
-    async def test_create_syncs_agent_when_promoted_to_default(self, db_session):
-        """Sync must survive the set_default_persona() re-commit path, not
-        just the plain-commit else-branch (T-36-03 promotion path)."""
+    async def test_create_when_promoted_to_default_also_returns_pending(self, db_session):
+        """Must survive the set_default_persona() re-commit path, not just
+        the plain-commit else-branch (T-36-03 promotion path)."""
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            return_value={"id": "persona-agent-default", "name": "Lisa", "model": "gpt-4o"},
-        ):
+        ) as mock_sync:
             persona = await _create(db_session, name="Lisa", is_default=True)
 
         assert persona.is_default is True
-        assert persona.agent_id == "persona-agent-default"
-        assert persona.agent_sync_status == "synced"
+        assert persona.agent_sync_status == "pending"
+        mock_sync.assert_not_awaited()
 
 
 class TestAgentSyncOnUpdate:
-    """Tests for agent sync triggered on persona update
-    (persona-hcp-foundry-alignment Increment A)."""
+    """Tests for agent sync scheduling on persona update
+    (persona-hcp-foundry-alignment Increment A). Perf follow-up: see
+    TestAgentSyncOnCreate's docstring -- update_persona also only sets
+    "pending" and schedules the background sync."""
 
-    async def test_update_resyncs_agent_on_success(self, db_session):
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            return_value={"id": "persona-agent-456", "name": "Lisa", "model": "gpt-4o"},
-        ):
-            persona = await _create(db_session, name="Lisa")
+    async def test_update_returns_pending_status_without_syncing_inline(self, db_session):
+        persona = await _create(db_session, name="Lisa")
 
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            return_value={"id": "persona-agent-456", "name": "Lisa Updated", "model": "gpt-4o"},
-        ):
+        ) as mock_sync:
             updated = await avatar_persona_service.update_persona(
                 db_session, persona.id, AvatarPersonaUpdate(name="Lisa Updated")
             )
 
-        assert updated.agent_sync_status == "synced"
+        assert updated.agent_sync_status == "pending"
         assert updated.agent_sync_error == ""
+        mock_sync.assert_not_awaited()
 
-    async def test_update_assigns_agent_id_when_missing(self, db_session):
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            side_effect=Exception("Network error"),
-        ):
-            persona = await _create(db_session, name="Lisa")
+    async def test_update_does_not_clear_an_existing_agent_id(self, db_session):
+        persona = await _create(db_session, name="Lisa")
+        persona.agent_id = "persona-agent-preexisting"
+        await db_session.commit()
 
-        assert persona.agent_id in ("", None)
+        updated = await avatar_persona_service.update_persona(
+            db_session, persona.id, AvatarPersonaUpdate(name="Lisa Renamed")
+        )
 
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            return_value={"id": "persona-agent-789", "name": "Lisa", "model": "gpt-4o"},
-        ):
-            updated = await avatar_persona_service.update_persona(
-                db_session, persona.id, AvatarPersonaUpdate(name="Lisa Renamed")
-            )
-
-        assert updated.agent_id == "persona-agent-789"
-        assert updated.agent_sync_status == "synced"
+        assert updated.agent_id == "persona-agent-preexisting"
+        assert updated.agent_sync_status == "pending"
 
 
 class TestDeletePersonaWithAgent:
     """Tests for delete_persona when an agent_id exists
-    (persona-hcp-foundry-alignment Increment A)."""
+    (persona-hcp-foundry-alignment Increment A). `agent_id` is now set
+    directly rather than via a synchronous create-time sync (perf
+    follow-up moved that sync to the background) -- delete_persona's own
+    logic is unchanged and doesn't care how agent_id got populated."""
 
     async def test_delete_calls_agent_delete(self, db_session):
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            return_value={"id": "persona-agent-del", "name": "Lisa", "model": "gpt-4o"},
-        ):
-            persona = await _create(db_session, name="Lisa")
-
-        assert persona.agent_id == "persona-agent-del"
+        persona = await _create(db_session, name="Lisa")
+        persona.agent_id = "persona-agent-del"
+        await db_session.commit()
 
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.delete_agent",
@@ -586,12 +565,9 @@ class TestDeletePersonaWithAgent:
         mock_delete.assert_called_once_with(db_session, "persona-agent-del")
 
     async def test_delete_tolerates_agent_deletion_failure(self, db_session):
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            return_value={"id": "persona-agent-del2", "name": "Lisa", "model": "gpt-4o"},
-        ):
-            persona = await _create(db_session, name="Lisa")
+        persona = await _create(db_session, name="Lisa")
+        persona.agent_id = "persona-agent-del2"
+        await db_session.commit()
 
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.delete_agent",
@@ -605,43 +581,97 @@ class TestDeletePersonaWithAgent:
 
 
 class TestRetryAgentSync:
-    """Tests for retry_agent_sync (persona-hcp-foundry-alignment Increment A)."""
+    """Tests for retry_agent_sync (persona-hcp-foundry-alignment Increment
+    A). Perf follow-up: returns immediately with "pending"; the sync
+    outcome is exercised via TestRunBackgroundAgentSync below."""
 
-    async def test_retries_and_succeeds(self, db_session):
+    async def test_retry_sets_pending_and_clears_prior_error_without_syncing_inline(
+        self, db_session
+    ):
+        persona = await _create(db_session, name="Lisa")
+        persona.agent_sync_status = "failed"
+        persona.agent_sync_error = "First failure"
+        await db_session.commit()
+
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            side_effect=Exception("First failure"),
-        ):
-            persona = await _create(db_session, name="Lisa")
-
-        assert persona.agent_sync_status == "failed"
-
-        with patch(
-            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
-            new_callable=AsyncMock,
-            return_value={"id": "persona-agent-retry", "name": "Lisa", "model": "gpt-4o"},
-        ):
+        ) as mock_sync:
             retried = await avatar_persona_service.retry_agent_sync(db_session, persona.id)
 
-        assert retried.agent_sync_status == "synced"
+        assert retried.agent_sync_status == "pending"
         assert retried.agent_sync_error == ""
-        assert retried.agent_id == "persona-agent-retry"
+        mock_sync.assert_not_awaited()
 
-    async def test_retries_and_fails_again(self, db_session):
+
+class TestRunBackgroundAgentSync:
+    """Tests for `_run_background_agent_sync` (perf follow-up to
+    persona-hcp-foundry-alignment) -- the actual sync chain now scheduled
+    via `asyncio.create_task` from create/update/retry-sync instead of run
+    inline. Exercised directly against its own fresh session, monkeypatched
+    to `TestSessionLocal` (mirrors `dry_run_engine`'s established
+    background-function test pattern), and verified by reloading the
+    persona via a SEPARATE `TestSessionLocal()` session -- proving the
+    background task's session-independence, exactly as it behaves in
+    production against `AsyncSessionLocal`."""
+
+    async def test_marks_synced_on_success(self, db_session, monkeypatch):
+        from tests.conftest import TestSessionLocal
+
+        persona = await _create(db_session, name="Lisa")
+        assert persona.agent_sync_status == "pending"
+
+        monkeypatch.setattr(avatar_persona_service, "AsyncSessionLocal", TestSessionLocal)
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            side_effect=Exception("First failure"),
+            return_value={"id": "persona-agent-bg", "name": "Lisa", "model": "gpt-4o"},
         ):
-            persona = await _create(db_session, name="Lisa")
+            await avatar_persona_service._run_background_agent_sync(persona.id)
 
+        async with TestSessionLocal() as session:
+            reloaded = await session.get(AvatarPersona, persona.id)
+            assert reloaded.agent_id == "persona-agent-bg"
+            assert reloaded.agent_sync_status == "synced"
+            assert reloaded.agent_sync_error == ""
+
+    async def test_marks_failed_on_error(self, db_session, monkeypatch):
+        from tests.conftest import TestSessionLocal
+
+        persona = await _create(db_session, name="Lisa")
+
+        monkeypatch.setattr(avatar_persona_service, "AsyncSessionLocal", TestSessionLocal)
         with patch(
             "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
             new_callable=AsyncMock,
-            side_effect=Exception("Second failure"),
+            side_effect=Exception("Network error"),
         ):
-            retried = await avatar_persona_service.retry_agent_sync(db_session, persona.id)
+            await avatar_persona_service._run_background_agent_sync(persona.id)
 
-        assert retried.agent_sync_status == "failed"
-        assert "Second failure" in retried.agent_sync_error
+        async with TestSessionLocal() as session:
+            reloaded = await session.get(AvatarPersona, persona.id)
+            assert reloaded.agent_sync_status == "failed"
+            assert "Network error" in reloaded.agent_sync_error
+
+    async def test_noop_when_persona_no_longer_exists(self, monkeypatch):
+        from tests.conftest import TestSessionLocal
+
+        monkeypatch.setattr(avatar_persona_service, "AsyncSessionLocal", TestSessionLocal)
+
+        # Must not raise -- logs a warning and returns.
+        await avatar_persona_service._run_background_agent_sync("does-not-exist")
+
+    async def test_unexpected_crash_is_caught_and_never_propagates(self, monkeypatch):
+        """A completely unexpected crash (e.g. failure to even open the DB
+        session) must never surface as an unhandled asyncio task exception
+        -- only `sync_agent_for_profile` failures are caught internally
+        around the sync call itself; this covers everything else via the
+        function's outer try/except."""
+
+        def broken_session_factory():
+            raise RuntimeError("session factory exploded")
+
+        monkeypatch.setattr(avatar_persona_service, "AsyncSessionLocal", broken_session_factory)
+
+        # Must not raise.
+        await avatar_persona_service._run_background_agent_sync("any-id")
