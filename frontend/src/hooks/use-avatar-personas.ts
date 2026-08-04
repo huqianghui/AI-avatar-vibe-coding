@@ -63,3 +63,13 @@ export function useSetDefaultAvatarPersona() {
     },
   });
 }
+
+export function useRetrySyncAvatarPersona() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => avatarPersonasApi.retrySync(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    },
+  });
+}

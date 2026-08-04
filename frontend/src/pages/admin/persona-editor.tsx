@@ -25,9 +25,11 @@ import {
   useAvatarPersona,
   useCreateAvatarPersona,
   useUpdateAvatarPersona,
+  useRetrySyncAvatarPersona,
 } from "@/hooks/use-avatar-personas";
 import { AvatarView } from "@/components/voice/avatar-view";
 import { AvatarCharacterGallery } from "@/components/admin/avatar-character-gallery";
+import { PersonaAgentStatusSection } from "@/components/admin/persona-agent-status-section";
 import {
   SUPPORTED_VOICE_LOCALES,
   LOCALE_FLAGS,
@@ -82,6 +84,7 @@ export default function PersonaEditorPage() {
   const { data: persona, isLoading } = useAvatarPersona(id);
   const createMutation = useCreateAvatarPersona();
   const updateMutation = useUpdateAvatarPersona();
+  const retrySyncMutation = useRetrySyncAvatarPersona();
 
   /* ── Form state ────────────────────────────────────────────────────── */
 
@@ -230,6 +233,15 @@ export default function PersonaEditorPage() {
     }
   }, [form, isEdit, id, createMutation, updateMutation, navigate, te, handleError]);
 
+  const handleRetrySync = useCallback(() => {
+    if (!id) return;
+    retrySyncMutation.mutate(id, {
+      onSuccess: () => toast.success(t("hcp.syncSuccess")),
+      onError: (err) =>
+        toast.error(t("hcp.syncFailed", { error: (err as Error).message })),
+    });
+  }, [id, retrySyncMutation, t]);
+
   /* ── Loading state ─────────────────────────────────────────────────── */
 
   if (isEdit && isLoading) {
@@ -327,6 +339,16 @@ export default function PersonaEditorPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 1b. AI Foundry Agent sync status (persona-hcp-foundry-alignment
+           * Increment B; mirrors AgentStatusSection's placement in
+           * hcp-profile-editor.tsx, adjacent to Identity). */}
+          <PersonaAgentStatusSection
+            persona={persona}
+            isNew={!isEdit}
+            onRetrySync={handleRetrySync}
+            retrySyncPending={retrySyncMutation.isPending}
+          />
 
           {/* 2. Character & Avatar -- replaces the HCP page's "VL Instance
            * Summary" card with the actual voice-mode avatar picker. */}

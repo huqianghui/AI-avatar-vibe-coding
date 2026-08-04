@@ -31,11 +31,13 @@ vi.mock("sonner", () => ({
 
 const mockCreateMutate = vi.fn();
 const mockUpdateMutate = vi.fn();
+const mockRetrySyncMutate = vi.fn();
 
 let mockPersonaReturn: {
   data: AvatarPersona | undefined;
   isLoading: boolean;
 };
+let mockRetrySyncReturn: { isPending: boolean } = { isPending: false };
 
 vi.mock("@/hooks/use-avatar-personas", () => ({
   useAvatarPersona: () => mockPersonaReturn,
@@ -46,6 +48,10 @@ vi.mock("@/hooks/use-avatar-personas", () => ({
   useUpdateAvatarPersona: () => ({
     mutate: mockUpdateMutate,
     isPending: false,
+  }),
+  useRetrySyncAvatarPersona: () => ({
+    mutate: mockRetrySyncMutate,
+    isPending: mockRetrySyncReturn.isPending,
   }),
 }));
 
@@ -116,6 +122,10 @@ const MOCK_PERSONA: AvatarPersona = {
   prompt_fragment: "Be casual and friendly.",
   enabled: true,
   is_default: true,
+  agent_id: "persona-agent-p-1",
+  agent_version: "2",
+  agent_sync_status: "synced",
+  agent_sync_error: "",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
@@ -143,6 +153,7 @@ describe("PersonaEditorPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPersonaReturn = { data: undefined, isLoading: false };
+    mockRetrySyncReturn = { isPending: false };
   });
 
   /* ---- Create mode ---- */
@@ -445,5 +456,70 @@ describe("PersonaEditorPage", () => {
     const defaultSwitch = screen.getByText("personas.toggleDefault").closest("div")!
       .querySelector('[role="switch"]')!;
     expect(defaultSwitch).toBeDisabled();
+  });
+
+  /* ---- AI Foundry Agent sync card (persona-hcp-foundry-alignment
+   * Increment B) ---- */
+
+  it("renders the AI Foundry Agent card with 'No Agent' status in create mode", () => {
+    renderEditor("/admin/avatar-personas/new");
+    expect(screen.getByText("AI Foundry Agent")).toBeInTheDocument();
+    expect(screen.getByText("No Agent")).toBeInTheDocument();
+  });
+
+  it("shows the info message about auto-creating an agent in create mode", () => {
+    renderEditor("/admin/avatar-personas/new");
+    expect(
+      screen.getByText(/AI Foundry Agent will be automatically created/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows 'Agent Synced' status and Agent ID in edit mode with a synced persona", () => {
+    mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
+    renderEditor("/admin/avatar-personas/p-1/edit");
+    expect(screen.getByText("Agent Synced")).toBeInTheDocument();
+    expect(screen.getByText("persona-agent-p-1")).toBeInTheDocument();
+  });
+
+  it("shows a Force re-sync button for a synced persona and calls the retry mutation", async () => {
+    mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
+    renderEditor("/admin/avatar-personas/p-1/edit");
+
+    const retryBtn = screen.getByText("Force re-sync").closest("button")!;
+    await userEvent.click(retryBtn);
+
+    expect(mockRetrySyncMutate).toHaveBeenCalledWith(
+      "p-1",
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
+  });
+
+  it("shows a success toast when retry-sync succeeds", async () => {
+    mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
+    renderEditor("/admin/avatar-personas/p-1/edit");
+
+    await userEvent.click(screen.getByText("Force re-sync").closest("button")!);
+
+    const call = mockRetrySyncMutate.mock.calls[0]!;
+    const callbacks = call[1] as { onSuccess: () => void };
+    callbacks.onSuccess();
+
+    expect(toast.success).toHaveBeenCalledWith("hcp.syncSuccess");
+  });
+
+  it("shows a failed toast for a persona with a sync error", () => {
+    mockPersonaReturn = {
+      data: { ...MOCK_PERSONA, agent_sync_status: "failed", agent_sync_error: "boom" },
+      isLoading: false,
+    };
+    renderEditor("/admin/avatar-personas/p-1/edit");
+    expect(screen.getByText("Sync Failed")).toBeInTheDocument();
+    expect(screen.getByText("boom")).toBeInTheDocument();
+  });
+
+  it("shows 'View in Azure Portal' button when the persona has an agent_id", () => {
+    mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
+    renderEditor("/admin/avatar-personas/p-1/edit");
+    expect(screen.getByText("View in Azure Portal")).toBeInTheDocument();
   });
 });

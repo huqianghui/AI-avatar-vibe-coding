@@ -12,6 +12,8 @@ vi.mock("@/api/avatar-personas", () => ({
     update: vi.fn(),
     remove: vi.fn(),
     setDefault: vi.fn(),
+    retrySync: vi.fn(),
+    getAgentPortalUrl: vi.fn(),
   },
 }));
 
@@ -23,6 +25,7 @@ import {
   useUpdateAvatarPersona,
   useDeleteAvatarPersona,
   useSetDefaultAvatarPersona,
+  useRetrySyncAvatarPersona,
 } from "./use-avatar-personas";
 
 const mockedList = vi.mocked(avatarPersonasApi.list);
@@ -31,6 +34,7 @@ const mockedCreate = vi.mocked(avatarPersonasApi.create);
 const mockedUpdate = vi.mocked(avatarPersonasApi.update);
 const mockedRemove = vi.mocked(avatarPersonasApi.remove);
 const mockedSetDefault = vi.mocked(avatarPersonasApi.setDefault);
+const mockedRetrySync = vi.mocked(avatarPersonasApi.retrySync);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -68,6 +72,10 @@ const mockPersona: AvatarPersona = {
   prompt_fragment: "",
   enabled: true,
   is_default: true,
+  agent_id: "",
+  agent_version: "",
+  agent_sync_status: "none",
+  agent_sync_error: "",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
@@ -177,6 +185,23 @@ describe("useSetDefaultAvatarPersona", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedSetDefault).toHaveBeenCalledWith("p1");
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+});
+
+describe("useRetrySyncAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.retrySync and invalidates on success", async () => {
+    mockedRetrySync.mockResolvedValueOnce({ ...mockPersona, agent_sync_status: "synced" });
+    const { Wrapper, invalidateSpy } = createWrapperWithSpy();
+
+    const { result } = renderHook(() => useRetrySyncAvatarPersona(), { wrapper: Wrapper });
+
+    result.current.mutate("p1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedRetrySync).toHaveBeenCalledWith("p1");
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
   });
 });

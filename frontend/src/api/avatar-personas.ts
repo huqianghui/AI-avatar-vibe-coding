@@ -10,6 +10,11 @@ export interface AvatarPersona {
   prompt_fragment: string;
   enabled: boolean;
   is_default: boolean;
+  // AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A)
+  agent_id: string;
+  agent_version: string;
+  agent_sync_status: "none" | "pending" | "synced" | "failed";
+  agent_sync_error: string;
   created_at: string;
   updated_at: string;
 }
@@ -71,4 +76,24 @@ export const avatarPersonasApi = {
     );
     return data;
   },
+  retrySync: async (id: string): Promise<AvatarPersona> => {
+    const { data } = await apiClient.post<AvatarPersona>(
+      `/admin/avatar-personas/${id}/retry-sync`,
+    );
+    return data;
+  },
+  getAgentPortalUrl: async (id: string): Promise<AgentPortalUrlResponse> => {
+    const { data } = await apiClient.get<AgentPortalUrlResponse>(
+      `/admin/avatar-personas/${id}/agent-portal-url`,
+    );
+    return data;
+  },
 };
+
+// AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A;
+// mirrors hcp-profiles.ts's AgentPortalUrlResponse)
+export interface AgentPortalUrlResponse {
+  url: string;
+  agent_name: string;
+  agent_version: string;
+}
