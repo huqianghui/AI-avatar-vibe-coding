@@ -353,7 +353,7 @@ Plans:
 
 **Milestone Goal:** 将 "Voice Live Instance" 选择卡替换为 AI Foundry portal 最新 voice mode 直接配置（模型部署、Language、Speech output 语音、Avatar 画廊），HCP 档案编辑页与 Persona 编辑页两处统一，配置持久化并被语音会话实际使用。原 Persona Editor Foundry Parity 需求（PEDIT-01..06, BRAND-01）延后至 Future Requirements（用户 2026-08-04 rescope 决定）。
 
-- [ ] **Phase 38: Voice Mode Config (Foundry Portal Style)** - Replace Voice Live Instance card with Foundry-portal-style direct voice mode config on both HCP profile editor and persona editor
+- [x] **Phase 38: Voice Mode Config (Foundry Portal Style)** - Replace Voice Live Instance card with Foundry-portal-style direct voice mode config on both HCP profile editor and persona editor (completed 2026-08-04)
 
 ## Phase Details (v2.3)
 
@@ -370,9 +370,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 38-01-PLAN.md — Backend: HCP direct voice-mode columns (migration + backfill) + resolve_voice_config repoint, relax instance requirement (VMODE-01)
-- [ ] 38-02-PLAN.md — Frontend: shared AvatarCharacterGallery component + Voice Live Instance card replaced with direct voice-mode config on HCP editor + E2E (VMODE-01)
-- [ ] 38-03-PLAN.md — Persona editor alignment: shared gallery + Speech output presentation + E2E (VMODE-02)
+- [x] 38-01-PLAN.md — Backend: HCP direct voice-mode columns (migration + backfill) + resolve_voice_config repoint, relax instance requirement (VMODE-01)
+- [x] 38-02-PLAN.md — Frontend: shared AvatarCharacterGallery component + Voice Live Instance card replaced with direct voice-mode config on HCP editor + E2E (VMODE-01)
+- [x] 38-03-PLAN.md — Persona editor alignment: shared gallery + Speech output presentation + E2E (VMODE-02)
 
 ## Progress
 
@@ -389,4 +389,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
-| 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 0/3 | Not started | - |
+| 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 3/3 | Complete    | 2026-08-04 |
