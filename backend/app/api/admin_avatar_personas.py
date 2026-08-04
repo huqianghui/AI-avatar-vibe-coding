@@ -6,14 +6,26 @@ global exception handler as a natural 409, not caught here."""
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_role
 from app.models.user import User
 from app.schemas.avatar_persona import AvatarPersonaCreate, AvatarPersonaOut, AvatarPersonaUpdate
 from app.services import avatar_persona_service
+from app.utils.exceptions import bad_request
 
 router = APIRouter(prefix="/admin/avatar-personas", tags=["admin-avatar-personas"])
+
+
+class AgentPortalUrlResponse(BaseModel):
+    """Azure Portal URL for viewing a persona's agent in the playground
+    (persona-hcp-foundry-alignment Increment A; mirrors hcp_profiles.py's
+    AgentPortalUrlResponse)."""
+
+    url: str
+    agent_name: str
+    agent_version: str
 
 
 @router.get("", response_model=list[AvatarPersonaOut])
@@ -89,3 +101,61 @@ async def set_default_persona(
     """Promote a persona to be the sole default. Admin only."""
     persona = await avatar_persona_service.set_default_persona(db, persona_id)
     return AvatarPersonaOut.model_validate(persona)
+
+
+@router.post("/{persona_id}/retry-sync", response_model=AvatarPersonaOut)
+async def retry_sync(
+    persona_id: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+) -> AvatarPersonaOut:
+    """Retry AI Foundry agent sync for a persona with failed status. Admin only.
+
+    (persona-hcp-foundry-alignment Increment A; mirrors hcp_profiles.py's
+    /{profile_id}/retry-sync route.)"""
+    persona = await avatar_persona_service.retry_agent_sync(db, persona_id)
+    return AvatarPersonaOut.model_validate(persona)
+
+
+@router.get("/{persona_id}/agent-portal-url", response_model=AgentPortalUrlResponse)
+async def get_agent_portal_url(
+    persona_id: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+) -> AgentPortalUrlResponse:
+    """Get the Azure Portal URL for viewing this persona's agent in the
+    playground. Admin only.
+
+    (persona-hcp-foundry-alignment Increment A; mirrors hcp_profiles.py's
+    /{profile_id}/portal-url route.) Auto-discovers subscription, resource
+    group, resource name from the connections API -- no extra env vars
+    needed beyond endpoint + key."""
+    from app.services import agent_sync_service
+
+    persona = await avatar_persona_service.get_persona(db, persona_id)
+    if not persona.agent_id:
+        bad_request("No agent synced for this persona.")
+
+    components = await agent_sync_service.get_portal_url_components(db)
+    sub_hash = components.get("subscription_hash", "")
+    rg = components.get("resource_group", "")
+    resource_name = components.get("resource_name", "")
+    project_name = components.get("project_name", "")
+
+    # Always fetch latest version from Azure (version increments on each update)
+    version = await agent_sync_service.get_agent_latest_version(db, persona.agent_id)
+    if sub_hash and rg and resource_name and project_name:
+        url = (
+            f"https://ai.azure.com/nextgen/r/"
+            f"{sub_hash},{rg},,{resource_name},{project_name}"
+            f"/build/agents/{persona.agent_id}/build?version={version}"
+        )
+    else:
+        # Fallback: generic Azure AI Studio URL
+        url = "https://ai.azure.com"
+
+    return AgentPortalUrlResponse(
+        url=url,
+        agent_name=persona.agent_id,
+        agent_version=version,
+    )

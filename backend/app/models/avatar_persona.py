@@ -37,3 +37,29 @@ class AvatarPersona(Base, TimestampMixin):
     prompt_fragment: Mapped[str] = mapped_column(Text, default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A) --
+    # mirrors HcpProfile.agent_id/agent_version/agent_sync_status/agent_sync_error
+    # (backend/app/models/hcp_profile.py) so personas can be synced to real
+    # Foundry prompt agents the same way HCP profiles are, via the already
+    # provider-agnostic agent_sync_service.sync_agent_for_profile().
+    agent_id: Mapped[str] = mapped_column(String(100), default="")
+    agent_version: Mapped[str] = mapped_column(String(50), default="")
+    agent_sync_status: Mapped[str] = mapped_column(
+        String(20), default="none"
+    )  # none|pending|synced|failed
+    agent_sync_error: Mapped[str] = mapped_column(Text, default="")
+
+    def to_prompt_dict(self) -> dict:
+        """Return persona data as a dict for agent_sync_service.build_agent_instructions().
+
+        Personas have no HCP-style personality/knowledge fields to generate
+        instructions FROM -- prompt_fragment IS the persona's full instructions
+        text, so it is surfaced as `agent_instructions_override`, which
+        build_agent_instructions() checks first (before any template) and
+        returns verbatim when non-empty.
+        """
+        return {
+            "name": self.name,
+            "agent_instructions_override": self.prompt_fragment,
+        }

@@ -754,8 +754,18 @@ async def sync_agent_for_profile(
             master.model_or_deployment if master else get_settings().voice_live_default_model
         )
 
-    # Build Voice Live metadata if enabled on the profile
-    vl_metadata = build_voice_live_metadata(profile)
+    # Build Voice Live metadata if enabled on the profile.
+    # AvatarPersona (persona-hcp-foundry-alignment Increment A) has no inline
+    # voice-mode columns (voice_live_model/voice_name/avatar_character/etc --
+    # it stores voice per-locale in voice_map/greeting_map JSON instead), so
+    # resolve_voice_config() would raise AttributeError if called on one.
+    # Persona runtime voice selection already flows through its own
+    # session-config wiring (Phase 36/37), not through Foundry agent
+    # metadata, so skipping this for non-HCP-shaped profiles is correct, not
+    # just a workaround -- see debug session persona-hcp-foundry-alignment.md,
+    # Evidence implication_2.
+    has_voice_config = hasattr(profile, "voice_live_model")
+    vl_metadata = build_voice_live_metadata(profile) if has_voice_config else None
 
     # Build knowledge base tools from KB configs (Phase 17).
     # resolve_kb_remote_tool_connections() finds-or-creates the RemoteTool

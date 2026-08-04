@@ -20,6 +20,7 @@ from app.models.avatar_persona import AvatarPersona
 from app.models.public_knowledge_config import PublicKnowledgeConfig
 from app.models.user_preference import UserPreference
 from app.schemas.avatar_persona import AvatarPersonaCreate, AvatarPersonaUpdate
+from app.services import agent_sync_service
 from app.services.personalization_sanitizer import sanitize_free_text_with_pii
 from app.services.public_knowledge_config_service import parse_voice_map
 from app.services.voice_live_webrtc import DEFAULT_PUBLIC_VOICE_BY_LOCALE
@@ -81,7 +82,21 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
 
     Translates a DB-level `IntegrityError` (the partial unique default index,
     T-HARD-01) into a 409 `ConflictException` -- defense-in-depth, never a
-    raw 500."""
+    raw 500.
+
+    Also auto-syncs a real AI Foundry Agent for the persona
+    (persona-hcp-foundry-alignment Increment A), mirroring
+    `hcp_profile_service.create_hcp_profile`. Sync failure never blocks
+    persona creation -- it only sets `agent_sync_status="failed"` with the
+    error recorded, retryable via `retry_agent_sync`."""
+    # Pre-fetch config BEFORE any writes to avoid SQLite locking (mirrors
+    # hcp_profile_service.create_hcp_profile).
+    try:
+        endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
+    except Exception:
+        logger.warning("Failed to prefetch agent sync config for persona create", exc_info=True)
+        endpoint, api_key, model = None, None, None
+
     persona_data = data.model_dump()
     voice_map = persona_data.pop("voice_map", None) or {}
     greeting_map = persona_data.pop("greeting_map", None) or {}
@@ -102,6 +117,26 @@ async def create_persona(db: AsyncSession, data: AvatarPersonaCreate) -> AvatarP
     db.add(persona)
     await db.flush()
     await db.refresh(persona)
+
+    # Auto-sync agent to AI Foundry (persona-hcp-foundry-alignment Increment A)
+    persona.agent_sync_status = "pending"
+    await db.flush()
+    try:
+        result = await agent_sync_service.sync_agent_for_profile(
+            db,
+            persona,
+            prefetched_endpoint=endpoint,
+            prefetched_key=api_key,
+            prefetched_model=model,
+        )
+        persona.agent_id = result.get("id", "")
+        persona.agent_version = str(result.get("version", ""))
+        persona.agent_sync_status = "synced"
+        persona.agent_sync_error = ""
+    except Exception as e:
+        persona.agent_sync_status = "failed"
+        persona.agent_sync_error = str(e)[:500]
+    await db.flush()
 
     if want_default:
         persona = await set_default_persona(db, persona.id)
@@ -143,7 +178,18 @@ async def update_persona(
 
     Enforces the unique-default guard: transitioning `enabled` True->False on
     the current default persona requires `new_default_persona_id` to promote
-    a replacement default first (409 otherwise)."""
+    a replacement default first (409 otherwise).
+
+    Also re-syncs the persona's AI Foundry Agent on every update
+    (persona-hcp-foundry-alignment Increment A), mirroring
+    `hcp_profile_service.update_hcp_profile`."""
+    # Pre-fetch config BEFORE any writes to avoid SQLite locking.
+    try:
+        endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
+    except Exception:
+        logger.warning("Failed to prefetch agent sync config for persona update", exc_info=True)
+        endpoint, api_key, model = None, None, None
+
     persona = await get_persona(db, persona_id)
     update_data = data.model_dump(exclude_unset=True)
     new_default_persona_id = update_data.pop("new_default_persona_id", None)
@@ -181,6 +227,29 @@ async def update_persona(
         setattr(persona, field, value)
 
     await db.flush()
+
+    # Re-sync agent instructions on persona update (persona-hcp-foundry-alignment
+    # Increment A) -- mirrors hcp_profile_service.update_hcp_profile.
+    persona.agent_sync_status = "pending"
+    await db.flush()
+    try:
+        result = await agent_sync_service.sync_agent_for_profile(
+            db,
+            persona,
+            prefetched_endpoint=endpoint,
+            prefetched_key=api_key,
+            prefetched_model=model,
+        )
+        if not persona.agent_id and result.get("id"):
+            persona.agent_id = result["id"]
+        persona.agent_version = str(result.get("version", ""))
+        persona.agent_sync_status = "synced"
+        persona.agent_sync_error = ""
+    except Exception as e:
+        persona.agent_sync_status = "failed"
+        persona.agent_sync_error = str(e)[:500]
+    await db.flush()
+
     await db.commit()
     await db.refresh(persona)
 
@@ -197,7 +266,12 @@ async def delete_persona(
 
     Enforces the unique-default guard: deleting the current default persona
     requires `new_default_persona_id` to promote a replacement default first
-    (409 otherwise). Deleting a non-default persona always succeeds."""
+    (409 otherwise). Deleting a non-default persona always succeeds.
+
+    Also deletes the persona's AI Foundry Agent, if one was synced
+    (persona-hcp-foundry-alignment Increment A), mirroring
+    `hcp_profile_service.delete_hcp_profile`. Agent deletion failure never
+    blocks persona deletion -- it only logs a warning."""
     persona = await get_persona(db, persona_id)
     if persona.is_default:
         if not new_default_persona_id:
@@ -208,8 +282,56 @@ async def delete_persona(
                 )
             )
         await set_default_persona(db, new_default_persona_id)
+
+    if persona.agent_id:
+        try:
+            await agent_sync_service.delete_agent(db, persona.agent_id)
+        except Exception:
+            logger.warning(
+                "Agent deletion failed for %s, proceeding with persona deletion",
+                persona.agent_id,
+                exc_info=True,
+            )
+
     await db.delete(persona)
     await db.commit()
+
+
+async def retry_agent_sync(db: AsyncSession, persona_id: str) -> AvatarPersona:
+    """Retry agent sync for a persona with failed sync status
+    (persona-hcp-foundry-alignment Increment A), mirroring
+    `hcp_profile_service.retry_agent_sync`."""
+    # Pre-fetch config BEFORE any writes to avoid SQLite locking.
+    try:
+        endpoint, api_key, model = await agent_sync_service.prefetch_sync_config(db)
+    except Exception:
+        logger.warning("Failed to prefetch agent sync config for persona retry", exc_info=True)
+        endpoint, api_key, model = None, None, None
+
+    persona = await get_persona(db, persona_id)
+    persona.agent_sync_status = "pending"
+    persona.agent_sync_error = ""
+    await db.flush()
+    try:
+        result = await agent_sync_service.sync_agent_for_profile(
+            db,
+            persona,
+            prefetched_endpoint=endpoint,
+            prefetched_key=api_key,
+            prefetched_model=model,
+        )
+        if result.get("id"):
+            persona.agent_id = result["id"]
+        persona.agent_version = str(result.get("version", ""))
+        persona.agent_sync_status = "synced"
+        persona.agent_sync_error = ""
+    except Exception as e:
+        persona.agent_sync_status = "failed"
+        persona.agent_sync_error = str(e)[:500]
+    await db.flush()
+    await db.commit()
+    await db.refresh(persona)
+    return persona
 
 
 async def set_default_persona(db: AsyncSession, persona_id: str) -> AvatarPersona:

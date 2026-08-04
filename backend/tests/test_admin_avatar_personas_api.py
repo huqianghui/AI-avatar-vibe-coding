@@ -1,5 +1,7 @@
 """Integration tests for the admin AvatarPersona CRUD API
-(Phase 36, PERSONA-01/02)."""
+(Phase 36, PERSONA-01/02; persona-hcp-foundry-alignment Increment A)."""
+
+from unittest.mock import AsyncMock, patch
 
 from app.models.avatar_persona import AvatarPersona
 from app.models.user import User
@@ -181,3 +183,86 @@ class TestDeletePersona:
         )
 
         assert response.status_code == 409
+
+
+class TestRetrySyncEndpoint:
+    """Tests for POST /{persona_id}/retry-sync (persona-hcp-foundry-alignment
+    Increment A)."""
+
+    async def test_admin_retry_sync_returns_updated_persona(self, client):
+        persona = await _create_persona(
+            name="Failed Persona", agent_sync_status="failed", agent_sync_error="boom"
+        )
+        _, token = await _create_admin_and_token()
+
+        with patch(
+            "app.services.avatar_persona_service.agent_sync_service.sync_agent_for_profile",
+            new_callable=AsyncMock,
+            return_value={"id": "persona-agent-api", "name": "Failed Persona", "model": "gpt-4o"},
+        ):
+            response = await client.post(
+                f"{BASE}/{persona.id}/retry-sync",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_id"] == "persona-agent-api"
+        assert data["agent_sync_status"] == "synced"
+
+    async def test_non_admin_retry_sync_returns_403(self, client):
+        persona = await _create_persona(name="Any")
+        _, token = await _create_user_and_token()
+
+        response = await client.post(
+            f"{BASE}/{persona.id}/retry-sync",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403
+
+
+class TestAgentPortalUrlEndpoint:
+    """Tests for GET /{persona_id}/agent-portal-url (persona-hcp-foundry-alignment
+    Increment A)."""
+
+    async def test_no_agent_synced_returns_422(self, client):
+        """bad_request() raises ValidationException -> 422 (matches
+        hcp_profiles.py's get_agent_portal_url behavior exactly)."""
+        persona = await _create_persona(name="No Agent", agent_id="")
+        _, token = await _create_admin_and_token()
+
+        response = await client.get(
+            f"{BASE}/{persona.id}/agent-portal-url",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["code"] == "VALIDATION_ERROR"
+
+    async def test_agent_synced_returns_url(self, client):
+        persona = await _create_persona(name="Has Agent", agent_id="persona-agent-portal")
+        _, token = await _create_admin_and_token()
+
+        with (
+            patch(
+                "app.services.agent_sync_service.get_portal_url_components",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch(
+                "app.services.agent_sync_service.get_agent_latest_version",
+                new_callable=AsyncMock,
+                return_value="3",
+            ),
+        ):
+            response = await client.get(
+                f"{BASE}/{persona.id}/agent-portal-url",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_name"] == "persona-agent-portal"
+        assert data["agent_version"] == "3"
+        assert data["url"] == "https://ai.azure.com"

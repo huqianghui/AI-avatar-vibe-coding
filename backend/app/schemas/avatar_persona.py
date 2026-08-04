@@ -48,6 +48,13 @@ class AvatarPersonaOut(BaseModel):
     prompt_fragment: str
     enabled: bool
     is_default: bool
+
+    # AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A)
+    agent_id: str = ""
+    agent_version: str = ""
+    agent_sync_status: str = "none"
+    agent_sync_error: str = ""
+
     created_at: str
     updated_at: str
 
