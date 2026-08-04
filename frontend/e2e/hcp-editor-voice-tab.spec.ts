@@ -100,69 +100,126 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     ).toBeVisible();
   });
 
-  test("Voice Live Instance selector is present", async ({ page }) => {
-    const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
-    await voiceTab.click();
-    await page.waitForTimeout(500);
-
-    // D-13: voice is no longer an optional per-HCP toggle -- every HCP must
-    // reference exactly one Voice Live Instance, surfaced via a mandatory
-    // assignment combobox (no more on/off "Voice Mode" switch, D-11).
-    await expect(
-      page.getByText(/voice live instance/i).first(),
-    ).toBeVisible();
-    await expect(page.getByRole("combobox").first()).toBeVisible();
-  });
-
-  test("text chat mode shows when Voice Mode is OFF", async ({ page }) => {
-    const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
-    await voiceTab.click();
-    await page.waitForTimeout(500);
-
-    // Ensure voice mode is OFF first
-    const switches = page.getByRole("switch");
-    const switchCount = await switches.count();
-    if (switchCount > 0) {
-      const isChecked = await switches.first().isChecked();
-      if (isChecked) {
-        await switches.first().click();
-        await page.waitForTimeout(300);
-      }
-    }
-
-    // When voice mode is OFF, should see text chat input or chat-related UI
-    // The Playground area should contain a text input for messaging
-    const chatInput = page
-      .getByPlaceholder(/message/i)
-      .or(page.locator('input[disabled]').filter({ hasText: /agent/i }));
-    // At minimum, the playground should show the chat empty state
-    const chatEmptyState = page.getByText(/message.*agent|chat/i);
-    const hasChat =
-      (await chatInput.count()) > 0 || (await chatEmptyState.count()) > 0;
-    expect(hasChat).toBeTruthy();
-  });
-
-  test("VL Instance selector appears when Voice Mode is toggled ON", async ({
+  // VMODE-01: the "Voice Live Instance" selector was removed entirely --
+  // every HCP profile now configures voice/avatar directly via its own
+  // inline fields (voice_live_model, voice_name, recognition_language,
+  // avatar_character, avatar_style, avatar_enabled). No VoiceLiveInstance
+  // binding is required or shown.
+  test("Voice & Avatar Configuration card is visible with no Voice Live Instance selector (VMODE-01)", async ({
     page,
   }) => {
     const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
     await voiceTab.click();
     await page.waitForTimeout(500);
 
-    // Toggle voice mode ON
-    const switches = page.getByRole("switch");
-    const switchCount = await switches.count();
-    if (switchCount > 0) {
-      const isChecked = await switches.first().isChecked();
-      if (!isChecked) {
-        await switches.first().click();
-        await page.waitForTimeout(300);
-      }
-    }
+    // The new Foundry-portal-style direct config card is visible.
+    await expect(
+      page.getByText(/voice.*avatar configuration/i).first(),
+    ).toBeVisible({ timeout: 5000 });
 
-    // VL Instance selector or related label should appear
-    const vlLabel = page.getByText(/voice live instance/i);
-    await expect(vlLabel.first()).toBeVisible({ timeout: 3000 });
+    // No trace of the removed VL Instance selector/text.
+    await expect(page.getByText(/voice live instance/i)).toHaveCount(0);
+
+    // The three direct-config selects (model, language, voice) and the
+    // avatar-enabled switch are present.
+    const comboboxes = page.getByRole("combobox");
+    expect(await comboboxes.count()).toBeGreaterThanOrEqual(3);
+    await expect(page.getByRole("switch").first()).toBeVisible();
+
+    // The avatar character gallery grid is present.
+    await expect(page.getByTestId("avatar-character-grid")).toBeVisible();
+  });
+
+  test("admin can configure model, language, voice, and avatar directly, and the config persists after reload (VMODE-01)", async ({
+    page,
+  }) => {
+    // Capture the editor URL up-front -- saving an existing profile
+    // navigates back to the list page (see hcp-profile-editor.tsx
+    // handleSubmit's onSuccess), so persistence must be verified by
+    // re-navigating to this same edit URL rather than reloading in place.
+    const editUrl = page.url();
+
+    const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
+    await voiceTab.click();
+    await page.waitForTimeout(500);
+
+    // Comboboxes render in DOM order within the Voice & Avatar tab:
+    // [0] model deployment (VMODE-01 card), [1] language, [2] voice.
+    // (A 4th, unrelated, decorative Agent Foundation Model combobox follows
+    // in a separate card further down and is not touched by this test.)
+    const comboboxes = page.getByRole("combobox");
+
+    // (1) Select a model deployment.
+    await comboboxes.nth(0).click();
+    await page.getByRole("option", { name: "GPT-4o Mini" }).click();
+    await page.waitForTimeout(200);
+
+    // (2) Select a recognition language.
+    await comboboxes.nth(1).click();
+    await page.getByRole("option", { name: /español \(españa\)/i }).click();
+    await page.waitForTimeout(200);
+
+    // (3) Select a speech output voice.
+    await comboboxes.nth(2).click();
+    await page.getByRole("option", { name: /andrew/i }).click();
+    await page.waitForTimeout(200);
+
+    // (4) Select an avatar character + style from the gallery.
+    const galleryGrid = page.getByTestId("avatar-character-grid");
+    await expect(galleryGrid).toBeVisible();
+    const firstAvatarItem = galleryGrid.locator("button").first();
+    await firstAvatarItem.click();
+    const selectedAvatarLabel = await firstAvatarItem.textContent();
+    await page.waitForTimeout(200);
+
+    // (5) Toggle avatar enabled ON.
+    const avatarSwitch = page.getByRole("switch").first();
+    const wasChecked = await avatarSwitch.isChecked();
+    if (!wasChecked) {
+      await avatarSwitch.click();
+      await page.waitForTimeout(200);
+    }
+    await expect(avatarSwitch).toBeChecked();
+
+    // (6) Save and wait for the PUT to resolve 200.
+    const saveButton = page.getByRole("button", { name: /save/i }).first();
+    const [putResponse] = await Promise.all([
+      page.waitForResponse(
+        (resp) =>
+          /\/api\/v1\/hcp-profiles\/[^/?]+$/.test(resp.url()) &&
+          resp.request().method() === "PUT",
+      ),
+      saveButton.click(),
+    ]);
+    expect(putResponse.status()).toBe(200);
+    await page.waitForTimeout(500);
+
+    // (7) Re-navigate to the editor (save redirects to the list page) and
+    // assert the newly-selected values persisted. A full-screen splash
+    // overlay (auth bootstrap) briefly covers the page after a fresh
+    // navigation and must fully detach before the tab is clickable.
+    await page.goto(editUrl);
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .waitFor({ state: "hidden", timeout: 10000 })
+      .catch(() => {});
+    await page.waitForSelector("[role='tab']", { timeout: 10000 });
+    await page.getByRole("tab", { name: /voice.*avatar/i }).click();
+    await page.waitForTimeout(500);
+
+    await expect(page.getByText("GPT-4o Mini").first()).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(
+      page.getByText(/español \(españa\)/i).first(),
+    ).toBeVisible();
+    await expect(page.getByText(/andrew/i).first()).toBeVisible();
+    await expect(page.getByRole("switch").first()).toBeChecked();
+    if (selectedAvatarLabel) {
+      await expect(
+        page.getByTestId("avatar-character-grid").getByText(selectedAvatarLabel.trim(), { exact: false }).first(),
+      ).toBeVisible();
+    }
   });
 
   test("Instructions section with Regenerate button is visible", async ({
@@ -431,61 +488,24 @@ test.describe("HCP Editor: Agent Config Center (Phase 15)", () => {
     }
   });
 
-  test("Playground panel shows text chat UI in text mode", async ({ page }) => {
-    const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
-    await voiceTab.click();
-    await page.waitForTimeout(500);
-
-    // Ensure voice mode is OFF
-    const switches = page.getByRole("switch");
-    const switchCount = await switches.count();
-    if (switchCount > 0) {
-      const isChecked = await switches.first().isChecked();
-      if (isChecked) {
-        await switches.first().click();
-        await page.waitForTimeout(300);
-      }
-    }
-
-    // The Playground panel should show a chat interface
-    const playgroundTitle = page.getByText(/playground/i);
-    await expect(playgroundTitle.first()).toBeVisible({ timeout: 3000 });
-
-    // Chat input or empty state message should be visible
-    const chatInput = page.locator("input").last();
-    const chatEmptyState = page.getByText(/message|chat|agent/i);
-    const hasChat =
-      (await chatInput.count()) > 0 || (await chatEmptyState.count()) > 0;
-    expect(hasChat).toBeTruthy();
-  });
-
-  test("Playground panel shows voice-related UI when voice mode is ON", async ({
+  // VMODE-01: voice mode is always available (resolve_voice_config() always
+  // returns valid config), so there is no on/off "Voice Mode" switch to
+  // manipulate here anymore. The single remaining switch on this tab is the
+  // avatar-enabled toggle, which does not gate the Playground's voice
+  // capability -- it only controls whether the avatar video is shown.
+  test("Playground panel is visible regardless of avatar-enabled state (VMODE-01)", async ({
     page,
   }) => {
     const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
     await voiceTab.click();
     await page.waitForTimeout(500);
 
-    // Turn voice mode ON
-    const switches = page.getByRole("switch");
-    const switchCount = await switches.count();
-    if (switchCount > 0) {
-      const isChecked = await switches.first().isChecked();
-      if (!isChecked) {
-        await switches.first().click();
-        await page.waitForTimeout(300);
-      }
-    }
+    // The Playground panel should be visible.
+    const playgroundTitle = page.getByText(/playground/i);
+    await expect(playgroundTitle.first()).toBeVisible({ timeout: 3000 });
 
-    // VL Instance selector should appear
-    const vlLabel = page.getByText(/voice live instance/i);
-    await expect(vlLabel.first()).toBeVisible({ timeout: 3000 });
-
-    // The playground panel should contain voice-related content
-    // (e.g., start button, avatar view, or disabled message)
-    const playground = page.getByText(/playground/i);
-    const count = await playground.count();
-    expect(count).toBeGreaterThan(0);
+    // No Voice Live Instance selector should ever reappear.
+    await expect(page.getByText(/voice live instance/i)).toHaveCount(0);
   });
 
   test("Model Deployment selector is interactive", async ({ page }) => {
@@ -498,9 +518,12 @@ test.describe("HCP Editor: Agent Config Center (Phase 15)", () => {
     await expect(modelLabel.first()).toBeVisible({ timeout: 5000 });
 
     // Find the model select trigger (a combobox-style button), scoped to the
-    // Model Deployment card. D-13 added a second, unrelated combobox above it
-    // ("Assign a Voice Live Instance"), so an unscoped page-wide combobox
-    // locator would grab the wrong one -- scope to the label's own card.
+    // Model Deployment card. VMODE-01's direct voice-mode config card and the
+    // decorative Agent Foundation Model card both use the identical
+    // "Model Deployment" label text, so an unscoped page-wide combobox
+    // locator could grab the wrong one -- scope to the label's own card.
+    // `.first()` above resolves to the VMODE-01 card since it renders first
+    // in DOM order.
     const modelSelect = modelLabel
       .first()
       .locator("..")

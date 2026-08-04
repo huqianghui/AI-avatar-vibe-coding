@@ -68,6 +68,7 @@ describe("i18n key parity", () => {
       "playgroundChatNoAgent",
       "playgroundChatThinking",
       "playgroundVoiceHint",
+      "voiceAvatarConfigTitle",
     ];
 
     const enHcpSection = enAdmin["hcp"] ?? {};
@@ -136,6 +137,18 @@ describe("HCP editor tab structure", () => {
     expect(formIndex).toBeGreaterThan(-1);
     expect(tabsIndex).toBeGreaterThan(-1);
     expect(formIndex).toBeLessThan(tabsIndex);
+  });
+
+  // VMODE-01 regression guard: the removed "Voice Live Instance" card must
+  // never silently reappear in agent-config-left-panel.tsx.
+  it("agent-config-left-panel.tsx does not reintroduce the removed Voice Live Instance card (VMODE-01)", () => {
+    const leftPanelPath = path.resolve(
+      __dirname,
+      "../components/admin/agent-config-left-panel.tsx",
+    );
+    const source = fs.readFileSync(leftPanelPath, "utf-8");
+    expect(source).not.toContain("useVoiceLiveInstances");
+    expect(source).not.toContain("vlInstanceEmptyTitle");
   });
 });
 

@@ -75,6 +75,7 @@
     "overrideInstructions": "Override Instructions",
     "overridePlaceholder": "Leave empty to use auto-generated instructions",
     "voiceAvatarCol": "Voice & Avatar",
+    "voiceAvatarConfigTitle": "Voice & Avatar Configuration",
     "knowledgeBaseCol": "Knowledge",
     "noKb": "No KB",
     "notConfigured": "Not configured",

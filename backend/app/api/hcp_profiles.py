@@ -40,8 +40,21 @@ class HcpProfileOut(BaseModel):
     agent_sync_status: str
     agent_sync_error: str
 
-    # Voice Live Instance reference
+    # Voice Live Instance reference (vestigial as of VMODE-01 -- retained for
+    # legacy/display purposes only; resolve_voice_config() no longer reads it)
     voice_live_instance_id: str | None = None
+
+    # Direct voice-mode config (Foundry-portal-style, VMODE-01) -- source of
+    # truth for resolve_voice_config(). Without these, the HCP editor's
+    # Voice & Avatar tab cannot round-trip a saved selection: every full page
+    # load falls back to hardcoded form defaults regardless of what was
+    # actually persisted to the database.
+    voice_live_model: str = "gpt-4o"
+    voice_name: str = "en-US-AvaNeural"
+    recognition_language: str = "auto"
+    avatar_character: str = "lisa"
+    avatar_style: str = "casual"
+    avatar_enabled: bool = True
 
     agent_instructions_override: str = ""
 
