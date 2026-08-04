@@ -41,40 +41,6 @@ vi.mock("@/components/admin/agent-foundation-model-select", () => ({
   ),
 }));
 
-vi.mock("@/components/admin/voice-live-model-select", () => ({
-  VoiceLiveModelSelect: ({
-    value,
-    onValueChange,
-  }: {
-    value: string;
-    onValueChange: (v: string) => void;
-  }) => (
-    <div data-testid="voice-live-model-select" data-value={value}>
-      <button type="button" onClick={() => onValueChange("gpt-realtime")}>
-        change-model
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/admin/avatar-character-gallery", () => ({
-  AvatarCharacterGallery: ({
-    character,
-    style,
-    onSelect,
-  }: {
-    character: string;
-    style: string;
-    onSelect: (characterId: string, style: string) => void;
-  }) => (
-    <div data-testid="avatar-character-gallery" data-character={character} data-style={style}>
-      <button type="button" onClick={() => onSelect("harry", "business")}>
-        select-gallery-item
-      </button>
-    </div>
-  ),
-}));
-
 let capturedInstructionsProps: Record<string, unknown> | null = null;
 vi.mock("@/components/admin/instructions-section", () => ({
   InstructionsSection: (props: Record<string, unknown>) => {
@@ -162,71 +128,17 @@ describe("AgentConfigLeftPanel", () => {
     ).not.toBeInTheDocument();
   });
 
-  // ── New "Voice & Avatar Configuration" card ────────────────────────
-  it("renders the new Voice & Avatar Configuration card title", () => {
+  // ── persona-hcp-foundry-alignment Increment D: voice/avatar config
+  // moved out of this panel into the gear-opened <ConfigurationPanel>
+  // rendered by VoiceAvatarTab -- this panel no longer owns those fields.
+  it("does not render the Voice & Avatar Configuration card (moved to ConfigurationPanel)", () => {
     render(<TestWrapper />);
     expect(
-      screen.getByText("admin:hcp.voiceAvatarConfigTitle"),
-    ).toBeInTheDocument();
-  });
-
-  it("renders VoiceLiveModelSelect bound to voice_live_model", () => {
-    render(<TestWrapper />);
-    expect(screen.getByTestId("voice-live-model-select")).toHaveAttribute(
-      "data-value",
-      "gpt-4o",
-    );
-  });
-
-  it("changing the model deployment select updates the form value", () => {
-    render(<TestWrapper />);
-    fireEvent.click(screen.getByText("change-model"));
-    expect(screen.getByTestId("voice-live-model-select")).toHaveAttribute(
-      "data-value",
-      "gpt-realtime",
-    );
-  });
-
-  it("renders a Language select and a Speech-output Voice select", () => {
-    render(<TestWrapper />);
-    expect(screen.getByText("admin:hcp.recognitionLanguage")).toBeInTheDocument();
-    expect(screen.getByText("admin:hcp.voiceName")).toBeInTheDocument();
-  });
-
-  it("renders an avatar_enabled Switch", () => {
-    render(<TestWrapper />);
-    const switchEl = screen.getByRole("switch");
-    expect(switchEl).toBeInTheDocument();
-    expect(switchEl).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("renders AvatarCharacterGallery bound to avatar_character/avatar_style", () => {
-    render(<TestWrapper />);
-    const gallery = screen.getByTestId("avatar-character-gallery");
-    expect(gallery).toHaveAttribute("data-character", "lisa");
-    expect(gallery).toHaveAttribute("data-style", "casual");
-  });
-
-  it("selecting a gallery item calls form.setValue for avatar_character/avatar_style with shouldDirty true", () => {
-    render(<TestWrapper />);
-    fireEvent.click(screen.getByText("select-gallery-item"));
-    const gallery = screen.getByTestId("avatar-character-gallery");
-    expect(gallery).toHaveAttribute("data-character", "harry");
-    expect(gallery).toHaveAttribute("data-style", "business");
-  });
-
-  it("shows disabled hint for new profiles", () => {
-    render(<TestWrapper isNew={true} />);
-    expect(
-      screen.getByText("admin:hcp.playgroundDisabledNew"),
-    ).toBeInTheDocument();
-  });
-
-  it("does not show disabled hint for existing profiles", () => {
-    render(<TestWrapper isNew={false} />);
-    expect(
-      screen.queryByText("admin:hcp.playgroundDisabledNew"),
+      screen.queryByText("admin:hcp.voiceAvatarConfigTitle"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("voice-live-model-select")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("avatar-character-gallery")).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
   // ── Agent Foundation Model card (D-14, unaffected) ─────────────────

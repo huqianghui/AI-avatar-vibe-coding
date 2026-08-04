@@ -105,6 +105,10 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
   // inline fields (voice_live_model, voice_name, recognition_language,
   // avatar_character, avatar_style, avatar_enabled). No VoiceLiveInstance
   // binding is required or shown.
+  // persona-hcp-foundry-alignment Increment D: the direct voice/avatar
+  // config card was replaced by a gear "Configure" button that opens a
+  // right-side Configuration panel (Foundry-portal pattern) -- open it
+  // before asserting on its contents.
   test("Voice & Avatar Configuration card is visible with no Voice Live Instance selector (VMODE-01)", async ({
     page,
   }) => {
@@ -112,7 +116,13 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await voiceTab.click();
     await page.waitForTimeout(500);
 
-    // The new Foundry-portal-style direct config card is visible.
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+
+    const panel = page.getByTestId("configuration-panel");
+    await expect(panel).toBeVisible();
+
+    // The gear-opened Configuration panel is visible with its title.
     await expect(
       page.getByText(/voice.*avatar configuration/i).first(),
     ).toBeVisible({ timeout: 5000 });
@@ -121,18 +131,27 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await expect(page.getByText(/voice live instance/i)).toHaveCount(0);
 
     // The three direct-config selects (model, language, voice) and the
-    // avatar-enabled switch are present.
-    const comboboxes = page.getByRole("combobox");
+    // avatar-enabled switch are present inside the panel.
+    const comboboxes = panel.getByRole("combobox");
     expect(await comboboxes.count()).toBeGreaterThanOrEqual(3);
-    await expect(page.getByRole("switch").first()).toBeVisible();
+    await expect(panel.getByRole("switch").first()).toBeVisible();
 
-    // The avatar character gallery grid is present.
-    await expect(page.getByTestId("avatar-character-grid")).toBeVisible();
+    // The avatar character gallery grid is present inside the panel.
+    await expect(panel.getByTestId("avatar-character-grid")).toBeVisible();
   });
 
   test("admin can configure model, language, voice, and avatar directly, and the config persists after reload (VMODE-01)", async ({
     page,
   }) => {
+    // This flow performs several real (unmocked) network round-trips --
+    // three combobox selections against live backend-fed option lists, a
+    // real PUT save, and a full page reload through the auth-bootstrap
+    // splash overlay -- which can exceed the default 30s test timeout under
+    // normal load. Extend it rather than racing the reload, matching the
+    // same pattern used for other real-backend-latency-sensitive specs
+    // (e.g. admin-persona-knowledge.spec.ts's Foundry agent sync test).
+    test.setTimeout(60000);
+
     // Capture the editor URL up-front -- saving an existing profile
     // navigates back to the list page (see hcp-profile-editor.tsx
     // handleSubmit's onSuccess), so persistence must be verified by
@@ -143,11 +162,18 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await voiceTab.click();
     await page.waitForTimeout(500);
 
-    // Comboboxes render in DOM order within the Voice & Avatar tab:
-    // [0] model deployment (VMODE-01 card), [1] language, [2] voice.
-    // (A 4th, unrelated, decorative Agent Foundation Model combobox follows
-    // in a separate card further down and is not touched by this test.)
-    const comboboxes = page.getByRole("combobox");
+    // persona-hcp-foundry-alignment Increment D: model/language/voice/avatar
+    // config now live inside the gear-opened Configuration panel -- open it
+    // and scope all locators to the panel to avoid colliding with the
+    // unrelated decorative Agent Foundation Model combobox in the left panel.
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const panel = page.getByTestId("configuration-panel");
+    await expect(panel).toBeVisible();
+
+    // Comboboxes render in DOM order within the panel:
+    // [0] model deployment (recognitionModel), [1] language, [2] voice.
+    const comboboxes = panel.getByRole("combobox");
 
     // (1) Select a model deployment.
     await comboboxes.nth(0).click();
@@ -165,7 +191,7 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await page.waitForTimeout(200);
 
     // (4) Select an avatar character + style from the gallery.
-    const galleryGrid = page.getByTestId("avatar-character-grid");
+    const galleryGrid = panel.getByTestId("avatar-character-grid");
     await expect(galleryGrid).toBeVisible();
     const firstAvatarItem = galleryGrid.locator("button").first();
     await firstAvatarItem.click();
@@ -173,7 +199,7 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await page.waitForTimeout(200);
 
     // (5) Toggle avatar enabled ON.
-    const avatarSwitch = page.getByRole("switch").first();
+    const avatarSwitch = panel.getByRole("switch").first();
     const wasChecked = await avatarSwitch.isChecked();
     if (!wasChecked) {
       await avatarSwitch.click();
@@ -181,7 +207,12 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     }
     await expect(avatarSwitch).toBeChecked();
 
-    // (6) Save and wait for the PUT to resolve 200.
+    // (6) Close the panel (its overlay blocks pointer events on the rest of
+    // the page) then save and wait for the PUT to resolve 200. Form state
+    // lives in the parent react-hook-form instance, not the panel, so
+    // closing it does not lose the selections made above.
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
     const saveButton = page.getByRole("button", { name: /save/i }).first();
     const [putResponse] = await Promise.all([
       page.waitForResponse(
@@ -207,17 +238,26 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await page.getByRole("tab", { name: /voice.*avatar/i }).click();
     await page.waitForTimeout(500);
 
-    await expect(page.getByText("GPT-4o Mini").first()).toBeVisible({
+    // Re-open the panel -- these fields are not rendered until opened.
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const reopenedPanel = page.getByTestId("configuration-panel");
+    await expect(reopenedPanel).toBeVisible();
+
+    await expect(reopenedPanel.getByText("GPT-4o Mini").first()).toBeVisible({
       timeout: 5000,
     });
     await expect(
-      page.getByText(/español \(españa\)/i).first(),
+      reopenedPanel.getByText(/español \(españa\)/i).first(),
     ).toBeVisible();
-    await expect(page.getByText(/andrew/i).first()).toBeVisible();
-    await expect(page.getByRole("switch").first()).toBeChecked();
+    await expect(reopenedPanel.getByText(/andrew/i).first()).toBeVisible();
+    await expect(reopenedPanel.getByRole("switch").first()).toBeChecked();
     if (selectedAvatarLabel) {
       await expect(
-        page.getByTestId("avatar-character-grid").getByText(selectedAvatarLabel.trim(), { exact: false }).first(),
+        reopenedPanel
+          .getByTestId("avatar-character-grid")
+          .getByText(selectedAvatarLabel.trim(), { exact: false })
+          .first(),
       ).toBeVisible();
     }
   });

@@ -1,31 +1,33 @@
 ---
-status: investigating
+status: awaiting_human_verify
 trigger: "Investigate issue: persona-hcp-foundry-alignment — Avatar Persona admin page still not aligned with HCP profile page and Azure AI Foundry portal design. Three gaps: (1) Foundry-portal voice-mode layout parity (gear Configure button opening right-side Configuration panel) on BOTH HCP and Persona pages; (2) Persona editor missing Foundry features HCP has (Knowledge/Foundry IQ); (3) Persona must be a real Foundry agent, synced like HCP (Agent Synced card, Agent ID, version, Force re-sync, View in Azure Portal)."
 created: 2026-08-04T00:00:00Z
-updated: 2026-08-04T00:00:00Z
+updated: 2026-08-04T21:10:00Z
 ---
 
 ## Current Focus
 <!-- OVERWRITE on each update - reflects NOW -->
 
-hypothesis: CONFIRMED for all 3 gaps (see Resolution). User approved the 4-increment fix plan (A/B/C/D) via checkpoint; executing sequentially, one increment per commit.
-test: n/a — implementation phase, not hypothesis testing.
+hypothesis: CONFIRMED for all 3 gaps (see Resolution). All 4 increments (A/B/C/D) implemented,
+gated, and committed. Awaiting human browser verification before final archive.
+test: n/a — implementation complete, awaiting human sign-off.
 expecting: n/a
 next_action: |
-  Increment A DONE (commit cc8a962) — backend Foundry agent sync fields/hooks/routes for AvatarPersona.
-  Increment B DONE (commit fb7e9ef) — frontend AgentStatusSection rendering for personas.
-  Increment C DONE (backend + frontend Knowledge/Foundry IQ for personas) — implemented, unit
-  tested (backend pytest + frontend vitest), Playwright E2E added, all gates green. NOT YET
-  COMMITTED as of this update — commit immediately after this file save, using:
-  "feat(persona): knowledge base / Foundry IQ attach for personas (increment C)".
-  Start Increment D next: new shared <ConfigurationPanel> component opened by a gear Button in
-  PlaygroundPreviewPanel's toolbar; migrate voice/language/avatar/speech fields out of the
-  always-visible agent-config-left-panel.tsx Cards (HCP) and persona-editor.tsx equivalent
-  fields into this panel for BOTH pages, per the Foundry-portal reference interaction pattern.
-  Add/adjust Playwright E2E + vitest unit tests, run tsc -b / npm run build / vitest / pytest
-  gates, commit alone as "feat(admin): gear Configure button opens Foundry-style Configuration
-  panel on HCP + persona editors (increment D)". When D is green and committed, update this file
-  to status: awaiting_human_verify and return DEBUG COMPLETE summarizing all 4 increment commits.
+  All 4 increments DONE:
+    Increment A (commit cc8a962) — backend Foundry agent sync fields/hooks/routes for AvatarPersona.
+    Increment B (commit fb7e9ef) — frontend AgentStatusSection rendering for personas.
+    Increment C (commit 41699ab) — backend + frontend Knowledge/Foundry IQ for personas.
+    Increment D (this commit) — shared <ConfigurationPanel> gear-button pattern wired into both
+      voice-avatar-tab.tsx (HCP) and persona-editor.tsx (Persona); unit tests for both plus a new
+      configuration-panel.test.tsx (25 tests); 3 Playwright specs rewritten
+      (hcp-editor-voice-tab.spec.ts, admin-avatar-personas.spec.ts, admin-persona-knowledge.spec.ts)
+      to open the gear panel before interacting with the fields it now contains; 2 pre-existing
+      real-Foundry-sync-latency test timeouts (in admin-avatar-personas.spec.ts, touched by this
+      increment's createPersonaViaUi rewrite) fixed by extending test.setTimeout, matching the
+      pattern already used elsewhere for the same root cause. All gates green (tsc, build, vitest,
+      full E2E re-runs — see Resolution.verification).
+  Awaiting the user's own browser walkthrough to confirm the gear->Configuration-panel pattern
+  looks and behaves correctly on both pages before archiving this session to resolved/.
 
 ## Symptoms
 <!-- Written during gathering, then IMMUTABLE -->

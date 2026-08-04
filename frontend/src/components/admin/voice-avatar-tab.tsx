@@ -1,7 +1,11 @@
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { UseFormReturn } from "react-hook-form";
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AgentConfigLeftPanel } from "@/components/admin/agent-config-left-panel";
 import { PlaygroundPreviewPanel } from "@/components/admin/playground-preview-panel";
+import { ConfigurationPanel } from "@/components/admin/configuration-panel";
 import type { HcpFormValues } from "@/pages/admin/hcp-profile-editor";
 import type { HcpProfile } from "@/types/hcp";
 
@@ -12,11 +16,19 @@ interface VoiceAvatarTabProps {
 }
 
 export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
+  const { t } = useTranslation(["admin"]);
+
   // Auto-generated instructions from InstructionsSection (used as fallback systemPrompt)
   const [autoInstructions, setAutoInstructions] = useState("");
   const handleAutoInstructionsChange = useCallback((instructions: string) => {
     setAutoInstructions(instructions);
   }, []);
+
+  // Foundry-portal-style gear "Configure" button -> right-side Configuration
+  // panel (persona-hcp-foundry-alignment Increment D). Owns its own open
+  // state here since the panel is triggered from the playground toolbar but
+  // reads/writes the same react-hook-form instance as the left panel.
+  const [configPanelOpen, setConfigPanelOpen] = useState(false);
 
   // VMODE-01: voice/avatar config is now sourced directly from the 6 inline
   // HcpProfile form fields (Plan 38-01) rather than a bound VoiceLiveInstance.
@@ -26,6 +38,9 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
   const avatarCharacter = form.watch("avatar_character");
   const avatarStyle = form.watch("avatar_style");
   const avatarEnabled = form.watch("avatar_enabled");
+  const voiceLiveModel = form.watch("voice_live_model");
+  const recognitionLanguage = form.watch("recognition_language");
+  const voiceName = form.watch("voice_name");
   // Voice mode is always available -- resolve_voice_config() on the backend
   // always returns a valid config regardless of VL instance linkage (38-01).
   const voiceModeEnabled = true;
@@ -58,8 +73,47 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
           avatarEnabled={avatarEnabled}
           voiceModeEnabled={voiceModeEnabled}
           disabled={isNew}
+          toolbarExtra={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              aria-label={t("admin:hcp.configureButton")}
+              onClick={() => setConfigPanelOpen(true)}
+            >
+              <Settings className="size-3.5" />
+              {t("admin:hcp.configureButton")}
+            </Button>
+          }
         />
       </div>
+
+      <ConfigurationPanel
+        open={configPanelOpen}
+        onOpenChange={setConfigPanelOpen}
+        recognitionModel={voiceLiveModel}
+        onRecognitionModelChange={(v) =>
+          form.setValue("voice_live_model", v, { shouldDirty: true })
+        }
+        language={recognitionLanguage}
+        onLanguageChange={(v) =>
+          form.setValue("recognition_language", v, { shouldDirty: true })
+        }
+        showAutoDetectOption
+        voice={voiceName}
+        onVoiceChange={(v) => form.setValue("voice_name", v, { shouldDirty: true })}
+        avatarEnabled={avatarEnabled}
+        onAvatarEnabledChange={(v) =>
+          form.setValue("avatar_enabled", v, { shouldDirty: true })
+        }
+        avatarCharacter={avatarCharacter}
+        avatarStyle={avatarStyle}
+        onAvatarSelect={(characterId, style) => {
+          form.setValue("avatar_character", characterId, { shouldDirty: true });
+          form.setValue("avatar_style", style, { shouldDirty: true });
+        }}
+        disabledNote={isNew ? t("admin:hcp.playgroundDisabledNew") : undefined}
+      />
     </div>
   );
 }

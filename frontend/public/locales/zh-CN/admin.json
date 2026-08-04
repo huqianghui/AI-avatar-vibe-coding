@@ -76,6 +76,7 @@
     "overridePlaceholder": "留空则使用自动生成的指令",
     "voiceAvatarCol": "语音和数字人",
     "voiceAvatarConfigTitle": "语音和数字人配置",
+    "configureButton": "配置",
     "knowledgeBaseCol": "知识库",
     "noKb": "无知识库",
     "notConfigured": "未配置",

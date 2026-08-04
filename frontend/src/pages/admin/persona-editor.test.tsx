@@ -158,6 +158,15 @@ function renderEditor(path = "/admin/avatar-personas/new") {
   );
 }
 
+// Opens the gear-triggered Configuration panel (persona-hcp-foundry-
+// alignment Increment D) -- Character & Avatar + Speech fields now live
+// there, not always-visible in the main column.
+async function openConfigPanel() {
+  await userEvent.click(
+    screen.getByRole("button", { name: "hcp.configureButton" }),
+  );
+}
+
 /* ── Tests ─────────────────────────────────────────────────────────────── */
 
 describe("PersonaEditorPage", () => {
@@ -181,17 +190,29 @@ describe("PersonaEditorPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders character section", () => {
+  it("renders a gear Configure button that opens the Character & Avatar section", async () => {
     renderEditor("/admin/avatar-personas/new");
-    expect(screen.getByText("personas.characterSectionTitle")).toBeInTheDocument();
+    expect(
+      screen.queryByText("personas.characterSectionTitle"),
+    ).not.toBeInTheDocument();
+    await openConfigPanel();
+    expect(screen.getByText("admin:voiceLive.playgroundSection.avatar")).toBeInTheDocument();
   });
 
-  it("renders speech section with language, voice, and greeting fields", () => {
+  it("renders speech section with language, voice, and greeting fields inside the Configuration panel", async () => {
     renderEditor("/admin/avatar-personas/new");
-    expect(screen.getByText("personas.editor.speechSectionTitle")).toBeInTheDocument();
-    expect(screen.getByText("personas.editor.languageLabel")).toBeInTheDocument();
-    expect(screen.getByText("personas.editor.voiceLabel")).toBeInTheDocument();
-    expect(screen.getByText("personas.greetingLabel")).toBeInTheDocument();
+    expect(
+      screen.queryByText("admin:personas.greetingLabel"),
+    ).not.toBeInTheDocument();
+
+    await openConfigPanel();
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.speechInput"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.speechOutput"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("admin:personas.greetingLabel")).toBeInTheDocument();
   });
 
   it("renders instructions section (prompt fragment)", () => {
@@ -250,15 +271,17 @@ describe("PersonaEditorPage", () => {
 
   /* ---- Avatar grid ---- */
 
-  it("renders avatar grid with filter buttons", () => {
+  it("renders avatar grid with filter buttons", async () => {
     renderEditor("/admin/avatar-personas/new");
+    await openConfigPanel();
     expect(screen.getByText("voiceLive.vlDialogFilterAll")).toBeInTheDocument();
     expect(screen.getByText("voiceLive.vlDialogFilterPhoto")).toBeInTheDocument();
     expect(screen.getByText("voiceLive.vlDialogFilterVideo")).toBeInTheDocument();
   });
 
-  it("renders avatar thumbnails from mock data", () => {
+  it("renders avatar thumbnails from mock data", async () => {
     renderEditor("/admin/avatar-personas/new");
+    await openConfigPanel();
     // lisa has 2 styles + 1 photo avatar = 3 items
     const imgs = screen.getAllByRole("img");
     expect(imgs.length).toBe(3);
@@ -266,6 +289,7 @@ describe("PersonaEditorPage", () => {
 
   it("filters avatars by photo filter", async () => {
     renderEditor("/admin/avatar-personas/new");
+    await openConfigPanel();
     await userEvent.click(
       screen.getByText("voiceLive.vlDialogFilterPhoto").closest("button")!,
     );
@@ -275,6 +299,7 @@ describe("PersonaEditorPage", () => {
 
   it("filters avatars by video filter", async () => {
     renderEditor("/admin/avatar-personas/new");
+    await openConfigPanel();
     await userEvent.click(
       screen.getByText("voiceLive.vlDialogFilterVideo").closest("button")!,
     );
@@ -284,14 +309,16 @@ describe("PersonaEditorPage", () => {
 
   it("selecting an avatar updates the preview character/style", async () => {
     renderEditor("/admin/avatar-personas/new");
+    await openConfigPanel();
     await userEvent.click(screen.getAllByRole("img")[1]!); // lisa's second style
     const avatarView = screen.getByTestId("avatar-view");
     expect(avatarView).toHaveAttribute("data-avatar-character", "lisa");
     expect(avatarView).toHaveAttribute("data-avatar-style", "professional");
   });
 
-  it("renders the shared AvatarCharacterGallery component", () => {
+  it("renders the shared AvatarCharacterGallery component", async () => {
     renderEditor("/admin/avatar-personas/new");
+    await openConfigPanel();
     // Proves the swap to <AvatarCharacterGallery> (Plan 38-02) rather than a
     // coincidental pass-through: the gallery's own grid container carries
     // this data-testid, which the page's now-deleted inline markup never had.
@@ -385,15 +412,17 @@ describe("PersonaEditorPage", () => {
     expect(nameInput).toHaveValue("Lisa - Casual");
   });
 
-  it("shows configured-locale chip for en-US when voice/greeting are set", () => {
+  it("shows configured-locale chip for en-US when voice/greeting are set", async () => {
     mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
     renderEditor("/admin/avatar-personas/p-1/edit");
+    await openConfigPanel();
     expect(screen.getByText("personas.editor.configuredLocalesLabel")).toBeInTheDocument();
   });
 
-  it("shows the configured greeting text in the preview (default active locale en-US)", () => {
+  it("shows the configured greeting text in the preview (default active locale en-US)", async () => {
     mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
     renderEditor("/admin/avatar-personas/p-1/edit");
+    await openConfigPanel();
     // Appears in both the editable greeting textarea and the read-only preview card.
     expect(screen.getAllByText("Hi there, I'm Lisa!").length).toBeGreaterThanOrEqual(2);
   });

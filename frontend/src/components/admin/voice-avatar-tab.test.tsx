@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 // ---- Mocks ----
 
@@ -19,6 +20,7 @@ vi.mock("sonner", () => ({
 // Mock the two child panels the component delegates to
 let capturedLeftPanelProps: Record<string, unknown> | null = null;
 let capturedPlaygroundProps: Record<string, unknown> | null = null;
+let capturedConfigPanelProps: Record<string, unknown> | null = null;
 
 vi.mock("@/components/admin/agent-config-left-panel", () => ({
   AgentConfigLeftPanel: (props: Record<string, unknown>) => {
@@ -30,7 +32,23 @@ vi.mock("@/components/admin/agent-config-left-panel", () => ({
 vi.mock("@/components/admin/playground-preview-panel", () => ({
   PlaygroundPreviewPanel: (props: Record<string, unknown>) => {
     capturedPlaygroundProps = props;
-    return <div data-testid="playground-preview-panel">PlaygroundPreviewPanel</div>;
+    return (
+      <div data-testid="playground-preview-panel">
+        PlaygroundPreviewPanel
+        {(props.toolbarExtra as ReactNode) ?? null}
+      </div>
+    );
+  },
+}));
+
+// Mock ConfigurationPanel -- gear-button-opened Foundry-style panel
+// (persona-hcp-foundry-alignment Increment D). Renders a marker only when
+// `open` so tests can assert on the gear button's open/close wiring.
+vi.mock("@/components/admin/configuration-panel", () => ({
+  ConfigurationPanel: (props: Record<string, unknown>) => {
+    capturedConfigPanelProps = props;
+    if (!props.open) return null;
+    return <div data-testid="configuration-panel">ConfigurationPanel</div>;
   },
 }));
 
@@ -96,6 +114,7 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
   beforeEach(() => {
     capturedLeftPanelProps = null;
     capturedPlaygroundProps = null;
+    capturedConfigPanelProps = null;
   });
 
   it("renders both panels", () => {
@@ -166,5 +185,69 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
     capturedPlaygroundProps = null;
     render(<TestWrapper instanceId={null} />);
     expect(capturedPlaygroundProps!.voiceModeEnabled).toBe(true);
+  });
+
+  // ── persona-hcp-foundry-alignment Increment D: gear Configure button ──
+  describe("gear Configure button -> ConfigurationPanel", () => {
+    it("passes a gear Configure button as PlaygroundPreviewPanel's toolbarExtra", () => {
+      render(<TestWrapper instanceId={null} />);
+      expect(
+        screen.getByRole("button", { name: "admin:hcp.configureButton" }),
+      ).toBeInTheDocument();
+    });
+
+    it("renders ConfigurationPanel closed by default", () => {
+      render(<TestWrapper instanceId={null} />);
+      expect(capturedConfigPanelProps).toBeTruthy();
+      expect(capturedConfigPanelProps!.open).toBe(false);
+      expect(screen.queryByTestId("configuration-panel")).not.toBeInTheDocument();
+    });
+
+    it("opens ConfigurationPanel when the gear button is clicked", () => {
+      render(<TestWrapper instanceId={null} />);
+      fireEvent.click(
+        screen.getByRole("button", { name: "admin:hcp.configureButton" }),
+      );
+      expect(screen.getByTestId("configuration-panel")).toBeInTheDocument();
+    });
+
+    it("passes the form's voice/language/model/avatar fields to ConfigurationPanel", () => {
+      render(
+        <TestWrapper
+          instanceId={null}
+          avatarCharacter="lisa"
+          avatarStyle="casual"
+          avatarEnabled={true}
+        />,
+      );
+      expect(capturedConfigPanelProps).toBeTruthy();
+      expect(capturedConfigPanelProps!.recognitionModel).toBe("gpt-4o");
+      expect(capturedConfigPanelProps!.language).toBe("auto");
+      expect(capturedConfigPanelProps!.voice).toBe("en-US-AvaNeural");
+      expect(capturedConfigPanelProps!.avatarEnabled).toBe(true);
+      expect(capturedConfigPanelProps!.avatarCharacter).toBe("lisa");
+      expect(capturedConfigPanelProps!.avatarStyle).toBe("casual");
+      expect(capturedConfigPanelProps!.showAutoDetectOption).toBe(true);
+      expect(typeof capturedConfigPanelProps!.onRecognitionModelChange).toBe(
+        "function",
+      );
+      expect(typeof capturedConfigPanelProps!.onLanguageChange).toBe("function");
+      expect(typeof capturedConfigPanelProps!.onVoiceChange).toBe("function");
+      expect(typeof capturedConfigPanelProps!.onAvatarEnabledChange).toBe(
+        "function",
+      );
+      expect(typeof capturedConfigPanelProps!.onAvatarSelect).toBe("function");
+    });
+
+    it("shows a disabledNote for new profiles and none for existing ones", () => {
+      render(<TestWrapper instanceId={null} isNew={true} />);
+      expect(capturedConfigPanelProps!.disabledNote).toBe(
+        "admin:hcp.playgroundDisabledNew",
+      );
+
+      capturedConfigPanelProps = null;
+      render(<TestWrapper instanceId={null} isNew={false} />);
+      expect(capturedConfigPanelProps!.disabledNote).toBeUndefined();
+    });
   });
 });

@@ -76,6 +76,7 @@
     "overridePlaceholder": "Leave empty to use auto-generated instructions",
     "voiceAvatarCol": "Voice & Avatar",
     "voiceAvatarConfigTitle": "Voice & Avatar Configuration",
+    "configureButton": "Configure",
     "knowledgeBaseCol": "Knowledge",
     "noKb": "No KB",
     "notConfigured": "Not configured",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,10 @@ interface PlaygroundPreviewPanelProps {
   avatarEnabled: boolean;
   voiceModeEnabled: boolean;
   disabled?: boolean;
+  /** Extra content rendered in the toolbar area (e.g. the Foundry-portal-
+   * style gear "Configure" button that opens the ConfigurationPanel --
+   * persona-hcp-foundry-alignment Increment D). */
+  toolbarExtra?: ReactNode;
 }
 
 export function PlaygroundPreviewPanel({
@@ -37,6 +41,7 @@ export function PlaygroundPreviewPanel({
   avatarEnabled,
   voiceModeEnabled,
   disabled,
+  toolbarExtra,
 }: PlaygroundPreviewPanelProps) {
   const { t } = useTranslation(["admin"]);
 
@@ -117,6 +122,7 @@ export function PlaygroundPreviewPanel({
           disabledMessage={
             disabled ? t("admin:hcp.playgroundDisabledNew") : undefined
           }
+          headerExtra={toolbarExtra}
           className="flex-1"
         />
       </Card>
@@ -126,13 +132,14 @@ export function PlaygroundPreviewPanel({
   // Text chat mode — HCP-specific (agent interaction via testChatWithAgent API)
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
           <MessageSquare className="size-4 text-muted-foreground" />
           <CardTitle className="text-sm font-semibold">
             {t("admin:hcp.playgroundTitle")}
           </CardTitle>
         </div>
+        {toolbarExtra}
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col space-y-3">

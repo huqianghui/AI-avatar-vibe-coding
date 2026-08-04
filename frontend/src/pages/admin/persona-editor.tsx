@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, Play, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AgentFoundationModelSelect } from "@/components/admin/agent-foundation-model-select";
@@ -28,14 +21,13 @@ import {
   useRetrySyncAvatarPersona,
 } from "@/hooks/use-avatar-personas";
 import { AvatarView } from "@/components/voice/avatar-view";
-import { AvatarCharacterGallery } from "@/components/admin/avatar-character-gallery";
 import { PersonaAgentStatusSection } from "@/components/admin/persona-agent-status-section";
 import { PersonaKnowledgeSection } from "@/components/admin/persona-knowledge-section";
+import { ConfigurationPanel } from "@/components/admin/configuration-panel";
 import {
   SUPPORTED_VOICE_LOCALES,
   LOCALE_FLAGS,
   LOCALE_LABEL_KEY,
-  VOICE_NAME_OPTIONS,
 } from "@/lib/voice-constants";
 import type { AvatarPersonaCreate } from "@/api/avatar-personas";
 
@@ -92,6 +84,10 @@ export default function PersonaEditorPage() {
   const [form, setForm] = useState<PersonaEditorFormState>(createDefaultPersonaForm());
   const [activeLocale, setActiveLocale] =
     useState<(typeof SUPPORTED_VOICE_LOCALES)[number]>(DEFAULT_LOCALE);
+  // Foundry-portal-style gear "Configure" button -> right-side Configuration
+  // panel (persona-hcp-foundry-alignment Increment D), sharing the same
+  // <ConfigurationPanel> component as the HCP editor's VoiceAvatarTab.
+  const [configPanelOpen, setConfigPanelOpen] = useState(false);
   const formInitializedRef = useRef(false);
   // Model Deployment selector -- mirrors the HCP profile editor's D-14
   // pattern: informational only, not yet persisted to any backend field
@@ -351,114 +347,11 @@ export default function PersonaEditorPage() {
             retrySyncPending={retrySyncMutation.isPending}
           />
 
-          {/* 2. Character & Avatar -- replaces the HCP page's "VL Instance
-           * Summary" card with the actual voice-mode avatar picker. */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">
-                {t("personas.characterSectionTitle")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <AvatarCharacterGallery
-                character={form.character}
-                style={form.style}
-                onSelect={(c, s) => {
-                  updateField("character", c);
-                  updateField("style", s);
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* 3. Speech (language-scoped voice + greeting) -- the other half
-           * of the voice-mode config replacing the VL Instance Summary card. */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">
-                {te("speechSectionTitle")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Language selector — picks which locale's voice/greeting is being edited */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">{te("languageLabel")}</Label>
-                <Select
-                  value={activeLocale}
-                  onValueChange={(v) =>
-                    setActiveLocale(v as (typeof SUPPORTED_VOICE_LOCALES)[number])
-                  }
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_VOICE_LOCALES.map((locale) => (
-                      <SelectItem key={locale} value={locale}>
-                        {LOCALE_FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Voice for the active locale */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">{te("voiceLabel")}</Label>
-                <Select
-                  value={form.voiceMap[activeLocale] ?? USE_DEFAULT_VOICE}
-                  onValueChange={(v) => setVoiceForLocale(activeLocale, v)}
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={USE_DEFAULT_VOICE}>
-                      {t("personas.useDefaultVoiceOption")}
-                    </SelectItem>
-                    {VOICE_NAME_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {t(`hcp.${opt.labelKey}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Greeting for the active locale */}
-              <div className="space-y-1.5">
-                <Label className="text-xs">{t("personas.greetingLabel")}</Label>
-                <Textarea
-                  id="persona-editor-greeting"
-                  rows={2}
-                  className="text-sm resize-none"
-                  value={form.greetingMap[activeLocale] ?? ""}
-                  onChange={(e) => setGreetingForLocale(activeLocale, e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">{t("personas.greetingHelper")}</p>
-              </div>
-
-              {/* Which locales already have overrides configured */}
-              {configuredLocales.length > 0 && (
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    {te("configuredLocalesLabel")}
-                  </Label>
-                  <div className="flex flex-wrap gap-1">
-                    {configuredLocales.map((locale) => (
-                      <Badge
-                        key={locale}
-                        variant={locale === activeLocale ? "default" : "outline"}
-                        className="text-[10px]"
-                      >
-                        {LOCALE_FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Character & Avatar (avatar gallery) and Speech (language-scoped
+           * voice + greeting) now live in the gear-opened
+           * <ConfigurationPanel> rendered below, per the Foundry-portal
+           * gear-button interaction pattern (persona-hcp-foundry-alignment
+           * Increment D) -- mirrors VoiceAvatarTab's HCP-side wiring. */}
 
           {/* 4. Model Deployment -- mirrors AgentConfigLeftPanel's "模型部署"
            * card (D-14: informational only, not persisted anywhere for HCP
@@ -534,23 +427,39 @@ export default function PersonaEditorPage() {
         <Card className="flex flex-col h-full overflow-hidden">
           <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-semibold">{te("previewTitle")}</CardTitle>
-            {/* Mirrors the HCP page's "工作台" Start button. Disabled here:
-             * a live interactive test session requires either an assigned
-             * Voice Live instance or a Foundry agent (see
-             * playground-preview-panel.tsx), and AvatarPersona has neither
-             * concept today -- this is a genuine backend gap, not something
-             * to fake. See personas.editor.noLiveTestNote. */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button size="sm" disabled className="gap-1.5">
-                    <Play className="size-3.5" />
-                    {t("hcp.playgroundStart")}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{te("noLiveTestNote")}</TooltipContent>
-            </Tooltip>
+            <div className="flex items-center gap-1.5">
+              {/* Gear "Configure" button -> right-side Configuration panel,
+               * holding Character & Avatar + Speech (voice/greeting) config
+               * (persona-hcp-foundry-alignment Increment D). Mirrors the HCP
+               * editor's VoiceAvatarTab toolbarExtra wiring. */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                aria-label={t("hcp.configureButton")}
+                onClick={() => setConfigPanelOpen(true)}
+              >
+                <Settings className="size-3.5" />
+                {t("hcp.configureButton")}
+              </Button>
+              {/* Mirrors the HCP page's "工作台" Start button. Disabled here:
+               * a live interactive test session requires either an assigned
+               * Voice Live instance or a Foundry agent (see
+               * playground-preview-panel.tsx), and AvatarPersona has neither
+               * concept today -- this is a genuine backend gap, not something
+               * to fake. See personas.editor.noLiveTestNote. */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button size="sm" disabled className="gap-1.5">
+                      <Play className="size-3.5" />
+                      {t("hcp.playgroundStart")}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{te("noLiveTestNote")}</TooltipContent>
+              </Tooltip>
+            </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col space-y-3">
             <div className="flex-1 relative min-h-[360px] rounded-lg overflow-hidden">
@@ -576,6 +485,57 @@ export default function PersonaEditorPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Foundry-portal-style Configuration panel -- Character & Avatar +
+       * Speech (per-locale voice/greeting), shared with the HCP editor's
+       * VoiceAvatarTab (persona-hcp-foundry-alignment Increment D). No
+       * recognitionModel/avatarEnabled props: personas have neither a
+       * voice-recognition model-deployment concept nor an avatar disable
+       * toggle (the avatar is always shown). No onReset: the main column's
+       * bottom "Reset" button already resets these fields along with the
+       * rest of the form. */}
+      <ConfigurationPanel
+        open={configPanelOpen}
+        onOpenChange={setConfigPanelOpen}
+        language={activeLocale}
+        onLanguageChange={(v) =>
+          setActiveLocale(v as (typeof SUPPORTED_VOICE_LOCALES)[number])
+        }
+        voice={form.voiceMap[activeLocale] ?? USE_DEFAULT_VOICE}
+        onVoiceChange={(v) => setVoiceForLocale(activeLocale, v)}
+        voiceDefaultOption={{
+          value: USE_DEFAULT_VOICE,
+          label: t("personas.useDefaultVoiceOption"),
+        }}
+        greeting={form.greetingMap[activeLocale] ?? ""}
+        onGreetingChange={(v) => setGreetingForLocale(activeLocale, v)}
+        speechOutputExtra={
+          configuredLocales.length > 0 ? (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {te("configuredLocalesLabel")}
+              </Label>
+              <div className="flex flex-wrap gap-1">
+                {configuredLocales.map((locale) => (
+                  <Badge
+                    key={locale}
+                    variant={locale === activeLocale ? "default" : "outline"}
+                    className="text-[10px]"
+                  >
+                    {LOCALE_FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : undefined
+        }
+        avatarCharacter={form.character}
+        avatarStyle={form.style}
+        onAvatarSelect={(c, s) => {
+          updateField("character", c);
+          updateField("style", s);
+        }}
+      />
     </div>
   );
 }

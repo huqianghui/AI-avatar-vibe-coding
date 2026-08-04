@@ -90,8 +90,19 @@ test.describe("Admin Persona Editor — Knowledge / Foundry IQ section", () => {
 
     const personaName = `E2E Persona Knowledge ${Date.now()}`;
     await page.getByPlaceholder(/e\.g\., lisa - casual/i).fill(personaName);
-    await page.locator("button", { hasText: /lisa/i }).first().click();
-    await page.locator("#persona-editor-greeting").fill(`Hello from ${personaName}!`);
+
+    // Character & Avatar + Speech (greeting) config now live inside the
+    // gear-opened Configuration panel (persona-hcp-foundry-alignment
+    // Increment D) -- open it before interacting with those fields.
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const panel = page.getByTestId("configuration-panel");
+    await expect(panel).toBeVisible();
+    await panel.locator("button", { hasText: /lisa/i }).first().click();
+    await panel.locator("#persona-editor-greeting").fill(`Hello from ${personaName}!`);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+
     await page
       .locator("#persona-editor-prompt-fragment")
       .fill("Speak concisely and warmly.");

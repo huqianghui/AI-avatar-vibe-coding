@@ -161,6 +161,14 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
   test("full create -> set-default -> delete-guard -> delete workflow", async ({
     page,
   }) => {
+    // Creates TWO throwaway personas via createPersonaViaUi, each of which
+    // synchronously provisions a real AI Foundry agent (agent_sync_service,
+    // ~14s+ per create) on top of the Configuration-panel UI steps -- well
+    // over the default 30s test timeout. Extend it rather than racing the
+    // sync (pre-existing risk from increment A, bumped here since this test
+    // is touched by increment D's createPersonaViaUi rewrite).
+    test.setTimeout(90000);
+
     await page.goto("/admin/dashboard");
     await page.waitForTimeout(1000);
 
@@ -209,14 +217,28 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
 
       await page.getByPlaceholder(/e\.g\., lisa - casual/i).fill(name);
 
+      // Character & Avatar + Speech (greeting) config now live inside the
+      // gear-opened Configuration panel (persona-hcp-foundry-alignment
+      // Increment D) -- open it before interacting with those fields.
+      await page.getByRole("button", { name: /configure/i }).click();
+      await page.waitForTimeout(300);
+      const panel = page.getByTestId("configuration-panel");
+      await expect(panel).toBeVisible();
+
       // Character & Style grid: pick the first available option (Lisa's first style)
-      await page.locator("button", { hasText: /lisa/i }).first().click();
+      await panel.locator("button", { hasText: /lisa/i }).first().click();
 
       // Speech section defaults to the en-US locale (DEFAULT_LOCALE) on a
       // fresh persona, so filling the single active-locale greeting field
       // here is equivalent to the old per-locale `#persona-greeting-en-US`
       // field it replaces. Prompt fragment is unchanged in shape.
-      await page.locator("#persona-editor-greeting").fill(`Hello from ${name}!`);
+      await panel.locator("#persona-editor-greeting").fill(`Hello from ${name}!`);
+
+      // Close the panel -- its overlay blocks pointer events on the rest of
+      // the page (the prompt-fragment field lives in the main column).
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(200);
+
       await page
         .locator("#persona-editor-prompt-fragment")
         .fill("Speak concisely and warmly.");
@@ -324,6 +346,13 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
   test("avatar gallery renders as the shared component and a selection persists across save + reload", async ({
     page,
   }) => {
+    // Persona creation synchronously provisions a real AI Foundry agent
+    // (agent_sync_service, ~14s+), plus a page reload through the
+    // Configuration panel re-open -- extend past the default 30s timeout
+    // rather than racing the sync (same pre-existing risk as the test
+    // above, bumped here for the same reason).
+    test.setTimeout(60000);
+
     await page.goto("/admin/avatar-personas");
     await expect(
       page.getByRole("heading", { name: /avatar personas/i, level: 1 }),
@@ -335,13 +364,21 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
     const personaName = `E2E Persona Gallery ${Date.now()}`;
     await page.getByPlaceholder(/e\.g\., lisa - casual/i).fill(personaName);
 
+    // Character & Avatar + Speech (greeting) config now live inside the
+    // gear-opened Configuration panel (persona-hcp-foundry-alignment
+    // Increment D) -- open it before interacting with those fields.
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const panel = page.getByTestId("configuration-panel");
+    await expect(panel).toBeVisible();
+
     // The shared AvatarCharacterGallery's own grid container + all three
     // filter buttons are visible BEFORE any selection is made.
-    const galleryGrid = page.getByTestId("avatar-character-grid");
+    const galleryGrid = panel.getByTestId("avatar-character-grid");
     await expect(galleryGrid).toBeVisible();
-    await expect(page.getByRole("button", { name: "All", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Photo", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Video", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "All", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Photo", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Video", exact: true })).toBeVisible();
 
     // Select a non-default character/style (the seeded default persona is
     // Lisa / casual-sitting) -- Harry / business.
@@ -349,7 +386,13 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
     await harryBusiness.click();
     await expect(harryBusiness).toHaveClass(/border-primary/);
 
-    await page.locator("#persona-editor-greeting").fill(`Hello from ${personaName}!`);
+    await panel.locator("#persona-editor-greeting").fill(`Hello from ${personaName}!`);
+
+    // Close the panel -- its overlay blocks pointer events on the rest of
+    // the page (the prompt-fragment field lives in the main column).
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+
     await page
       .locator("#persona-editor-prompt-fragment")
       .fill("Speak concisely and warmly.");
@@ -370,12 +413,17 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
       { timeout: 5000 },
     );
 
-    // Reload the same edit page and confirm the gallery selection persisted.
+    // Reload the same edit page, re-open the panel, and confirm the gallery
+    // selection persisted.
     await page.reload();
-    await expect(page.getByTestId("avatar-character-grid")).toBeVisible({
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const reopenedPanel = page.getByTestId("configuration-panel");
+    await expect(reopenedPanel).toBeVisible({ timeout: 10000 });
+    await expect(reopenedPanel.getByTestId("avatar-character-grid")).toBeVisible({
       timeout: 10000,
     });
-    const harryBusinessAfterReload = page
+    const harryBusinessAfterReload = reopenedPanel
       .getByTestId("avatar-character-grid")
       .getByTestId("avatar-item-harry-business");
     await expect(harryBusinessAfterReload).toBeVisible();
