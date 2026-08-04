@@ -759,7 +759,7 @@
     "useDefaultVoiceOption": "（使用默认）",
     "editor": {
       "backAriaLabel": "返回人设列表",
-      "speechSectionTitle": "语音",
+      "speechSectionTitle": "语音输出",
       "languageLabel": "语言",
       "voiceLabel": "语音",
       "configuredLocalesLabel": "已配置的语言",

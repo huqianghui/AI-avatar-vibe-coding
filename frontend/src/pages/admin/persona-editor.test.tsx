@@ -4,8 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { toast } from "sonner";
+import fs from "fs";
+import path from "path";
 import PersonaEditorPage from "./persona-editor";
 import type { AvatarPersona } from "@/api/avatar-personas";
+
+// Helper: read JSON locale files via fs -- mirrors hcp-editor-tabs.test.tsx's
+// readLocaleJson helper.
+function readLocaleJson(locale: string, ns: string): Record<string, unknown> {
+  const filePath = path.resolve(__dirname, `../../../public/locales/${locale}/${ns}.json`);
+  return JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<string, unknown>;
+}
 
 /* ── Mocks ────────────────────────────────────────────────────────────── */
 
@@ -257,6 +266,23 @@ describe("PersonaEditorPage", () => {
     const avatarView = screen.getByTestId("avatar-view");
     expect(avatarView).toHaveAttribute("data-avatar-character", "lisa");
     expect(avatarView).toHaveAttribute("data-avatar-style", "professional");
+  });
+
+  it("renders the shared AvatarCharacterGallery component", () => {
+    renderEditor("/admin/avatar-personas/new");
+    // Proves the swap to <AvatarCharacterGallery> (Plan 38-02) rather than a
+    // coincidental pass-through: the gallery's own grid container carries
+    // this data-testid, which the page's now-deleted inline markup never had.
+    expect(screen.getByTestId("avatar-character-grid")).toBeInTheDocument();
+  });
+
+  /* ---- Speech card i18n (VMODE-02) ---- */
+
+  it("has a 'Speech output'-phrased en-US title for the Speech card", () => {
+    const enAdmin = readLocaleJson("en-US", "admin") as {
+      personas: { editor: { speechSectionTitle: string } };
+    };
+    expect(enAdmin.personas.editor.speechSectionTitle.toLowerCase()).toContain("output");
   });
 
   /* ---- Save (create) ---- */

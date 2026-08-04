@@ -759,7 +759,7 @@
     "useDefaultVoiceOption": "(use default)",
     "editor": {
       "backAriaLabel": "Back to personas list",
-      "speechSectionTitle": "Speech",
+      "speechSectionTitle": "Speech output",
       "languageLabel": "Language",
       "voiceLabel": "Voice",
       "configuredLocalesLabel": "Configured languages",

@@ -759,7 +759,7 @@
     "useDefaultVoiceOption": "(usar predeterminada)",
     "editor": {
       "backAriaLabel": "Volver a la lista de personas",
-      "speechSectionTitle": "Voz",
+      "speechSectionTitle": "Salida de voz",
       "languageLabel": "Idioma",
       "voiceLabel": "Voz",
       "configuredLocalesLabel": "Idiomas configurados",

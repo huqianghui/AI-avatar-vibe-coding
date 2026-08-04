@@ -27,47 +27,21 @@ import {
   useUpdateAvatarPersona,
 } from "@/hooks/use-avatar-personas";
 import { AvatarView } from "@/components/voice/avatar-view";
-import { AVATAR_CHARACTERS, getAvatarInitials } from "@/data/avatar-characters";
-import { CDN_BASE, VOICE_NAME_OPTIONS } from "@/lib/voice-constants";
-import { cn } from "@/lib/utils";
+import { AvatarCharacterGallery } from "@/components/admin/avatar-character-gallery";
+import {
+  SUPPORTED_VOICE_LOCALES,
+  LOCALE_FLAGS,
+  LOCALE_LABEL_KEY,
+  VOICE_NAME_OPTIONS,
+} from "@/lib/voice-constants";
 import type { AvatarPersonaCreate } from "@/api/avatar-personas";
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
-const PERSONA_VOICE_LOCALES = ["zh-CN", "en-US", "es-ES", "es-MX", "es-US"] as const;
-
-/** Flag emoji per locale -- mirrors settings.tsx's Voice per Language card. */
-const FLAGS: Record<string, string> = {
-  "zh-CN": "\u{1F1E8}\u{1F1F3}",
-  "en-US": "\u{1F1FA}\u{1F1F8}",
-  "es-ES": "\u{1F1EA}\u{1F1F8}",
-  "es-MX": "\u{1F1F2}\u{1F1FD}",
-  "es-US": "\u{1F1FA}\u{1F1F8}",
-};
-
-/** Maps locale code to its common.json `lang.*` sub-key. */
-const LOCALE_LABEL_KEY: Record<string, string> = {
-  "zh-CN": "zhCN",
-  "en-US": "enUS",
-  "es-ES": "esES",
-  "es-MX": "esMX",
-  "es-US": "esUS",
-};
-
 /** Sentinel value for the leading "(use default)" voice option. */
 const USE_DEFAULT_VOICE = "__use_default__";
 
-const DEFAULT_LOCALE: (typeof PERSONA_VOICE_LOCALES)[number] = "en-US";
-
-type AvatarGridItem = {
-  characterId: string;
-  displayName: string;
-  style: string;
-  styleLabel: string;
-  isPhotoAvatar: boolean;
-  thumbnailUrl: string;
-  gradientClasses: string;
-};
+const DEFAULT_LOCALE: (typeof SUPPORTED_VOICE_LOCALES)[number] = "en-US";
 
 interface PersonaEditorFormState {
   name: string;
@@ -112,9 +86,8 @@ export default function PersonaEditorPage() {
   /* ── Form state ────────────────────────────────────────────────────── */
 
   const [form, setForm] = useState<PersonaEditorFormState>(createDefaultPersonaForm());
-  const [avatarFilter, setAvatarFilter] = useState<"all" | "photo" | "video">("all");
   const [activeLocale, setActiveLocale] =
-    useState<(typeof PERSONA_VOICE_LOCALES)[number]>(DEFAULT_LOCALE);
+    useState<(typeof SUPPORTED_VOICE_LOCALES)[number]>(DEFAULT_LOCALE);
   const formInitializedRef = useRef(false);
   // Model Deployment selector -- mirrors the HCP profile editor's D-14
   // pattern: informational only, not yet persisted to any backend field
@@ -187,49 +160,6 @@ export default function PersonaEditorPage() {
     }
   }, [persona]);
 
-  /* ── Avatar grid ───────────────────────────────────────────────────── */
-
-  const filteredAvatarItems = useMemo(() => {
-    const items: AvatarGridItem[] = [];
-    for (const c of AVATAR_CHARACTERS) {
-      if (c.isPhotoAvatar) {
-        if (avatarFilter === "video") continue;
-        items.push({
-          characterId: c.id,
-          displayName: c.displayName,
-          style: "",
-          styleLabel: "",
-          isPhotoAvatar: true,
-          thumbnailUrl: c.thumbnailUrl,
-          gradientClasses: c.gradientClasses,
-        });
-      } else {
-        if (avatarFilter === "photo") continue;
-        for (const s of c.styles) {
-          items.push({
-            characterId: c.id,
-            displayName: c.displayName,
-            style: s,
-            styleLabel: s.replace(/-/g, " "),
-            isPhotoAvatar: false,
-            thumbnailUrl: `${CDN_BASE}/${c.id}-${s}.png`,
-            gradientClasses: c.gradientClasses,
-          });
-        }
-      }
-    }
-    return items;
-  }, [avatarFilter]);
-
-  const failedThumbnailsRef = useRef(new Set<string>());
-  const [, setThumbnailRerender] = useState(0);
-  const handleThumbnailError = useCallback((key: string) => {
-    if (!failedThumbnailsRef.current.has(key)) {
-      failedThumbnailsRef.current.add(key);
-      setThumbnailRerender((n) => n + 1);
-    }
-  }, []);
-
   /* ── Resolved greeting preview (client-side mirror of the backend's
    * 3-tier fallback chain in avatar_persona_service.resolve_greeting_for_locale) ── */
 
@@ -241,7 +171,7 @@ export default function PersonaEditorPage() {
   }, [form.greetingMap, activeLocale, te]);
 
   const configuredLocales = useMemo(
-    () => PERSONA_VOICE_LOCALES.filter((l) => form.voiceMap[l] || form.greetingMap[l]),
+    () => SUPPORTED_VOICE_LOCALES.filter((l) => form.voiceMap[l] || form.greetingMap[l]),
     [form.voiceMap, form.greetingMap],
   );
 
@@ -407,73 +337,14 @@ export default function PersonaEditorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex gap-1">
-                {(["all", "photo", "video"] as const).map((filter) => (
-                  <Button
-                    key={filter}
-                    type="button"
-                    size="sm"
-                    variant={avatarFilter === filter ? "default" : "outline"}
-                    className="h-6 text-[10px] px-2"
-                    onClick={() => setAvatarFilter(filter)}
-                  >
-                    {t(
-                      `voiceLive.vlDialogFilter${filter.charAt(0).toUpperCase() + filter.slice(1)}` as `voiceLive.vlDialogFilter${"All" | "Photo" | "Video"}`,
-                    )}
-                  </Button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
-                {filteredAvatarItems.map((item) => {
-                  const gridKey = item.isPhotoAvatar
-                    ? item.characterId
-                    : `${item.characterId}-${item.style}`;
-                  const isSelected =
-                    form.character === item.characterId &&
-                    (item.isPhotoAvatar || form.style === item.style);
-                  const imgFailed = failedThumbnailsRef.current.has(gridKey);
-
-                  return (
-                    <button
-                      key={gridKey}
-                      type="button"
-                      className={cn(
-                        "flex flex-col items-center gap-1 rounded-lg border p-1.5 transition-all hover:bg-accent/50 cursor-pointer",
-                        isSelected && "ring-2 ring-primary border-primary",
-                      )}
-                      onClick={() => {
-                        updateField("character", item.characterId);
-                        updateField("style", item.style);
-                      }}
-                    >
-                      {!imgFailed ? (
-                        <div className="w-full aspect-[3/4] overflow-hidden rounded-md bg-muted/30">
-                          <img
-                            src={item.thumbnailUrl}
-                            alt={item.displayName}
-                            className="size-full object-contain"
-                            onError={() => handleThumbnailError(gridKey)}
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          className={cn(
-                            "w-full aspect-[3/4] rounded-md flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br",
-                            item.gradientClasses,
-                          )}
-                        >
-                          {getAvatarInitials(item.displayName)}
-                        </div>
-                      )}
-                      <span className="text-[9px] leading-tight text-center truncate w-full">
-                        {item.displayName}
-                        {item.styleLabel ? ` (${item.styleLabel})` : ""}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <AvatarCharacterGallery
+                character={form.character}
+                style={form.style}
+                onSelect={(c, s) => {
+                  updateField("character", c);
+                  updateField("style", s);
+                }}
+              />
             </CardContent>
           </Card>
 
@@ -492,16 +363,16 @@ export default function PersonaEditorPage() {
                 <Select
                   value={activeLocale}
                   onValueChange={(v) =>
-                    setActiveLocale(v as (typeof PERSONA_VOICE_LOCALES)[number])
+                    setActiveLocale(v as (typeof SUPPORTED_VOICE_LOCALES)[number])
                   }
                 >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PERSONA_VOICE_LOCALES.map((locale) => (
+                    {SUPPORTED_VOICE_LOCALES.map((locale) => (
                       <SelectItem key={locale} value={locale}>
-                        {FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
+                        {LOCALE_FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -557,7 +428,7 @@ export default function PersonaEditorPage() {
                         variant={locale === activeLocale ? "default" : "outline"}
                         className="text-[10px]"
                       >
-                        {FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
+                        {LOCALE_FLAGS[locale]} {tc(`lang.${LOCALE_LABEL_KEY[locale]}`)}
                       </Badge>
                     ))}
                   </div>
