@@ -27,3 +27,21 @@ regression. `TestRealVoiceLiveIntegration::test_real_config_resolution_with_hcp_
 passed consistently across all runs.
 
 No action taken. Not blocking for Plan 38-01.
+
+## Plan 38-02: pre-existing failing unit test unrelated to VMODE-01
+
+`frontend/src/pages/login.test.tsx > LoginPage > navigates user to /user/dashboard
+on login success` fails on the full `npx vitest run` pass:
+
+```
+expect(mockNavigate).toHaveBeenCalledWith("/user/dashboard");
+Received: "/"
+```
+
+`login.tsx`/`login.test.tsx` were never read or modified during Plan 38-02
+execution. The mismatch (`/` vs `/user/dashboard`) looks like a leftover from a
+separate, unrelated change to the post-login landing redirect (see Phase 36
+"avatar-persona-selection-post-login-landing" in `.planning/phases/`, which was
+in-progress in this repo's working tree at the time of this session per the
+initial `git status`). Not fixed per the scope boundary rule -- out of scope for
+Plan 38-02 (voice-mode config replacement), not caused by any Task 1/2/3 change.
