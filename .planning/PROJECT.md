@@ -8,19 +8,19 @@ An AI-powered digital human (avatar) platform for BeiGene (百济神州), built 
 
 Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
-## Current Milestone: v2.2 Persona Fidelity & Hardening (Gap Closure)
+## Current Milestone: v2.3 Voice Mode Config (Foundry Portal Style)
 
-**Goal:** Persona 切换完全可观察（视觉 + 对话人格 + 按语言问候语），并加固数据完整性（DB 级唯一默认约束 + E2E 数据清理）。
+**Goal:** 将 "Voice Live Instance" 选择卡替换为 AI Foundry portal 最新 voice mode 直接配置（模型部署、Language、Speech output 语音、Avatar 画廊），HCP 档案编辑页与 Persona 编辑页两处统一，配置持久化并被语音会话实际使用。
 
 **Target features:**
-- 视频形象保真 — WebRTC session config 携带 persona 的 avatar character+style，切换 Persona 后屏幕上的数字人形象随之变化（匿名与登录一致）
-- 语音人格保真 — Voice Live session instructions 携带 sanitized persona prompt 片段（登录路径合并 CRM/偏好上下文），复用双闸 sanitization
-- 按语言问候语 — greeting 从单一字符串改为 per-locale map（与 voice_map 同构），按 locale 解析并回退；admin 按语言编辑；迁移保留既有问候语
-- 数据加固 — `is_default` 唯一性提升为 partial unique index（enabled+is_default）；persona E2E 自带 teardown，dev DB 不再被测试污染
+- HCP 编辑页移除 Voice Live Instance 选择器，替换为 Foundry-portal 风格直接配置（model deployment / language / speech-output voice / avatar 开关 + 角色画廊）
+- HCP 直接 voice 配置持久化到 HcpProfile 内联字段（Alembic 迁移 + 回填），语音会话直接使用，不再依赖预置 Voice Live 实例
+- Persona 编辑页复用同一套配置组件/布局（共享 AvatarCharacterGallery、Speech output 分区、语言下拉）
+- 原 Persona Editor Foundry Parity 需求（PEDIT-01..06, BRAND-01）延后至 Future Requirements（用户 2026-08-04 rescope 决定）
 
 **Key context:**
-- 来源：Phase 36 后 gap 分析 — Phase 36 交付 audio-first（voice/greeting/chat 注入），session_config 尚无 character/style 与 instructions 字段
-- 约束不变：Azure Voice Live 标准 avatar 仅限预置角色（Lisa/Harry/Meg/Max 等 + styles）
+- 替换机制来源：Phase 28 的 HCP Voice Live instance 关联被内联字段取代；`resolve_voice_config()` 输出 21-key dict 形状保持不变，`voice_live_websocket.py` 与 `agent_sync_service.py` 消费方零改动
+- 遗留 VoiceLiveInstance CRUD 端点保留但对 HCP 语音行为已无影响（code review WR-1，后续里程碑可清理）
 - 执行遵循 CLAUDE.md 最高优先级规则：逐个需求 实现 → 100% unit test → Playwright E2E → 全通过 → commit → push
 
 ## Requirements
@@ -69,9 +69,13 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - ✓ 问候语按语言：greeting → per-locale greeting_map（与 voice_map 同构）+ 回退链（exact → any → 默认），admin 按语言编辑，Alembic 迁移保留既有问候语 — v2.2 (Phase 37, PERSONA-07)
 - ✓ 数据完整性加固：is_default partial unique index（enabled+is_default）+ persona E2E teardown（dev DB 前后字节一致，零污染）— v2.2 (Phase 37, HARD-01)
 
+- ✓ HCP 直接 voice mode 配置：HcpProfile 新增 6 个内联字段（voice_live_model/voice_name/recognition_language/avatar_character/avatar_style/avatar_enabled，Alembic g40a 迁移 + 回填），`resolve_voice_config()` 仅从内联字段读取（21-key 输出形状不变），语音会话不再依赖预置 Voice Live 实例 — v2.3 (Phase 38, VMODE-01)
+- ✓ HCP 编辑页 Foundry-portal 风格配置：Voice Live Instance 卡移除，替换为 model deployment + Language + Speech output voice + avatar 开关 + AvatarCharacterGallery（共享组件 + voice-constants），5 locale 文案齐全，E2E 覆盖 — v2.3 (Phase 38, VMODE-01)
+- ✓ Persona 编辑页对齐：复用共享 AvatarCharacterGallery 与 voice-constants，Speech output 分区呈现，E2E 覆盖 — v2.3 (Phase 38, VMODE-02)
+
 ### Active
 
-（无 — v2.2 里程碑全部需求已交付）
+（无 — v2.3 里程碑全部需求已交付）
 
 ### Out of Scope
 
@@ -136,4 +140,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-03 — v2.2 milestone (Persona Fidelity & Hardening) 完成：Phase 37 交付 PERSONA-05/06/07 + HARD-01，验证 4/4 通过（37-VERIFICATION.md）*
+*Last updated: 2026-08-04 — v2.3 milestone (Voice Mode Config, Foundry Portal Style) 完成：Phase 38 交付 VMODE-01/02，验证 4/4 通过（38-VERIFICATION.md）*
