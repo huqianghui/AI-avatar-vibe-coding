@@ -98,6 +98,17 @@ vi.mock("@/hooks/use-agent-foundation-models", () => ({
   }),
 }));
 
+// Mock the Knowledge/Foundry IQ hooks (persona-hcp-foundry-alignment
+// Increment C) -- keeps this page's own test suite focused on the page's
+// own behavior; PersonaKnowledgeSection has its own dedicated test file.
+vi.mock("@/hooks/use-knowledge-base", () => ({
+  usePersonaKnowledgeConfigs: () => ({ data: [], isLoading: false }),
+  useAddPersonaKnowledgeConfig: () => ({ mutate: vi.fn(), isPending: false }),
+  useRemovePersonaKnowledgeConfig: () => ({ mutate: vi.fn(), isPending: false }),
+  useSearchConnections: () => ({ data: [], isLoading: false }),
+  useSearchIndexes: () => ({ data: [], isLoading: false }),
+}));
+
 // Mock AvatarView — avoid pulling in WebRTC/audio-orb dependencies for a static preview
 vi.mock("@/components/voice/avatar-view", () => ({
   AvatarView: (props: { avatarCharacter?: string; avatarStyle?: string; hcpName: string }) => (
@@ -521,5 +532,19 @@ describe("PersonaEditorPage", () => {
     mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
     renderEditor("/admin/avatar-personas/p-1/edit");
     expect(screen.getByText("View in Azure Portal")).toBeInTheDocument();
+  });
+
+  /* ---- Knowledge / Foundry IQ section (persona-hcp-foundry-alignment
+   * Increment C) ---- */
+
+  it("renders the Knowledge/Foundry IQ section in edit mode", () => {
+    mockPersonaReturn = { data: MOCK_PERSONA, isLoading: false };
+    renderEditor("/admin/avatar-personas/p-1/edit");
+    expect(screen.getByText("hcp.knowledgeTitle")).toBeInTheDocument();
+  });
+
+  it("does not render the Knowledge/Foundry IQ section in create mode (no persona id yet)", () => {
+    renderEditor("/admin/avatar-personas/new");
+    expect(screen.queryByText("hcp.knowledgeTitle")).not.toBeInTheDocument();
   });
 });

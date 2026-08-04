@@ -777,9 +777,20 @@ async def sync_agent_for_profile(
     # which set agent_sync_status="failed") rather than silently producing an
     # unauthenticated MCPTool that gets reported as a "synced" agent.
     kb_tools: list = []
+    from app.models.avatar_persona import AvatarPersona
     from app.services import knowledge_base_service
 
-    kb_configs = await knowledge_base_service.get_knowledge_configs(db, profile.id)
+    # Personas store their Knowledge Base configs in a separate sibling table
+    # (AvatarPersonaKnowledgeConfig, persona-hcp-foundry-alignment Increment C)
+    # -- HcpKnowledgeConfig.hcp_profile_id is a hard-typed FK to hcp_profiles.id,
+    # so querying it with a persona id would silently and always return [].
+    if isinstance(profile, AvatarPersona):
+        from app.services import persona_knowledge_service
+
+        kb_configs = await persona_knowledge_service.get_knowledge_configs(db, profile.id)
+    else:
+        kb_configs = await knowledge_base_service.get_knowledge_configs(db, profile.id)
+
     if kb_configs:
         rt_map = await knowledge_base_service.resolve_kb_remote_tool_connections(db, kb_configs)
         kb_tools = knowledge_base_service.build_search_tools(kb_configs, rt_map)

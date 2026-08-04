@@ -8,7 +8,7 @@ partial unique DB index (`ix_avatar_personas_unique_default`) that rejects a
 second enabled default even if the service-layer guard is bypassed."""
 
 from sqlalchemy import Boolean, Index, String, Text, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 
@@ -49,6 +49,23 @@ class AvatarPersona(Base, TimestampMixin):
         String(20), default="none"
     )  # none|pending|synced|failed
     agent_sync_error: Mapped[str] = mapped_column(Text, default="")
+
+    # Knowledge Base / Foundry IQ configs (persona-hcp-foundry-alignment
+    # Increment C) -- mirrors HcpProfile.knowledge_configs, sibling table
+    # AvatarPersonaKnowledgeConfig (not a shared polymorphic FK).
+    knowledge_configs = relationship(
+        "AvatarPersonaKnowledgeConfig",
+        back_populates="avatar_persona",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def knowledge_config_count(self) -> int:
+        """Count of associated knowledge base configs (mirrors HcpProfile)."""
+        try:
+            return len(self.knowledge_configs)
+        except Exception:
+            return 0
 
     def to_prompt_dict(self) -> dict:
         """Return persona data as a dict for agent_sync_service.build_agent_instructions().

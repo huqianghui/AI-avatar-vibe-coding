@@ -14,10 +14,15 @@ vi.mock("react-i18next", () => ({
 }));
 
 let mockKbConfigs: Array<{ id: string; index_name: string }> = [];
+const mockAddKbMutate = vi.fn();
 const mockRemoveKbMutate = vi.fn();
 
 vi.mock("@/hooks/use-knowledge-base", () => ({
   useHcpKnowledgeConfigs: () => ({ data: mockKbConfigs }),
+  useAddKnowledgeConfig: () => ({
+    mutate: mockAddKbMutate,
+    isPending: false,
+  }),
   useRemoveKnowledgeConfig: () => ({
     mutate: mockRemoveKbMutate,
     isPending: false,

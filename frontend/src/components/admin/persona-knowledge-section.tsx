@@ -1,3 +1,11 @@
+/**
+ * Persona-scoped Knowledge / Foundry IQ section (persona-hcp-foundry-alignment
+ * Increment C). Mirrors `knowledge-tab.tsx`'s HCP UI exactly -- same card
+ * layout, same "hcp.*" translation keys (reused as-is, matching how
+ * `persona-agent-status-section.tsx` already reuses `hcp.agentVersion` /
+ * `hcp.retrySync` for personas rather than duplicating strings) -- but wired
+ * to the persona-scoped hooks/API instead of the HCP ones.
+ */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Trash2, Plus, Database } from "lucide-react";
@@ -12,30 +20,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConnectKbDialog } from "@/components/admin/connect-kb-dialog";
 import {
-  useHcpKnowledgeConfigs,
-  useAddKnowledgeConfig,
-  useRemoveKnowledgeConfig,
+  usePersonaKnowledgeConfigs,
+  useAddPersonaKnowledgeConfig,
+  useRemovePersonaKnowledgeConfig,
 } from "@/hooks/use-knowledge-base";
 import type { KnowledgeConfigCreate } from "@/types/knowledge-base";
 
-interface KnowledgeTabProps {
-  hcpId: string;
+interface PersonaKnowledgeSectionProps {
+  personaId: string;
 }
 
-export function KnowledgeTab({ hcpId }: KnowledgeTabProps) {
+export function PersonaKnowledgeSection({
+  personaId,
+}: PersonaKnowledgeSectionProps) {
   const { t } = useTranslation("admin");
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
 
-  const { data: configs, isLoading } = useHcpKnowledgeConfigs(hcpId);
-  const addMutation = useAddKnowledgeConfig();
-  const removeMutation = useRemoveKnowledgeConfig();
+  const { data: configs, isLoading } = usePersonaKnowledgeConfigs(personaId);
+  const addMutation = useAddPersonaKnowledgeConfig();
+  const removeMutation = useRemovePersonaKnowledgeConfig();
 
   const handleRemove = (configId: string) => {
     removeMutation.mutate(configId);
   };
 
   const handleConnect = (data: KnowledgeConfigCreate, onDone: () => void) => {
-    addMutation.mutate({ hcpId, data }, { onSuccess: onDone });
+    addMutation.mutate({ personaId, data }, { onSuccess: onDone });
   };
 
   return (
@@ -59,9 +69,7 @@ export function KnowledgeTab({ hcpId }: KnowledgeTabProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => setConnectDialogOpen(true)}
-                >
+                <DropdownMenuItem onClick={() => setConnectDialogOpen(true)}>
                   <Database className="size-4 mr-2" />
                   {t("hcp.connectToFoundryIQ")}
                 </DropdownMenuItem>
@@ -94,8 +102,7 @@ export function KnowledgeTab({ hcpId }: KnowledgeTabProps) {
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         <span>
-                          {t("hcp.kbConnectionLabel")}:{" "}
-                          {config.connection_name}
+                          {t("hcp.kbConnectionLabel")}: {config.connection_name}
                         </span>
                       </div>
                     </div>

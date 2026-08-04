@@ -55,3 +55,47 @@ export function useRemoveKnowledgeConfig() {
     },
   });
 }
+
+// AvatarPersona-scoped equivalents (persona-hcp-foundry-alignment
+// Increment C). useSearchConnections/useSearchIndexes above are global
+// (owner-agnostic) and reused as-is by the persona Knowledge/Foundry IQ
+// section.
+
+export function usePersonaKnowledgeConfigs(personaId: string | undefined) {
+  return useQuery({
+    queryKey: ["knowledge-base", "persona", personaId, "configs"],
+    queryFn: () => knowledgeBaseApi.getPersonaConfigs(personaId!),
+    enabled: !!personaId,
+  });
+}
+
+export function useAddPersonaKnowledgeConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      personaId,
+      data,
+    }: {
+      personaId: string;
+      data: KnowledgeConfigCreate;
+    }) => knowledgeBaseApi.addPersonaConfig(personaId, data),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["knowledge-base", "persona", variables.personaId, "configs"],
+      });
+    },
+  });
+}
+
+export function useRemovePersonaKnowledgeConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (configId: string) =>
+      knowledgeBaseApi.removePersonaConfig(configId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["knowledge-base"],
+      });
+    },
+  });
+}

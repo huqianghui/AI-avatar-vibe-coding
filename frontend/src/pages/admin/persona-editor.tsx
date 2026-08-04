@@ -30,6 +30,7 @@ import {
 import { AvatarView } from "@/components/voice/avatar-view";
 import { AvatarCharacterGallery } from "@/components/admin/avatar-character-gallery";
 import { PersonaAgentStatusSection } from "@/components/admin/persona-agent-status-section";
+import { PersonaKnowledgeSection } from "@/components/admin/persona-knowledge-section";
 import {
   SUPPORTED_VOICE_LOCALES,
   LOCALE_FLAGS,
@@ -504,6 +505,13 @@ export default function PersonaEditorPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* 6. Knowledge / Foundry IQ (persona-hcp-foundry-alignment
+           * Increment C; mirrors the HCP profile editor's KnowledgeTab).
+           * Requires a persisted persona id -- unavailable until the
+           * persona has been created at least once (same "save first"
+           * constraint as the HCP knowledge tab). */}
+          {isEdit && id && <PersonaKnowledgeSection personaId={id} />}
         </div>
 
         {/* Bottom action bar */}

@@ -266,3 +266,135 @@ class TestAgentPortalUrlEndpoint:
         assert data["agent_name"] == "persona-agent-portal"
         assert data["agent_version"] == "3"
         assert data["url"] == "https://ai.azure.com"
+
+
+class TestPersonaKnowledgeConfigsEndpoints:
+    """Tests for the persona-scoped Knowledge Base config routes
+    (persona-hcp-foundry-alignment Increment C)."""
+
+    async def test_admin_list_configs_empty(self, client):
+        persona = await _create_persona(name="No Configs")
+        _, token = await _create_admin_and_token()
+
+        response = await client.get(
+            f"{BASE}/{persona.id}/knowledge-configs",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    async def test_non_admin_list_configs_returns_403(self, client):
+        persona = await _create_persona(name="Any")
+        _, token = await _create_user_and_token()
+
+        response = await client.get(
+            f"{BASE}/{persona.id}/knowledge-configs",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403
+
+    async def test_admin_add_config_returns_201(self, client):
+        persona = await _create_persona(name="Add Config Target")
+        _, token = await _create_admin_and_token()
+
+        with patch(
+            "app.services.persona_knowledge_service._trigger_agent_resync",
+            new_callable=AsyncMock,
+        ):
+            response = await client.post(
+                f"{BASE}/{persona.id}/knowledge-configs",
+                json={
+                    "connection_name": "conn-api",
+                    "connection_target": "https://search.example.com",
+                    "index_name": "index-api",
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["avatar_persona_id"] == persona.id
+        assert data["connection_name"] == "conn-api"
+        assert data["index_name"] == "index-api"
+        assert data["server_label"] == "knowledge-base-index-api"
+        assert data["is_enabled"] is True
+
+    async def test_non_admin_add_config_returns_403(self, client):
+        persona = await _create_persona(name="Any")
+        _, token = await _create_user_and_token()
+
+        response = await client.post(
+            f"{BASE}/{persona.id}/knowledge-configs",
+            json={"connection_name": "conn", "index_name": "idx"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403
+
+    async def test_admin_add_then_list_returns_config(self, client):
+        persona = await _create_persona(name="List After Add")
+        _, token = await _create_admin_and_token()
+
+        with patch(
+            "app.services.persona_knowledge_service._trigger_agent_resync",
+            new_callable=AsyncMock,
+        ):
+            await client.post(
+                f"{BASE}/{persona.id}/knowledge-configs",
+                json={"connection_name": "conn-list", "index_name": "index-list"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        response = await client.get(
+            f"{BASE}/{persona.id}/knowledge-configs",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["connection_name"] == "conn-list"
+
+    async def test_admin_delete_config_returns_204(self, client):
+        persona = await _create_persona(name="Delete Config Target")
+        _, token = await _create_admin_and_token()
+
+        with patch(
+            "app.services.persona_knowledge_service._trigger_agent_resync",
+            new_callable=AsyncMock,
+        ):
+            create_response = await client.post(
+                f"{BASE}/{persona.id}/knowledge-configs",
+                json={"connection_name": "conn-del", "index_name": "index-del"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            config_id = create_response.json()["id"]
+
+            response = await client.delete(
+                f"{BASE}/knowledge-configs/{config_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 204
+
+    async def test_admin_delete_nonexistent_config_returns_404(self, client):
+        _, token = await _create_admin_and_token()
+
+        response = await client.delete(
+            f"{BASE}/knowledge-configs/nonexistent-id",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 404
+
+    async def test_non_admin_delete_config_returns_403(self, client):
+        _, token = await _create_user_and_token()
+
+        response = await client.delete(
+            f"{BASE}/knowledge-configs/some-id",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403

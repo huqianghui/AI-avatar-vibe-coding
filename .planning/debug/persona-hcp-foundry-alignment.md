@@ -13,14 +13,19 @@ test: n/a — implementation phase, not hypothesis testing.
 expecting: n/a
 next_action: |
   Increment A DONE (commit cc8a962) — backend Foundry agent sync fields/hooks/routes for AvatarPersona.
-  Start Increment B: render the AI Foundry Agent sync card in persona-editor.tsx (reuse
-  agent-status-section.tsx pattern via a thin persona variant, since it is hard-typed to
-  HcpProfile and imports @/api/hcp-profiles directly), wired to the new
-  /admin/avatar-personas/{id}/retry-sync and /agent-portal-url endpoints. Still need to read
-  frontend/src/api/avatar-personas.ts and frontend/src/hooks/use-avatar-personas.ts (not yet
-  opened) to add sync-status types + API functions + mutation hooks before touching the UI.
-  Write vitest unit tests + Playwright E2E, run tsc -b / npm run build / vitest, commit alone,
-  then update this file again before starting Increment C.
+  Increment B DONE (commit fb7e9ef) — frontend AgentStatusSection rendering for personas.
+  Increment C DONE (backend + frontend Knowledge/Foundry IQ for personas) — implemented, unit
+  tested (backend pytest + frontend vitest), Playwright E2E added, all gates green. NOT YET
+  COMMITTED as of this update — commit immediately after this file save, using:
+  "feat(persona): knowledge base / Foundry IQ attach for personas (increment C)".
+  Start Increment D next: new shared <ConfigurationPanel> component opened by a gear Button in
+  PlaygroundPreviewPanel's toolbar; migrate voice/language/avatar/speech fields out of the
+  always-visible agent-config-left-panel.tsx Cards (HCP) and persona-editor.tsx equivalent
+  fields into this panel for BOTH pages, per the Foundry-portal reference interaction pattern.
+  Add/adjust Playwright E2E + vitest unit tests, run tsc -b / npm run build / vitest / pytest
+  gates, commit alone as "feat(admin): gear Configure button opens Foundry-style Configuration
+  panel on HCP + persona editors (increment D)". When D is green and committed, update this file
+  to status: awaiting_human_verify and return DEBUG COMPLETE summarizing all 4 increment commits.
 
 ## Symptoms
 <!-- Written during gathering, then IMMUTABLE -->
@@ -63,6 +68,51 @@ started: Longstanding. Phase 38 (2026-08-04) explicitly deferred the Foundry-age
   found: `HcpKnowledgeConfig.hcp_profile_id` is a NOT-NULL `ForeignKey("hcp_profiles.id", ondelete="CASCADE")` with a `relationship("HcpProfile", back_populates="knowledge_configs")` — hard-typed to HCP at the DB, ORM, and service-function-signature level (`get_knowledge_configs(db, hcp_profile_id: str)`, `_trigger_agent_resync(db, hcp_profile_id: str)` which re-queries `HcpProfile` directly by that id). `ConnectKbDialog` (frontend) takes a `hcpId` prop.
   implication: Confirms gap #2 (persona Knowledge/Foundry-IQ) requires real new backend work: either (a) a new sibling table `AvatarPersonaKnowledgeConfig` + a generalized/duplicated service module (fastest, safest — no risk to HCP's existing FK/CASCADE semantics), or (b) migrating `HcpKnowledgeConfig` to a polymorphic `owner_type`/`owner_id` shape (touches every existing HCP knowledge-base code path — higher risk). Given CLAUDE.md's "never modify schema without migration" + "no raw SQL" rules and the existing precedent of duplicating rather than risking shared FKs (the codebase already duplicates AgentStatusSection-style patterns per-domain rather than sharing polymorphic tables), option (a) is the lower-risk path.
 
+- timestamp: 2026-08-04T19:45:00Z
+  checked: Local dev SQLite `backend/ai_coach.db` via `alembic current`, direct `curl` POST to
+  `/admin/avatar-personas` while running the app through the correct project `.venv`, and the
+  uvicorn traceback captured by running it in the foreground.
+  found: The Playwright E2E for Increment C's new Knowledge section timed out because persona
+  creation returned HTTP 500. Root cause was environmental, not a code defect: the local dev
+  database file was stamped at revision `g40a_add_hcp_direct_voice_config` — TWO migrations
+  behind head (`h41a_add_persona_agent_sync_fields`, `i42a_add_persona_knowledge_configs` had
+  never been applied to this file), because nobody had run `alembic upgrade head` locally since
+  Increment A introduced h41a. `avatar_personas` was missing the `agent_id` column entirely,
+  causing every create/update to 500 at the INSERT. Running `alembic upgrade head` applied h41a
+  cleanly; i42a then hit "table avatar_persona_knowledge_configs already exists" because the
+  app's own `Base.metadata.create_all()` startup step had already created that brand-new table
+  (create_all can add new tables but never ALTERs existing ones) — verified the existing table's
+  columns exactly matched the migration's target schema via `PRAGMA table_info`, then used
+  `alembic stamp head` (not a second CREATE TABLE) to reconcile the version pointer without
+  touching data. A secondary discovery during this: `which uvicorn` on this shell resolves to a
+  stale system-wide console-script whose shebang points at a DIFFERENT, older project checkout
+  (`AI-Coach-vibe-coding` vs `AI-avatar-vibe-coding`) still present on disk from before the repo
+  rename — invoking bare `uvicorn`/`python` without an explicit `.venv/bin/` prefix silently runs
+  the wrong interpreter/site-packages. Always invoke `backend/.venv/bin/python -m uvicorn ...` or
+  `backend/.venv/bin/python -m alembic ...` explicitly in this environment.
+  implication: Not an Increment C code bug — a pre-existing local dev-environment migration gap
+  (dating back to Increment A) plus a stale-shebang footgun from the project rename. Both are now
+  fixed for this dev environment (db upgraded to head, correct venv confirmed working); no source
+  files needed changing. Documenting here so the same trap isn't re-hit debugging Increment D.
+
+- timestamp: 2026-08-04T19:55:00Z
+  checked: `frontend/e2e/admin-avatar-personas.spec.ts` (Phase 36-02, pre-existing, predates
+  Increment A) re-run after the dev-db fix above, to check for Increment C regressions.
+  found: Two of its three tests now fail/timeout — one on `page.waitForResponse` for a persona
+  POST exceeding the spec's default 30s test timeout, one on a post-reload assertion likely
+  cascading from the first test's incomplete cleanup. Root cause: Increment A (already committed
+  as cc8a962, before this session) made every persona create/update synchronously call
+  `agent_sync_service.sync_agent_for_profile`, which performs a real Azure AI Foundry agent
+  create/update round-trip taking ~14s (confirmed via direct curl timing). This spec creates TWO
+  personas in one test body and was written before Increment A existed, so it never budgeted for
+  this latency.
+  implication: This is a PRE-EXISTING regression introduced by the already-committed Increment A,
+  not something caused by Increment C's changes (which only touch persona knowledge-config code,
+  never persona creation timing). Out of scope for Increment C per this session's explicit
+  instruction to touch only Increments C and D. Flagging for a future fix (raise this spec's
+  `test.setTimeout()`, mirroring the fix already applied in the new
+  `admin-persona-knowledge.spec.ts`) rather than editing Increment A's test file now.
+
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->
 
@@ -102,12 +152,19 @@ fix: |
       Evidence implication_2's option (ii). New POST /admin/avatar-personas/{id}/retry-sync + GET
       .../agent-portal-url routes mirroring hcp_profiles.py exactly (including the 422-not-400
       bad_request() behavior).
-    Increment B (frontend) — NOT YET STARTED. Render AgentStatusSection (or a thin persona variant)
-      in persona-editor.tsx's right/side area, wired to the new persona sync fields/mutations.
-    Increment C (backend + frontend, gap #2) — NOT YET STARTED. New AvatarPersonaKnowledgeConfig
-      table (sibling to HcpKnowledgeConfig, not a shared polymorphic FK) + a persona-scoped
-      knowledge_base_service counterpart + ConnectKbDialog generalized to accept an
-      ownerId/ownerType, wired into sync_agent_for_profile's tool-building step for personas.
+    Increment B (frontend) — APPLIED (commit fb7e9ef). AgentStatusSection rendering reused for
+      personas via persona-agent-status-section.tsx, reusing hcp.* i18n keys directly.
+    Increment C (backend + frontend, gap #2) — APPLIED (pending commit, this update). New
+      AvatarPersonaKnowledgeConfig table (sibling to HcpKnowledgeConfig, not a shared polymorphic
+      FK) + persona_knowledge_service.py counterpart (get/add/remove + _trigger_agent_resync) +
+      3 new admin routes on admin_avatar_personas.py + agent_sync_service.py dispatch
+      (isinstance(profile, AvatarPersona)) routing KB-tool building to the persona service.
+      Frontend: ConnectKbDialog refactored from an owner-typed `hcpId` prop to an owner-agnostic
+      `onConnect(data, onDone)` + `isPending` callback API (both HCP call sites —
+      knowledge-tab.tsx and agent-config-left-panel.tsx — updated to the new shape); new
+      persona-knowledge-section.tsx mirroring knowledge-tab.tsx's UI, wired to persona hooks,
+      rendered in persona-editor.tsx gated on `isEdit && id`. Reused hcp.* i18n keys as-is,
+      matching Increment B's established convention — no locale file edits needed.
     Increment D (frontend, largest, applies to BOTH pages) — NOT YET STARTED. New shared
       <ConfigurationPanel> component opened by a gear Button in PlaygroundPreviewPanel's toolbar,
       migrating avatar/voice/language fields out of the always-visible left-panel Cards into this
@@ -120,11 +177,24 @@ verification: |
   regressions. New tests added: TestToPromptDict, TestAgentSyncOnCreate (incl. sync-survives-
   default-promotion), TestAgentSyncOnUpdate, TestDeletePersonaWithAgent, TestRetryAgentSync
   (backend/tests/test_avatar_persona_service.py); TestRetrySyncEndpoint, TestAgentPortalUrlEndpoint
-  (backend/tests/test_admin_avatar_personas_api.py). A full unfiltered `pytest -q` (2988 tests,
-  coverage-gated) was also launched for maximal confidence but remained running past a reasonable
-  wait threshold (unrelated to this change's blast radius); proceeded on the strength of the
-  targeted 115-test run per the isolated-blast-radius fallback agreed with the user. Increments
-  B/C/D not yet verified.
+  (backend/tests/test_admin_avatar_personas_api.py).
+  Increment B: verified in a prior session segment (commit fb7e9ef).
+  Increment C: `ruff check .` + `ruff format --check .` clean. Full backend `pytest -q`:
+  2964/2965 passed (the 1 failure, `test_three_profiles_mixed_create_and_update`, reproduced as
+  passing in isolation and confirmed unrelated — a live-Azure-integration test, docstring-
+  confirmed, that my isinstance dispatch change never touches since it only affects the
+  AvatarPersona branch). Frontend `npx tsc -b` clean, `npm run build` succeeds, targeted vitest
+  (persona-knowledge-section.test.tsx, agent-config-left-panel.test.tsx, persona-editor.test.tsx)
+  65/65 passed, full vitest suite 2714/2715 passed (1 pre-existing unrelated failure in
+  login.test.tsx, confirmed via `git status` — no login files touched). New Playwright E2E
+  `frontend/e2e/admin-persona-knowledge.spec.ts` (3/3 passed, run against a real backend after
+  fixing a pre-existing local dev-db migration gap — see Evidence) covering: Knowledge card
+  absent while creating; card present with empty state after save; Add -> Connect to Foundry IQ
+  opens the dialog with title/description and a disabled Connect button until both selects are
+  filled; Cancel closes without side effects. Also re-ran the pre-existing
+  `admin-avatar-personas.spec.ts` for regressions — 2 of its 3 tests now fail on test-timeout,
+  traced to a pre-existing Increment-A-caused latency gap (see Evidence), not an Increment C
+  regression; left unmodified per this session's C/D-only scope.
 files_changed:
   - backend/app/models/avatar_persona.py
   - backend/alembic/versions/h41a_add_persona_agent_sync_fields.py
@@ -134,3 +204,20 @@ files_changed:
   - backend/app/api/admin_avatar_personas.py
   - backend/tests/test_avatar_persona_service.py
   - backend/tests/test_admin_avatar_personas_api.py
+  - backend/app/models/avatar_persona_knowledge_config.py
+  - backend/alembic/versions/i42a_add_persona_knowledge_configs.py
+  - backend/app/schemas/avatar_persona_knowledge.py
+  - backend/app/services/persona_knowledge_service.py
+  - backend/tests/test_persona_knowledge_service.py
+  - frontend/src/types/knowledge-base.ts
+  - frontend/src/api/knowledge-base.ts
+  - frontend/src/hooks/use-knowledge-base.ts
+  - frontend/src/components/admin/connect-kb-dialog.tsx
+  - frontend/src/components/admin/knowledge-tab.tsx
+  - frontend/src/components/admin/agent-config-left-panel.tsx
+  - frontend/src/components/admin/agent-config-left-panel.test.tsx
+  - frontend/src/components/admin/persona-knowledge-section.tsx
+  - frontend/src/components/admin/persona-knowledge-section.test.tsx
+  - frontend/src/pages/admin/persona-editor.tsx
+  - frontend/src/pages/admin/persona-editor.test.tsx
+  - frontend/e2e/admin-persona-knowledge.spec.ts

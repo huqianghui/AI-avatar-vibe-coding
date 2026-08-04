@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, require_role
 from app.models.user import User
 from app.schemas.avatar_persona import AvatarPersonaCreate, AvatarPersonaOut, AvatarPersonaUpdate
-from app.services import avatar_persona_service
+from app.schemas.avatar_persona_knowledge import PersonaKnowledgeConfigOut
+from app.schemas.knowledge_base import KnowledgeConfigCreate
+from app.services import avatar_persona_service, persona_knowledge_service
 from app.utils.exceptions import bad_request
 
 router = APIRouter(prefix="/admin/avatar-personas", tags=["admin-avatar-personas"])
@@ -159,3 +161,51 @@ async def get_agent_portal_url(
         agent_name=persona.agent_id,
         agent_version=version,
     )
+
+
+@router.get("/{persona_id}/knowledge-configs", response_model=list[PersonaKnowledgeConfigOut])
+async def get_persona_knowledge_configs(
+    persona_id: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+) -> list[PersonaKnowledgeConfigOut]:
+    """List Knowledge Base configs attached to a persona's AI Foundry Agent.
+    Admin only.
+
+    (persona-hcp-foundry-alignment Increment C; mirrors knowledge_base.py's
+    GET /knowledge-base/hcp/{hcp_profile_id}/configs route.)"""
+    configs = await persona_knowledge_service.get_knowledge_configs(db, persona_id)
+    return [PersonaKnowledgeConfigOut.model_validate(c) for c in configs]
+
+
+@router.post(
+    "/{persona_id}/knowledge-configs",
+    response_model=PersonaKnowledgeConfigOut,
+    status_code=201,
+)
+async def add_persona_knowledge_config(
+    persona_id: str,
+    data: KnowledgeConfigCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+) -> PersonaKnowledgeConfigOut:
+    """Attach a Knowledge Base to a persona's AI Foundry Agent. Admin only.
+
+    (persona-hcp-foundry-alignment Increment C; mirrors knowledge_base.py's
+    POST /knowledge-base/hcp/{hcp_profile_id}/configs route.)"""
+    config = await persona_knowledge_service.add_knowledge_config(db, persona_id, data)
+    return PersonaKnowledgeConfigOut.model_validate(config)
+
+
+@router.delete("/knowledge-configs/{config_id}", status_code=204)
+async def remove_persona_knowledge_config(
+    config_id: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+) -> Response:
+    """Remove a Knowledge Base config from a persona. Admin only.
+
+    (persona-hcp-foundry-alignment Increment C; mirrors knowledge_base.py's
+    DELETE /knowledge-base/configs/{config_id} route.)"""
+    await persona_knowledge_service.remove_knowledge_config(db, config_id)
+    return Response(status_code=204)

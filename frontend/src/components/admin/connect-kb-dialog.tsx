@@ -18,22 +18,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {
-  useSearchConnections,
-  useSearchIndexes,
-  useAddKnowledgeConfig,
-} from "@/hooks/use-knowledge-base";
+import { useSearchConnections, useSearchIndexes } from "@/hooks/use-knowledge-base";
+import type { KnowledgeConfigCreate } from "@/types/knowledge-base";
 
 interface ConnectKbDialogProps {
-  hcpId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Owner-agnostic connect handler (persona-hcp-foundry-alignment
+   * Increment C). The dialog itself has no knowledge of *what* it's
+   * attaching to (HCP profile vs AvatarPersona) -- the caller supplies
+   * the actual mutate call and is responsible for invoking `onDone` once
+   * the request succeeds so the dialog can reset/close itself. */
+  onConnect: (data: KnowledgeConfigCreate, onDone: () => void) => void;
+  isPending: boolean;
 }
 
 export function ConnectKbDialog({
-  hcpId,
   open,
   onOpenChange,
+  onConnect,
+  isPending,
 }: ConnectKbDialogProps) {
   const { t } = useTranslation("admin");
   const [selectedConnection, setSelectedConnection] = useState("");
@@ -42,7 +46,6 @@ export function ConnectKbDialog({
   const { data: connections, isLoading: connectionsLoading } =
     useSearchConnections();
   const { data: indexes, isLoading: indexesLoading } = useSearchIndexes();
-  const addConfigMutation = useAddKnowledgeConfig();
 
   const selectedConnectionObj = connections?.find(
     (c) => c.name === selectedConnection,
@@ -51,21 +54,16 @@ export function ConnectKbDialog({
   const handleConnect = () => {
     if (!selectedConnection || !selectedIndex || !selectedConnectionObj) return;
 
-    addConfigMutation.mutate(
+    onConnect(
       {
-        hcpId,
-        data: {
-          connection_name: selectedConnection,
-          connection_target: selectedConnectionObj.target,
-          index_name: selectedIndex,
-        },
+        connection_name: selectedConnection,
+        connection_target: selectedConnectionObj.target,
+        index_name: selectedIndex,
       },
-      {
-        onSuccess: () => {
-          setSelectedConnection("");
-          setSelectedIndex("");
-          onOpenChange(false);
-        },
+      () => {
+        setSelectedConnection("");
+        setSelectedIndex("");
+        onOpenChange(false);
       },
     );
   };
@@ -175,15 +173,9 @@ export function ConnectKbDialog({
           </Button>
           <Button
             onClick={handleConnect}
-            disabled={
-              !selectedConnection ||
-              !selectedIndex ||
-              addConfigMutation.isPending
-            }
+            disabled={!selectedConnection || !selectedIndex || isPending}
           >
-            {addConfigMutation.isPending && (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            )}
+            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {t("hcp.connectButton")}
           </Button>
         </DialogFooter>

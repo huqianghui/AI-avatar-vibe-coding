@@ -20,8 +20,10 @@ import { AvatarCharacterGallery } from "@/components/admin/avatar-character-gall
 import { ConnectKbDialog } from "@/components/admin/connect-kb-dialog";
 import {
   useHcpKnowledgeConfigs,
+  useAddKnowledgeConfig,
   useRemoveKnowledgeConfig,
 } from "@/hooks/use-knowledge-base";
+import type { KnowledgeConfigCreate } from "@/types/knowledge-base";
 import { SUPPORTED_VOICE_LOCALES, LOCALE_FLAGS, LOCALE_LABEL_KEY, VOICE_NAME_OPTIONS } from "@/lib/voice-constants";
 import type { HcpFormValues } from "@/pages/admin/hcp-profile-editor";
 import type { HcpProfile } from "@/types/hcp";
@@ -49,7 +51,13 @@ export function AgentConfigLeftPanel({
   const [foundationModel, setFoundationModel] = useState("");
 
   const { data: kbConfigs } = useHcpKnowledgeConfigs(profile?.id);
+  const addKbMutation = useAddKnowledgeConfig();
   const removeKbMutation = useRemoveKnowledgeConfig();
+
+  const handleConnectKb = (data: KnowledgeConfigCreate, onDone: () => void) => {
+    if (!profile?.id) return;
+    addKbMutation.mutate({ hcpId: profile.id, data }, { onSuccess: onDone });
+  };
 
   const recognitionLanguage = form.watch("recognition_language");
   const voiceName = form.watch("voice_name");
@@ -264,9 +272,10 @@ export function AgentConfigLeftPanel({
       {/* Connect Knowledge Base Dialog */}
       {profile?.id && (
         <ConnectKbDialog
-          hcpId={profile.id}
           open={connectKbDialogOpen}
           onOpenChange={setConnectKbDialogOpen}
+          onConnect={handleConnectKb}
+          isPending={addKbMutation.isPending}
         />
       )}
     </div>
