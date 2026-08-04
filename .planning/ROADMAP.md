@@ -6,7 +6,7 @@
 - ✅ **v2.0 Avatar MVP** - Phases 32-35 (complete 2026-08-02)
 - ✅ **v2.1 Avatar Persona & Post-Login Experience** - Phase 36 (complete 2026-08-02)
 - ✅ **v2.2 Persona Fidelity & Hardening** - Phase 37 (complete 2026-08-03)
-- 🚧 **v2.3 Persona Editor Foundry Parity** - Phase 38 (planned 2026-08-04)
+- 🚧 **v2.3 Voice Mode Config (Foundry Portal Style)** - Phase 38 (planned 2026-08-04, rescoped same day)
 
 ## Phases
 
@@ -349,27 +349,24 @@ Plans:
 - [x] 37-03-PLAN.md — Admin per-locale greeting editing UI + i18n parity + E2E teardown fix for admin-avatar-personas.spec.ts (PERSONA-07, HARD-01)
 - [x] 37-04-PLAN.md — Landing-page avatar video transceiver negotiation + persona identity wiring + E2E identity-switch proof (PERSONA-05)
 
-### 📋 v2.3 Persona Editor Foundry Parity (Phase 38)
+### 📋 v2.3 Voice Mode Config — Foundry Portal Style (Phase 38)
 
-**Milestone Goal:** Persona 编辑器功能对齐 HCP profile 编辑器：persona 保存时生成/同步对应 AI Foundry agent，支持知识库挂载（Foundry IQ）、模型部署持久化、自动生成指令、工作台实时试聊；Voice 列表与 Language 联动并补齐西班牙语声音；全站品牌文案 "AI Coach" 统一为 "AI Avatar"。
+**Milestone Goal:** 将 "Voice Live Instance" 选择卡替换为 AI Foundry portal 最新 voice mode 直接配置（模型部署、Language、Speech output 语音、Avatar 画廊），HCP 档案编辑页与 Persona 编辑页两处统一，配置持久化并被语音会话实际使用。原 Persona Editor Foundry Parity 需求（PEDIT-01..06, BRAND-01）延后至 Future Requirements（用户 2026-08-04 rescope 决定）。
 
-- [ ] **Phase 38: Persona Editor Foundry Parity** - Persona-backed Foundry agent sync, knowledge base attachment, model deployment persistence, auto-generated instructions, workbench live test, voice/language linkage with Spanish voices, AI Coach → AI Avatar rebranding
+- [ ] **Phase 38: Voice Mode Config (Foundry Portal Style)** - Replace Voice Live Instance card with Foundry-portal-style direct voice mode config on both HCP profile editor and persona editor
 
 ## Phase Details (v2.3)
 
-### Phase 38: Persona Editor Foundry Parity
+### Phase 38: Voice Mode Config (Foundry Portal Style)
 
-**Goal**: An avatar persona is a first-class Foundry-backed agent — saving a persona provisions/updates its AI Foundry agent (instructions, model, knowledge) exactly like an HCP profile does; the editor offers knowledge-base attachment, persisted model deployment, auto-generated instructions with regenerate, and a working workbench live-test; voice options follow the selected language (including Spanish voices) and no "AI Coach" wording remains user-visible
-**Depends on**: Phase 36 (persona catalog + editor), Phase 37 (persona fidelity/session config), Phase 28 (HCP Foundry agent provisioning + knowledge config), Phase 34 (Spanish locales)
-**Requirements**: PEDIT-01, PEDIT-02, PEDIT-03, PEDIT-04, PEDIT-05, PEDIT-06, BRAND-01
+**Goal**: Both the HCP profile editor and the persona editor configure the digital human via Foundry-portal-style direct voice mode settings (model deployment, language, speech-output voice, avatar toggle + character gallery) instead of selecting a pre-provisioned Voice Live instance; the HCP page's Voice Live Instance card is removed, the direct config is persisted, and voice sessions actually use it
+**Depends on**: Phase 36 (persona catalog + editor), Phase 37 (persona fidelity/session config), Phase 28 (HCP Voice Live instance wiring — the mechanism being replaced), Phase 34 (Spanish locales)
+**Requirements**: VMODE-01, VMODE-02
 **Success Criteria** (what must be TRUE):
-  1. Saving a persona creates/updates a corresponding AI Foundry agent whose instructions/model/knowledge stay in sync with the persona (same provisioning mechanism as HCP profiles)
-  2. Admin can attach/detach knowledge bases to a persona in the editor, and persona sessions ground answers in the attached knowledge (backend no longer hard-scoped to hcp_profiles)
-  3. Model deployment is persisted on AvatarPersona (with migration), selectable in the editor, and actually used by the persona's agent/session
-  4. Instructions are auto-generated from persona fields with a regenerate button; custom instructions override when non-empty (HCP-editor behavior)
-  5. The workbench "开始" button starts a live test session with the persona being edited
-  6. Voice dropdown is filtered/linked by the selected language and includes Spanish voices (es-ES/es-MX/es-US); no mismatched-language voices are shown
-  7. No user-visible "AI Coach" text remains in any locale — all rebranded to "AI Avatar" (identifiers and API paths unchanged)
+  1. HCP profile editor no longer shows a "Voice Live Instance" selector; in its place is Foundry-portal-style voice mode config (model deployment, language, speech-output voice, avatar toggle + character gallery)
+  2. The HCP direct voice-mode config is persisted on the HCP profile (Alembic migration as needed) and HCP voice sessions use it — no dependency on a pre-provisioned Voice Live instance
+  3. The persona editor uses the same Foundry-portal-style voice mode config components/layout (speech output section, avatar gallery with character previews, language dropdown)
+  4. Existing HCP and persona voice sessions keep working end-to-end after the swap (no regression in avatar video/voice)
 
 ## Progress
 
@@ -386,4 +383,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
-| 38. Persona Editor Foundry Parity | v2.3 | 0/? | Not started | - |
+| 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 0/? | Not started | - |
