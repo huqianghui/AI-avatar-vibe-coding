@@ -124,6 +124,7 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
   // noisy) second delete on an id that no longer exists.
   let personaAId: string | undefined;
   let personaBId: string | undefined;
+  let galleryPersonaId: string | undefined;
 
   test.beforeAll(async ({ request }) => {
     token = await loginApi(request, "admin", "admin123");
@@ -143,6 +144,9 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
     }
     if (personaBId) {
       await deletePersonaApi(request, token, personaBId);
+    }
+    if (galleryPersonaId) {
+      await deletePersonaApi(request, token, galleryPersonaId);
     }
   });
 
@@ -309,5 +313,78 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
     // B remains default at the end of the test body. `afterAll` restores
     // `originalDefaultId` as default (which also clears B's delete guard)
     // and then deletes B.
+  });
+
+  // Plan 38-03 (VMODE-02): proves the persona editor's Character & Avatar
+  // card renders the shared `AvatarCharacterGallery` component (built in
+  // Plan 38-02) -- not just that "a button with a character's name" exists
+  // somewhere, but that the gallery's own filter-button row and grid
+  // container are present -- and that a gallery selection survives a
+  // save + reload.
+  test("avatar gallery renders as the shared component and a selection persists across save + reload", async ({
+    page,
+  }) => {
+    await page.goto("/admin/avatar-personas");
+    await expect(
+      page.getByRole("heading", { name: /avatar personas/i, level: 1 }),
+    ).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole("button", { name: /create persona/i }).click();
+    await page.waitForURL(/\/admin\/avatar-personas\/new$/, { timeout: 10000 });
+
+    const personaName = `E2E Persona Gallery ${Date.now()}`;
+    await page.getByPlaceholder(/e\.g\., lisa - casual/i).fill(personaName);
+
+    // The shared AvatarCharacterGallery's own grid container + all three
+    // filter buttons are visible BEFORE any selection is made.
+    const galleryGrid = page.getByTestId("avatar-character-grid");
+    await expect(galleryGrid).toBeVisible();
+    await expect(page.getByRole("button", { name: "All", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Photo", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Video", exact: true })).toBeVisible();
+
+    // Select a non-default character/style (the seeded default persona is
+    // Lisa / casual-sitting) -- Harry / business.
+    const harryBusiness = galleryGrid.getByTestId("avatar-item-harry-business");
+    await harryBusiness.click();
+    await expect(harryBusiness).toHaveClass(/border-primary/);
+
+    await page.locator("#persona-editor-greeting").fill(`Hello from ${personaName}!`);
+    await page
+      .locator("#persona-editor-prompt-fragment")
+      .fill("Speak concisely and warmly.");
+
+    const createResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/admin/avatar-personas") &&
+        response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: /save persona/i }).click();
+    const createBody = await (await createResponse).json();
+    galleryPersonaId = createBody.id as string;
+    expect(galleryPersonaId).toBeTruthy();
+
+    // Save success navigates (replace) to the new persona's edit route.
+    await page.waitForURL(
+      new RegExp(`/admin/avatar-personas/${galleryPersonaId}/edit$`),
+      { timeout: 5000 },
+    );
+
+    // Reload the same edit page and confirm the gallery selection persisted.
+    await page.reload();
+    await expect(page.getByTestId("avatar-character-grid")).toBeVisible({
+      timeout: 10000,
+    });
+    const harryBusinessAfterReload = page
+      .getByTestId("avatar-character-grid")
+      .getByTestId("avatar-item-harry-business");
+    await expect(harryBusinessAfterReload).toBeVisible();
+    await expect(harryBusinessAfterReload).toHaveClass(/border-primary/);
+
+    // Cleanup -- deleted here rather than left for afterAll since this
+    // persona is never promoted to default (no unique-default guard to
+    // clear first).
+    await deletePersonaApi(page.request, token, galleryPersonaId);
+    galleryPersonaId = undefined;
   });
 });
