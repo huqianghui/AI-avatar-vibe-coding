@@ -41,7 +41,18 @@ class HcpProfile(Base, TimestampMixin):
     )  # none|pending|synced|failed
     agent_sync_error: Mapped[str] = mapped_column(Text, default="")
 
-    # Voice Live Instance FK — preferred config source (replaces inline voice fields)
+    # Direct voice-mode config (VMODE-01) — source of truth for resolve_voice_config().
+    # Restores the columns dropped by z33a_drop_hcp_inline_voice_fields, per the
+    # 2026-08-04 rescope to mirror the AI Foundry portal's direct-config style.
+    voice_live_model: Mapped[str] = mapped_column(String(50), default="gpt-4o")
+    voice_name: Mapped[str] = mapped_column(String(200), default="en-US-AvaNeural")
+    recognition_language: Mapped[str] = mapped_column(String(20), default="auto")
+    avatar_character: Mapped[str] = mapped_column(String(100), default="lisa")
+    avatar_style: Mapped[str] = mapped_column(String(100), default="casual")
+    avatar_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Voice Live Instance FK — retained for legacy/display purposes only. No longer
+    # read by resolve_voice_config(); the columns above are now the sole source of truth.
     voice_live_instance_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("voice_live_instances.id"), nullable=True, default=None, index=True
     )
