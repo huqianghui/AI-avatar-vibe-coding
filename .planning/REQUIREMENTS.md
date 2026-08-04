@@ -61,6 +61,23 @@
 
 - [x] **HARD-01**: 数据完整性加固 — `is_default` 唯一性提升为 DB 级约束（partial unique index，enabled+is_default）；persona 相关 E2E 测试自带数据清理（teardown 删除测试创建的 persona 并恢复默认），dev DB 不再被测试运行污染
 
+## v2.3 Requirements — Persona Editor Foundry Parity
+
+> Approved 2026-08-04 (post persona-editor voice-mode redesign, debug session avatar-persona-voice-mode-config). The persona editor was rebuilt to mirror the HCP profile editor's "语音和数字人" layout; v2.3 closes the functional gaps so a persona is a first-class Foundry-backed agent like an HCP profile.
+
+### Persona 编辑器 (PEDIT)
+
+- [ ] **PEDIT-01**: Persona ↔ AI Foundry agent 同步 — 保存 persona 时创建/更新对应的 AI Foundry agent（与 HCP profile 的 agent provisioning 机制一致），instructions/voice/model 等配置与 Foundry agent 保持同步
+- [ ] **PEDIT-02**: Persona 级知识库挂载（Foundry IQ）— persona 可挂载知识库用于回答 grounding（后端解除 `hcp_profiles` 硬绑定），编辑器提供知识库添加/移除 UI（与 HCP 页"知识库与工具"一致）
+- [ ] **PEDIT-03**: 模型部署持久化 — `AvatarPersona` 持久化 model deployment 字段（迁移），编辑器下拉选择并保存，会话/agent 实际使用所选部署
+- [ ] **PEDIT-04**: 自动生成指令 — 基于 persona 字段自动生成 instructions（带"重新生成"按钮），自定义指令留空则使用自动生成结果（与 HCP 页行为一致）
+- [ ] **PEDIT-05**: 工作台实时试聊 — 编辑器右侧工作台"开始"按钮可用，管理员可直接与该 persona 试聊（复用现有 voice session 机制）
+- [ ] **PEDIT-06**: Voice 与 Language 联动 — voice 列表补齐西班牙语声音（es-ES/es-MX/es-US），并按所选 language 过滤/联动展示，不再展示与语言不符的声音
+
+### 品牌文案 (BRAND)
+
+- [ ] **BRAND-01**: 全站 "AI Coach" 字样统一改为 "AI Avatar"（所有 locale 的 UI 文案、页面标题、导航等），不改动代码标识符与 API 路径
+
 ## Future Requirements
 
 - **PERS-04**: 后台自动抽取用户偏好（自动 memory 机制）
@@ -102,6 +119,13 @@
 | PERSONA-07 | Phase 37 | Complete |
 | HARD-01 | Phase 37 | Complete |
 | LAND-01 | Phase 36 | Complete |
+| PEDIT-01 | Phase 38 | Planned |
+| PEDIT-02 | Phase 38 | Planned |
+| PEDIT-03 | Phase 38 | Planned |
+| PEDIT-04 | Phase 38 | Planned |
+| PEDIT-05 | Phase 38 | Planned |
+| PEDIT-06 | Phase 38 | Planned |
+| BRAND-01 | Phase 38 | Planned |
 
 **Coverage:**
 - v2.0 requirements: 12 total
