@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { AgentConfigLeftPanel } from "@/components/admin/agent-config-left-panel";
 import { PlaygroundPreviewPanel } from "@/components/admin/playground-preview-panel";
-import { useVoiceLiveInstances } from "@/hooks/use-voice-live-instances";
 import type { HcpFormValues } from "@/pages/admin/hcp-profile-editor";
 import type { HcpProfile } from "@/types/hcp";
 
@@ -19,13 +18,17 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
     setAutoInstructions(instructions);
   }, []);
 
-  // Resolve selected VL Instance to pass its avatar data to Playground
-  const { data } = useVoiceLiveInstances();
-  const instances = data?.items ?? [];
+  // VMODE-01: voice/avatar config is now sourced directly from the 6 inline
+  // HcpProfile form fields (Plan 38-01) rather than a bound VoiceLiveInstance.
+  // voice_live_instance_id is vestigial/optional -- kept only as a fallback
+  // identifier for VoiceTestPlayground's non-HCP (VL-instance testing) path.
   const vlInstanceId = form.watch("voice_live_instance_id");
-  const selectedInstance = instances.find((i) => i.id === vlInstanceId);
-  // Voice mode is implied solely by having an assigned VL Instance (D-11)
-  const voiceModeEnabled = Boolean(vlInstanceId);
+  const avatarCharacter = form.watch("avatar_character");
+  const avatarStyle = form.watch("avatar_style");
+  const avatarEnabled = form.watch("avatar_enabled");
+  // Voice mode is always available -- resolve_voice_config() on the backend
+  // always returns a valid config regardless of VL instance linkage (38-01).
+  const voiceModeEnabled = true;
 
   // systemPrompt: use override if set, otherwise use auto-generated instructions
   const overridePrompt = form.watch("agent_instructions_override");
@@ -50,9 +53,9 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
           agentId={profile?.agent_id}
           vlInstanceId={vlInstanceId ?? undefined}
           systemPrompt={systemPrompt}
-          avatarCharacter={selectedInstance?.avatar_character}
-          avatarStyle={selectedInstance?.avatar_style}
-          avatarEnabled={selectedInstance?.avatar_enabled ?? false}
+          avatarCharacter={avatarCharacter}
+          avatarStyle={avatarStyle}
+          avatarEnabled={avatarEnabled}
           voiceModeEnabled={voiceModeEnabled}
           disabled={isNew}
         />

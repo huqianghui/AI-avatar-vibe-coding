@@ -109,13 +109,16 @@ describe("PlaygroundPreviewPanel: Voice Mode (Voice ON) — VoiceTestPlayground 
     expect(source).toContain("hcpName={profileName}");
   });
 
-  it("disables VoiceTestPlayground when disabled or no VL instance", () => {
-    expect(source).toContain("disabled={disabled || !vlInstanceId}");
+  // VMODE-01: vlInstanceId no longer gates the playground -- disabled is
+  // driven solely by the `disabled` prop (e.g. new/unsaved profiles).
+  it("disables VoiceTestPlayground only via the disabled prop (VMODE-01)", () => {
+    expect(source).toContain("disabled={disabled}");
+    expect(source).not.toContain("disabled={disabled || !vlInstanceId}");
   });
 
-  it("shows disabled hint when no VL instance selected", () => {
-    expect(source).toContain("!vlInstanceId");
-    expect(source).toContain("playgroundDisabledNoVl");
+  it("no longer shows a no-VL-instance disabled hint (VMODE-01)", () => {
+    expect(source).not.toContain("!vlInstanceId");
+    expect(source).not.toContain("playgroundDisabledNoVl");
   });
 
   it("has min-h-[360px] for text chat area", () => {

@@ -1,22 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import type { UseFormReturn } from "react-hook-form";
-import { toast } from "sonner";
-import {
-  ChevronRight,
-  ChevronDown,
-  Database,
-  FileText,
-  Plus,
-  Trash2,
-  Wrench,
-  X,
-  ExternalLink,
-} from "lucide-react";
+import { ChevronRight, ChevronDown, Database, FileText, Plus, Trash2, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -24,27 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { InstructionsSection } from "@/components/admin/instructions-section";
 import { AgentFoundationModelSelect } from "@/components/admin/agent-foundation-model-select";
+import { VoiceLiveModelSelect } from "@/components/admin/voice-live-model-select";
+import { AvatarCharacterGallery } from "@/components/admin/avatar-character-gallery";
 import { ConnectKbDialog } from "@/components/admin/connect-kb-dialog";
 import {
   useHcpKnowledgeConfigs,
   useRemoveKnowledgeConfig,
 } from "@/hooks/use-knowledge-base";
-import {
-  useVoiceLiveInstances,
-  useAssignVoiceLiveInstance,
-  useUnassignVoiceLiveInstance,
-} from "@/hooks/use-voice-live-instances";
+import { SUPPORTED_VOICE_LOCALES, LOCALE_FLAGS, LOCALE_LABEL_KEY, VOICE_NAME_OPTIONS } from "@/lib/voice-constants";
 import type { HcpFormValues } from "@/pages/admin/hcp-profile-editor";
 import type { HcpProfile } from "@/types/hcp";
 
@@ -62,18 +40,8 @@ export function AgentConfigLeftPanel({
   onAutoInstructionsChange,
 }: AgentConfigLeftPanelProps) {
   const { t } = useTranslation(["admin", "common"]);
-  const navigate = useNavigate();
-
-  const { data } = useVoiceLiveInstances();
-  const instances = data?.items ?? [];
-  const assignMutation = useAssignVoiceLiveInstance();
-  const unassignMutation = useUnassignVoiceLiveInstance();
-
-  const currentId = form.watch("voice_live_instance_id");
-  const selectedInstance = instances.find((i) => i.id === currentId);
 
   const [knowledgeToolsExpanded, setKnowledgeToolsExpanded] = useState(false);
-  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [connectKbDialogOpen, setConnectKbDialogOpen] = useState(false);
   // D-14: Foundation Model selection is not part of HcpFormValues (confirmed
   // by 29-07-SUMMARY.md — voice_live_model lives only on VoiceLiveInstanceSummary).
@@ -83,136 +51,105 @@ export function AgentConfigLeftPanel({
   const { data: kbConfigs } = useHcpKnowledgeConfigs(profile?.id);
   const removeKbMutation = useRemoveKnowledgeConfig();
 
-  // --- VL Instance assign/unassign logic (migrated from voice-avatar-tab.tsx) ---
-  const handleInstanceChange = (value: string) => {
-    if (profile?.id) {
-      assignMutation.mutate(
-        { instanceId: value, hcpProfileId: profile.id },
-        {
-          onSuccess: () => {
-            form.setValue("voice_live_instance_id", value, {
-              shouldDirty: true,
-            });
-            toast.success(t("admin:voiceLive.instanceAssigned"));
-          },
-          onError: () => {
-            toast.error(t("admin:voiceLive.assignError"));
-          },
-        },
-      );
-    } else {
-      form.setValue("voice_live_instance_id", value, { shouldDirty: true });
-    }
-  };
-
-  const handleConfirmRemove = () => {
-    if (!profile?.id) return;
-    unassignMutation.mutate(profile.id, {
-      onSuccess: () => {
-        form.setValue("voice_live_instance_id", null, { shouldDirty: true });
-        toast.success(t("admin:voiceLive.removeInstanceSuccess"));
-        setShowRemoveDialog(false);
-      },
-      onError: () => {
-        toast.error(t("admin:voiceLive.assignError"));
-        setShowRemoveDialog(false);
-      },
-    });
-  };
+  const recognitionLanguage = form.watch("recognition_language");
+  const voiceName = form.watch("voice_name");
+  const avatarEnabled = form.watch("avatar_enabled");
+  const avatarCharacter = form.watch("avatar_character");
+  const avatarStyle = form.watch("avatar_style");
 
   return (
     <div className="space-y-4">
-      {/* 1. VL Instance Summary (D-11) */}
+      {/* 1. Voice & Avatar Configuration (VMODE-01) — Foundry-portal-style
+       * direct voice-mode config, replacing the removed VL Instance Summary
+       * card. Persists directly to the 6 inline HcpProfile fields from
+       * Plan 38-01; no VoiceLiveInstance selection required. */}
       <Card>
-        <CardContent className="pt-4 pb-3 space-y-3">
-          <Label className="text-xs font-semibold">
-            {t("admin:hcp.vlInstanceLabel")}
-          </Label>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">
+            {t("admin:hcp.voiceAvatarConfigTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">
+              {t("admin:hcp.modelDeployment")}
+            </Label>
+            <VoiceLiveModelSelect
+              value={form.watch("voice_live_model")}
+              onValueChange={(v) =>
+                form.setValue("voice_live_model", v, { shouldDirty: true })
+              }
+            />
+          </div>
 
-          {currentId && selectedInstance ? (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold truncate">
-                {selectedInstance.name}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="secondary" className="text-[10px]">
-                  {selectedInstance.voice_live_model}
-                </Badge>
-                <Badge variant="secondary" className="text-[10px]">
-                  {selectedInstance.voice_name}
-                </Badge>
-                <Badge variant="secondary" className="text-[10px]">
-                  {selectedInstance.avatar_character} · {selectedInstance.avatar_style}
-                </Badge>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  {t("admin:hcp.vlInstanceEmptyTitle")}
-                </p>
-                <Badge variant="destructive" className="text-[10px]">
-                  {t("admin:hcp.vlInstanceRequiredBadge")}
-                </Badge>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                {t("admin:hcp.vlInstanceEmptyBody")}
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">
+              {t("admin:hcp.recognitionLanguage")}
+            </Label>
             <Select
-              value={currentId ?? undefined}
-              onValueChange={handleInstanceChange}
-              disabled={isNew}
+              value={recognitionLanguage}
+              onValueChange={(v) =>
+                form.setValue("recognition_language", v, { shouldDirty: true })
+              }
             >
-              <SelectTrigger className="h-9 text-sm flex-1 min-w-0 truncate">
-                <SelectValue placeholder={t("admin:hcp.vlInstanceRequired")} />
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {instances.map((inst) => (
-                  <SelectItem key={inst.id} value={inst.id}>
-                    <span className="flex items-center gap-1.5 max-w-full">
-                      <span className="truncate">{inst.name}</span>
-                      <Badge variant="secondary" className="text-[10px] shrink-0">
-                        {inst.voice_live_model}
-                      </Badge>
-                    </span>
+                <SelectItem value="auto">{t("admin:hcp.autoDetect")}</SelectItem>
+                {SUPPORTED_VOICE_LOCALES.map((locale) => (
+                  <SelectItem key={locale} value={locale}>
+                    {LOCALE_FLAGS[locale]}{" "}
+                    {t(`common:lang.${LOCALE_LABEL_KEY[locale]}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {currentId && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => setShowRemoveDialog(true)}
-                title={t("admin:voiceLive.removeInstance")}
-                aria-label={t("admin:voiceLive.removeInstance")}
-              >
-                <X className="size-4" />
-              </Button>
-            )}
           </div>
 
-          {form.formState.errors.voice_live_instance_id && (
-            <p className="text-destructive text-sm">
-              {t("admin:hcp.vlInstanceValidationError")}
-            </p>
-          )}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">
+              {t("admin:hcp.voiceName")}
+            </Label>
+            <Select
+              value={voiceName}
+              onValueChange={(v) =>
+                form.setValue("voice_name", v, { shouldDirty: true })
+              }
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VOICE_NAME_OPTIONS.map((voice) => (
+                  <SelectItem key={voice.value} value={voice.value}>
+                    {t(`admin:hcp.${voice.labelKey}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto p-0 text-xs"
-            onClick={() => navigate("/admin/voice-live")}
-          >
-            <ExternalLink className="size-3 mr-1" />
-            {t("admin:voiceLive.goToVlManagement")}
-          </Button>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">
+              {t("admin:voiceLive.playgroundSection.enableAvatar")}
+            </Label>
+            <Switch
+              checked={avatarEnabled}
+              onCheckedChange={(checked) =>
+                form.setValue("avatar_enabled", checked, { shouldDirty: true })
+              }
+            />
+          </div>
+
+          <AvatarCharacterGallery
+            character={avatarCharacter}
+            style={avatarStyle}
+            onSelect={(characterId, style) => {
+              form.setValue("avatar_character", characterId, { shouldDirty: true });
+              form.setValue("avatar_style", style, { shouldDirty: true });
+            }}
+          />
 
           {isNew && (
             <p className="text-[10px] text-muted-foreground">
@@ -222,7 +159,7 @@ export function AgentConfigLeftPanel({
         </CardContent>
       </Card>
 
-      {/* 2. Agent Foundation Model (D-14) — decoupled from the VL Instance Summary above */}
+      {/* 2. Agent Foundation Model (D-14) — decoupled from voice-mode config above */}
       <Card>
         <CardContent className="pt-4 pb-3">
           <Label className="text-xs font-semibold">
@@ -332,37 +269,6 @@ export function AgentConfigLeftPanel({
           onOpenChange={setConnectKbDialogOpen}
         />
       )}
-
-      {/* Remove Confirm Dialog (migrated from voice-avatar-tab.tsx) */}
-      <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("admin:voiceLive.removeInstance")}</DialogTitle>
-            <DialogDescription>
-              {t("admin:voiceLive.removeInstanceConfirm", {
-                name: selectedInstance?.name ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowRemoveDialog(false)}
-            >
-              {t("common:cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmRemove}
-              disabled={unassignMutation.isPending}
-            >
-              {unassignMutation.isPending
-                ? t("common:saving")
-                : t("admin:voiceLive.removeInstance")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

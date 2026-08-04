@@ -102,7 +102,10 @@ describe("PlaygroundPreviewPanel", () => {
       expect(capturedVoiceProps!.disabled).toBe(true);
     });
 
-    it("disables voice playground when no vlInstanceId", () => {
+    // VMODE-01: vlInstanceId is vestigial/optional -- resolve_voice_config()
+    // on the backend always returns a valid config, so the playground is no
+    // longer gated on having a bound VL instance.
+    it("does not disable voice playground when no vlInstanceId (VMODE-01)", () => {
       render(
         <PlaygroundPreviewPanel
           hcpProfileId="hcp-1"
@@ -112,7 +115,7 @@ describe("PlaygroundPreviewPanel", () => {
           disabled={false}
         />,
       );
-      expect(capturedVoiceProps!.disabled).toBe(true);
+      expect(capturedVoiceProps!.disabled).toBe(false);
     });
 
     it("shows disabled message for new profiles", () => {
@@ -129,7 +132,8 @@ describe("PlaygroundPreviewPanel", () => {
       );
     });
 
-    it("shows no-VL message when vlInstanceId is missing", () => {
+    // VMODE-01: no-VL-instance disabled message no longer applies.
+    it("shows no disabled message when vlInstanceId is missing and disabled is false (VMODE-01)", () => {
       render(
         <PlaygroundPreviewPanel
           hcpProfileId="hcp-1"
@@ -139,9 +143,7 @@ describe("PlaygroundPreviewPanel", () => {
           disabled={false}
         />,
       );
-      expect(capturedVoiceProps!.disabledMessage).toBe(
-        "admin:hcp.playgroundDisabledNoVl",
-      );
+      expect(capturedVoiceProps!.disabledMessage).toBeUndefined();
     });
   });
 

@@ -114,6 +114,12 @@ const MOCK_PROFILE: HcpProfile = {
   agent_sync_status: "synced",
   agent_sync_error: "",
   voice_live_instance_id: "vl-1",
+  voice_live_model: "gpt-4o",
+  voice_name: "en-US-AvaNeural",
+  recognition_language: "auto",
+  avatar_character: "lisa",
+  avatar_style: "casual",
+  avatar_enabled: true,
   agent_instructions_override: "",
   knowledge_config_count: 0,
 };
@@ -484,55 +490,20 @@ describe("HcpProfileEditorPage", () => {
     expect(result.success).toBe(true);
   });
 
-  it("hcpSchema rejects an empty voice_live_instance_id", () => {
+  it("hcpSchema accepts an empty voice_live_instance_id (vestigial, VMODE-01)", () => {
     const result = hcpSchema.safeParse({
       ...VALID_SCHEMA_PAYLOAD,
       voice_live_instance_id: "",
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(
-        result.error.issues.some((issue) =>
-          issue.path.includes("voice_live_instance_id"),
-        ),
-      ).toBe(true);
-    }
+    expect(result.success).toBe(true);
   });
 
-  it("hcpSchema rejects a null voice_live_instance_id", () => {
+  it("hcpSchema accepts a null voice_live_instance_id (vestigial, VMODE-01)", () => {
     const result = hcpSchema.safeParse({
       ...VALID_SCHEMA_PAYLOAD,
       voice_live_instance_id: null,
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(
-        result.error.issues.some((issue) =>
-          issue.path.includes("voice_live_instance_id"),
-        ),
-      ).toBe(true);
-    }
-  });
-
-  it("blocks save with a toast and never calls the API when no VL instance is assigned", async () => {
-    renderEditor("/admin/hcp-profiles/new");
-
-    const nameInput = screen.getByRole("textbox", { name: /name/i });
-    await userEvent.type(nameInput, "Dr. Blocked");
-
-    // Do NOT assign a VL instance -- submit directly (specialty left blank is
-    // irrelevant to this assertion; handleInvalidSubmit fires the VL toast
-    // independently of any other field's validity)
-    await userEvent.click(
-      screen.getAllByText("admin:hcp.save")[0]!.closest("button")!,
-    );
-
-    await vi.waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "admin:hcp.vlInstanceSaveBlockedToast",
-      );
-    });
-    expect(mockCreateMutate).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
   });
 
   /* ---- Update submit in edit mode ---- */

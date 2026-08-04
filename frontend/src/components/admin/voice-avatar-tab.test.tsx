@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { VoiceLiveInstance } from "@/types/voice-live";
 
 // ---- Mocks ----
+
+import { vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -13,47 +14,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), warning: vi.fn(), success: vi.fn(), info: vi.fn() },
-}));
-
-const MOCK_INSTANCE: VoiceLiveInstance = {
-  id: "inst-001",
-  name: "Test Voice Config",
-  description: "A test instance",
-  voice_live_model: "gpt-4o",
-  enabled: true,
-  voice_name: "en-US-AvaNeural",
-  voice_type: "azure-standard",
-  voice_temperature: 0.9,
-  voice_custom: false,
-  avatar_character: "lisa",
-  avatar_style: "casual",
-  avatar_customized: false,
-  turn_detection_type: "server_vad",
-  noise_suppression: false,
-  echo_cancellation: false,
-  eou_detection: false,
-  recognition_language: "auto",
-  model_instruction: "",
-  response_temperature: 0.8,
-  proactive_engagement: true,
-  auto_detect_language: true,
-  playback_speed: 1.0,
-  custom_lexicon_enabled: false,
-  custom_lexicon_url: "",
-  avatar_enabled: true,
-  hcp_count: 2,
-  created_by: "admin-001",
-  created_at: "2026-04-01T00:00:00Z",
-  updated_at: "2026-04-01T00:00:00Z",
-};
-
-let mockInstances: VoiceLiveInstance[] = [];
-
-vi.mock("@/hooks/use-voice-live-instances", () => ({
-  useVoiceLiveInstances: () => ({
-    data: { items: mockInstances, total: mockInstances.length },
-    isLoading: false,
-  }),
 }));
 
 // Mock the two child panels the component delegates to
@@ -84,10 +44,16 @@ function TestWrapper({
   instanceId = null,
   isNew = false,
   profile,
+  avatarCharacter = "lisa",
+  avatarStyle = "casual",
+  avatarEnabled = true,
 }: {
   instanceId?: string | null;
   isNew?: boolean;
   profile?: { id: string; name: string; agent_id?: string };
+  avatarCharacter?: string;
+  avatarStyle?: string;
+  avatarEnabled?: boolean;
 }) {
   const form = useForm<HcpFormValues>({
     defaultValues: {
@@ -105,6 +71,12 @@ function TestWrapper({
       probe_topics: [],
       difficulty: "medium",
       voice_live_instance_id: instanceId,
+      voice_live_model: "gpt-4o",
+      voice_name: "en-US-AvaNeural",
+      recognition_language: "auto",
+      avatar_character: avatarCharacter,
+      avatar_style: avatarStyle,
+      avatar_enabled: avatarEnabled,
       agent_instructions_override: "",
     },
   });
@@ -124,7 +96,6 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
   beforeEach(() => {
     capturedLeftPanelProps = null;
     capturedPlaygroundProps = null;
-    mockInstances = [MOCK_INSTANCE];
   });
 
   it("renders both panels", () => {
@@ -137,26 +108,29 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
     render(<TestWrapper instanceId="inst-001" isNew={false} />);
     expect(capturedLeftPanelProps).toBeTruthy();
     expect(capturedLeftPanelProps!.isNew).toBe(false);
-    expect(capturedLeftPanelProps!.voiceModeEnabled).toBeUndefined();
-    expect(capturedLeftPanelProps!.onVoiceModeChange).toBeUndefined();
     expect(typeof capturedLeftPanelProps!.onAutoInstructionsChange).toBe("function");
   });
 
-  it("passes avatar data from selected VL instance to PlaygroundPreviewPanel", () => {
-    mockInstances = [MOCK_INSTANCE];
-    render(<TestWrapper instanceId="inst-001" />);
+  // VMODE-01: avatar data now comes directly from the form's inline fields,
+  // not a matched VoiceLiveInstance -- no VL instance binding required.
+  it("passes avatar data from the form's inline avatar fields to PlaygroundPreviewPanel", () => {
+    render(
+      <TestWrapper
+        instanceId={null}
+        avatarCharacter="lisa"
+        avatarStyle="casual"
+        avatarEnabled={true}
+      />,
+    );
     expect(capturedPlaygroundProps).toBeTruthy();
     expect(capturedPlaygroundProps!.avatarCharacter).toBe("lisa");
     expect(capturedPlaygroundProps!.avatarStyle).toBe("casual");
     expect(capturedPlaygroundProps!.avatarEnabled).toBe(true);
   });
 
-  it("passes undefined avatar data when no instance is selected", () => {
-    mockInstances = [MOCK_INSTANCE];
-    render(<TestWrapper instanceId={null} />);
+  it("reflects avatar_enabled=false from the form", () => {
+    render(<TestWrapper instanceId={null} avatarEnabled={false} />);
     expect(capturedPlaygroundProps).toBeTruthy();
-    expect(capturedPlaygroundProps!.avatarCharacter).toBeUndefined();
-    expect(capturedPlaygroundProps!.avatarStyle).toBeUndefined();
     expect(capturedPlaygroundProps!.avatarEnabled).toBe(false);
   });
 
@@ -183,13 +157,14 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
     expect(capturedPlaygroundProps!.agentId).toBe("agent-1");
   });
 
-  it("derives voiceModeEnabled=true for PlaygroundPreviewPanel from a bound VL instance (D-11)", () => {
+  // VMODE-01: voice mode is always enabled -- resolve_voice_config() on the
+  // backend always returns a valid config regardless of VL instance linkage.
+  it("always derives voiceModeEnabled=true for PlaygroundPreviewPanel, with or without a bound VL instance", () => {
     render(<TestWrapper instanceId="inst-001" />);
     expect(capturedPlaygroundProps!.voiceModeEnabled).toBe(true);
-  });
 
-  it("derives voiceModeEnabled=false for PlaygroundPreviewPanel when no VL instance is bound (D-11)", () => {
+    capturedPlaygroundProps = null;
     render(<TestWrapper instanceId={null} />);
-    expect(capturedPlaygroundProps!.voiceModeEnabled).toBe(false);
+    expect(capturedPlaygroundProps!.voiceModeEnabled).toBe(true);
   });
 });

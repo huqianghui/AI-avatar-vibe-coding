@@ -22,9 +22,18 @@ export interface HcpProfile {
   agent_version: string;
   agent_sync_status: "synced" | "pending" | "failed" | "none";
   agent_sync_error: string;
-  // Voice Live Instance reference
+  // Voice Live Instance reference (vestigial as of Plan 38-01 -- no longer
+  // required to save; direct voice-mode fields below are the source of truth)
   voice_live_instance_id: string | null;
   voice_live_instance?: VoiceLiveInstanceSummary | null;
+  // Direct voice-mode config (Plan 38-01/38-02, VMODE-01) -- Foundry-portal-style
+  // inline fields replacing the mandatory Voice Live Instance dependency
+  voice_live_model: string;
+  voice_name: string;
+  recognition_language: string;
+  avatar_character: string;
+  avatar_style: string;
+  avatar_enabled: boolean;
   // Agent override (D-02)
   agent_instructions_override: string;
   // Knowledge Base config count (Phase 17)
@@ -57,7 +66,13 @@ export interface HcpProfileCreate {
   objections?: string[];
   probe_topics?: string[];
   difficulty?: HcpProfile["difficulty"];
-  voice_live_instance_id: string;
+  voice_live_instance_id?: string | null;
+  voice_live_model?: string;
+  voice_name?: string;
+  recognition_language?: string;
+  avatar_character?: string;
+  avatar_style?: string;
+  avatar_enabled?: boolean;
   agent_instructions_override?: string;
 }
 

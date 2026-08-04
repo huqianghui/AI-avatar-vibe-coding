@@ -565,6 +565,7 @@ describe("VoiceLiveManagementPage", () => {
       echo_cancellation: false,
       eou_detection: false,
       recognition_language: "auto",
+      avatar_enabled: true,
       agent_instructions_override: "",
       knowledge_config_count: 0,
     };
@@ -628,6 +629,7 @@ describe("VoiceLiveManagementPage", () => {
       echo_cancellation: false,
       eou_detection: false,
       recognition_language: "auto",
+      avatar_enabled: true,
       agent_instructions_override: "",
       knowledge_config_count: 0,
     };

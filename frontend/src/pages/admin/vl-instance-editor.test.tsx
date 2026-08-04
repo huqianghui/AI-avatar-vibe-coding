@@ -196,6 +196,12 @@ const MOCK_HCP: HcpProfile = {
   agent_sync_status: "none",
   agent_sync_error: "",
   voice_live_instance_id: "vl-1",
+  voice_live_model: "gpt-4o",
+  voice_name: "en-US-AvaNeural",
+  recognition_language: "auto",
+  avatar_character: "lisa",
+  avatar_style: "casual",
+  avatar_enabled: true,
   agent_instructions_override: "",
   knowledge_config_count: 0,
 };

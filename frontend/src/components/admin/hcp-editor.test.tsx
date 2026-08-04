@@ -37,6 +37,12 @@ const mockProfile: HcpProfile = {
   agent_instructions_override: "",
   knowledge_config_count: 0,
   voice_live_instance_id: null,
+  voice_live_model: "gpt-4o",
+  voice_name: "en-US-AvaNeural",
+  recognition_language: "auto",
+  avatar_character: "lisa",
+  avatar_style: "casual",
+  avatar_enabled: true,
 };
 
 describe("HcpEditor", () => {

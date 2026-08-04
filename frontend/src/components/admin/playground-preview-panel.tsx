@@ -113,13 +113,9 @@ export function PlaygroundPreviewPanel({
           avatarStyle={avatarEnabled ? avatarStyle : undefined}
           avatarEnabled={avatarEnabled}
           hcpName={profileName}
-          disabled={disabled || !vlInstanceId}
+          disabled={disabled}
           disabledMessage={
-            disabled
-              ? t("admin:hcp.playgroundDisabledNew")
-              : !vlInstanceId
-                ? t("admin:hcp.playgroundDisabledNoVl")
-                : undefined
+            disabled ? t("admin:hcp.playgroundDisabledNew") : undefined
           }
           className="flex-1"
         />

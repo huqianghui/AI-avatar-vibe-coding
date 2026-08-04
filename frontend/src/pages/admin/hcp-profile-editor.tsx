@@ -75,13 +75,16 @@ export const hcpSchema = z.object({
   objections: z.array(z.string()),
   probe_topics: z.array(z.string()),
   difficulty: z.enum(["easy", "medium", "hard"]),
-  // Voice Live Instance reference (D-10/D-13 -- required on save, both create and edit)
-  voice_live_instance_id: z
-    .string()
-    .nullable()
-    .refine((val) => Boolean(val && val.length > 0), {
-      message: "hcp.vlInstanceValidationError",
-    }),
+  // Voice Live Instance reference (vestigial as of Plan 38-01/VMODE-01 --
+  // no longer required on save; direct voice-mode fields below are authoritative)
+  voice_live_instance_id: z.string().nullable().default(null),
+  // Direct voice-mode config (Foundry-portal-style, VMODE-01)
+  voice_live_model: z.string().default("gpt-4o"),
+  voice_name: z.string().default("en-US-AvaNeural"),
+  recognition_language: z.string().default("auto"),
+  avatar_character: z.string().default("lisa"),
+  avatar_style: z.string().default("casual"),
+  avatar_enabled: z.boolean().default(true),
   agent_instructions_override: z.string().default(""),
 });
 
@@ -123,6 +126,12 @@ export default function HcpProfileEditorPage() {
       probe_topics: [],
       difficulty: "medium",
       voice_live_instance_id: null,
+      voice_live_model: "gpt-4o",
+      voice_name: "en-US-AvaNeural",
+      recognition_language: "auto",
+      avatar_character: "lisa",
+      avatar_style: "casual",
+      avatar_enabled: true,
       agent_instructions_override: "",
     },
   });
@@ -144,6 +153,12 @@ export default function HcpProfileEditorPage() {
         probe_topics: profile.probe_topics,
         difficulty: profile.difficulty,
         voice_live_instance_id: profile.voice_live_instance_id ?? null,
+        voice_live_model: profile.voice_live_model ?? "gpt-4o",
+        voice_name: profile.voice_name ?? "en-US-AvaNeural",
+        recognition_language: profile.recognition_language ?? "auto",
+        avatar_character: profile.avatar_character ?? "lisa",
+        avatar_style: profile.avatar_style ?? "casual",
+        avatar_enabled: profile.avatar_enabled ?? true,
         agent_instructions_override:
           profile.agent_instructions_override ?? "",
       });
@@ -177,12 +192,6 @@ export default function HcpProfileEditorPage() {
           onError: () => toast.error(t("admin:errors.hcpSaveFailed")),
         },
       );
-    }
-  };
-
-  const handleInvalidSubmit = (errors: typeof form.formState.errors) => {
-    if (errors.voice_live_instance_id) {
-      toast.error(t("admin:hcp.vlInstanceSaveBlockedToast"));
     }
   };
 
@@ -236,7 +245,7 @@ export default function HcpProfileEditorPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={form.handleSubmit(handleSubmit, handleInvalidSubmit)}
+            onClick={form.handleSubmit(handleSubmit)}
             disabled={createMutation.isPending || updateMutation.isPending}
           >
             <Save className="size-4 mr-2" />
