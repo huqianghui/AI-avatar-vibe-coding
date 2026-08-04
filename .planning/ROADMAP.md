@@ -367,6 +367,12 @@ Plans:
   2. The HCP direct voice-mode config is persisted on the HCP profile (Alembic migration as needed) and HCP voice sessions use it — no dependency on a pre-provisioned Voice Live instance
   3. The persona editor uses the same Foundry-portal-style voice mode config components/layout (speech output section, avatar gallery with character previews, language dropdown)
   4. Existing HCP and persona voice sessions keep working end-to-end after the swap (no regression in avatar video/voice)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 38-01-PLAN.md — Backend: HCP direct voice-mode columns (migration + backfill) + resolve_voice_config repoint, relax instance requirement (VMODE-01)
+- [ ] 38-02-PLAN.md — Frontend: shared AvatarCharacterGallery component + Voice Live Instance card replaced with direct voice-mode config on HCP editor + E2E (VMODE-01)
+- [ ] 38-03-PLAN.md — Persona editor alignment: shared gallery + Speech output presentation + E2E (VMODE-02)
 
 ## Progress
 
@@ -383,4 +389,4 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 35. Clean Avatar UI & Legacy Coach Hiding | v2.0 | 2/2 | Complete    | 2026-08-02 |
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
-| 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 0/? | Not started | - |
+| 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 0/3 | Not started | - |

@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Avatar MVP
-status: verifying
+milestone: v2.3
+milestone_name: Voice Mode Config (Foundry Portal Style)
+status: executing
 stopped_at: Completed 37-04-PLAN.md
-last_updated: "2026-08-03T02:45:43.515Z"
-last_activity: 2026-08-03
+last_updated: "2026-08-04T02:22:52.560Z"
+last_activity: 2026-08-04 -- Phase null planning complete
 progress:
   total_phases: 4
   completed_phases: 4
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 Phase: 37
 Plan: Not started
-Status: Plan 37-04 complete — anonymous WebRTC hook negotiates a recvonly video transceiver and surfaces avatarCharacter/avatarStyle/isAvatarConnected; avatar-page.tsx renders the active persona's identity via AvatarView's isDigitalHumanMode=true path; E2E proves persona switching updates the displayed avatar identity (Lisa->Harry), not just the switcher trigger label. PERSONA-05 now closed end-to-end (37-02 backend + 37-04 frontend). Residual risk carried forward by design (not resolved by this plan): whether Azure Voice Live actually streams avatar video over this WebRTC transport for agent-mode public sessions remains unverified against live Azure — if it never does, the static-preview/fallback identity layer (proven correct by this plan's E2E) is the permanent, fully-functional visible state, not a degraded one.
-Last activity: 2026-08-03
+Status: Ready to execute
+Last activity: 2026-08-04 -- Phase null planning complete
 
 ## Performance Metrics
 
