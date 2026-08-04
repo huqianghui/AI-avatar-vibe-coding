@@ -18,6 +18,13 @@ import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 
+from app.models.user import User
+from app.models.voice_live_instance import VoiceLiveInstance
+from app.schemas.hcp_profile import HcpProfileCreate, HcpProfileUpdate
+from app.services.auth import get_password_hash
+from app.services.hcp_profile_service import create_hcp_profile, update_hcp_profile
+from app.services.voice_live_instance_service import resolve_voice_config
+
 MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 MIGRATION_FILE = "g40a_add_hcp_direct_voice_config.py"
 NEW_COLUMNS = {
@@ -181,3 +188,153 @@ class TestMigration:
             assert unlinked_row[1] == "en-US-AvaNeural"
 
         engine.dispose()
+
+
+async def _seed_user(db) -> str:
+    """Create a test user and return user_id."""
+    user = User(
+        username="voicehcpuser",
+        email="voicehcp@test.com",
+        hashed_password=get_password_hash("pass"),
+        full_name="Voice HCP User",
+        role="admin",
+    )
+    db.add(user)
+    await db.flush()
+    return user.id
+
+
+class TestCreateWithoutInstance:
+    """VMODE-01: creating an HCP profile no longer requires a VoiceLiveInstance link."""
+
+    async def test_create_without_voice_live_instance_id_succeeds(self, db_session):
+        user_id = await _seed_user(db_session)
+        data = HcpProfileCreate(name="Dr. NoVL", specialty="Onc", created_by=user_id)
+        profile = await create_hcp_profile(db_session, data, user_id)
+
+        assert profile.voice_live_instance_id is None
+        assert profile.voice_live_model == "gpt-4o"
+        assert profile.voice_name == "en-US-AvaNeural"
+        assert profile.avatar_character == "lisa"
+        assert profile.avatar_style == "casual"
+        assert profile.avatar_enabled is True
+        assert profile.recognition_language == "auto"
+
+    async def test_create_with_direct_fields_persists_them(self, db_session):
+        user_id = await _seed_user(db_session)
+        data = HcpProfileCreate(
+            name="Dr. Direct",
+            specialty="Onc",
+            created_by=user_id,
+            voice_live_model="gpt-realtime",
+            voice_name="en-US-AndrewNeural",
+            avatar_character="harry",
+            avatar_style="front_facing",
+            avatar_enabled=False,
+            recognition_language="en-US",
+        )
+        profile = await create_hcp_profile(db_session, data, user_id)
+
+        assert profile.voice_live_instance_id is None
+        assert profile.voice_live_model == "gpt-realtime"
+        assert profile.voice_name == "en-US-AndrewNeural"
+        assert profile.avatar_character == "harry"
+        assert profile.avatar_style == "front_facing"
+        assert profile.avatar_enabled is False
+        assert profile.recognition_language == "en-US"
+
+
+class TestUpdateWithoutInstance:
+    """VMODE-01: voice_live_instance_id can be cleared on update (D-13 reversed)."""
+
+    async def test_update_can_clear_voice_live_instance_id(self, db_session):
+        user_id = await _seed_user(db_session)
+        inst = VoiceLiveInstance(name="To Be Cleared", created_by=user_id)
+        db_session.add(inst)
+        await db_session.flush()
+
+        data = HcpProfileCreate(
+            name="Dr. Clearable",
+            specialty="Onc",
+            created_by=user_id,
+            voice_live_instance_id=inst.id,
+        )
+        profile = await create_hcp_profile(db_session, data, user_id)
+        assert profile.voice_live_instance_id == inst.id
+
+        updated = await update_hcp_profile(
+            db_session, profile.id, HcpProfileUpdate(voice_live_instance_id=None)
+        )
+        assert updated.voice_live_instance_id is None
+
+    async def test_update_sets_direct_fields(self, db_session):
+        user_id = await _seed_user(db_session)
+        data = HcpProfileCreate(name="Dr. Update", specialty="Onc", created_by=user_id)
+        profile = await create_hcp_profile(db_session, data, user_id)
+
+        updated = await update_hcp_profile(
+            db_session,
+            profile.id,
+            HcpProfileUpdate(
+                voice_live_model="gpt-realtime",
+                voice_name="zh-CN-XiaoxiaoMultilingualNeural",
+                avatar_character="lisa",
+                avatar_style="casual-sitting",
+                avatar_enabled=False,
+                recognition_language="zh,en",
+            ),
+        )
+
+        assert updated.voice_live_model == "gpt-realtime"
+        assert updated.voice_name == "zh-CN-XiaoxiaoMultilingualNeural"
+        assert updated.avatar_character == "lisa"
+        assert updated.avatar_style == "casual-sitting"
+        assert updated.avatar_enabled is False
+        assert updated.recognition_language == "zh,en"
+
+
+class TestResolveVoiceConfigInlineFirst:
+    """VMODE-01: resolve_voice_config() sources from HcpProfile's own inline columns."""
+
+    async def test_resolves_from_inline_fields_regardless_of_instance_link(self, db_session):
+        user_id = await _seed_user(db_session)
+        data = HcpProfileCreate(
+            name="Dr. Inline",
+            specialty="Onc",
+            created_by=user_id,
+            voice_live_model="gpt-realtime",
+            voice_name="en-US-AndrewNeural",
+            avatar_character="harry",
+            avatar_style="front_facing",
+            avatar_enabled=False,
+            recognition_language="en-US",
+        )
+        profile = await create_hcp_profile(db_session, data, user_id)
+
+        config = resolve_voice_config(profile)
+
+        assert config["voice_live_enabled"] is True
+        assert config["voice_live_model"] == "gpt-realtime"
+        assert config["voice_name"] == "en-US-AndrewNeural"
+        assert config["avatar_character"] == "harry"
+        assert config["avatar_style"] == "front_facing"
+        assert config["avatar_enabled"] is False
+        assert config["recognition_language"] == "en-US"
+
+    async def test_resolves_from_inline_defaults_for_new_profile(self, db_session):
+        user_id = await _seed_user(db_session)
+        data = HcpProfileCreate(name="Dr. Bare", specialty="Onc", created_by=user_id)
+        profile = await create_hcp_profile(db_session, data, user_id)
+
+        config = resolve_voice_config(profile)
+
+        assert config["voice_live_enabled"] is True
+        assert config["voice_live_model"] == "gpt-4o"
+        assert config["voice_name"] == "en-US-AvaNeural"
+        assert config["avatar_character"] == "lisa"
+        assert config["avatar_style"] == "casual"
+        assert config["avatar_enabled"] is True
+        assert config["recognition_language"] == "auto"
+        assert config["model_instruction"] == ""
+        assert config["response_temperature"] == 0.8
+        assert config["custom_lexicon_enabled"] is False

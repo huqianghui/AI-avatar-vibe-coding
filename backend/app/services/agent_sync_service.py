@@ -127,8 +127,10 @@ def build_voice_live_metadata(profile: object) -> dict[str, str] | None:
     """Build microsoft.voice-live.configuration metadata from HCP profile voice fields.
 
     Uses resolve_voice_config() to get the effective voice/avatar settings --
-    VoiceLiveInstance fields when assigned, or safe defaults (voice disabled)
-    when not (D-12).
+    since VMODE-01 (2026-08-04 rescope), these are sourced directly from the
+    HcpProfile's own inline voice-mode columns and are always enabled
+    (voice_live_enabled is hardcoded True), superseding the old D-12
+    "disabled when unassigned" behavior.
 
     The output format matches Azure AI Foundry Portal's own save format:
     ``{"session": {camelCase keys for voice, avatar, turnDetection, etc.}}``

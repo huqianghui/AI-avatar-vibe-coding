@@ -93,8 +93,9 @@ async def seed_instance(db_session, seed_user):
 async def seed_hcp(db_session, seed_user):
     """Create an HcpProfile for assignment tests.
 
-    D-09: voice/avatar fields no longer exist as inline columns on HcpProfile --
-    voice/avatar config comes exclusively from an assigned VoiceLiveInstance.
+    VMODE-01 (2026-08-04 rescope): voice/avatar fields are inline columns on
+    HcpProfile itself again (restored by the g40a migration); the
+    VoiceLiveInstance FK is retained only for legacy/display purposes.
     """
     profile = HcpProfile(
         name="Dr. Test",
@@ -218,32 +219,30 @@ async def test_assign_instance_to_hcp(admin_client, seed_instance, seed_hcp):
 
 
 @pytest.mark.asyncio
-async def test_resolve_config_prefers_instance(db_session, seed_instance, seed_hcp):
-    """When HcpProfile has a VoiceLiveInstance, config should come from instance."""
+async def test_resolve_config_ignores_instance_uses_inline(db_session, seed_instance, seed_hcp):
+    """VMODE-01 (2026-08-04 rescope): even when a VoiceLiveInstance is assigned,
+    resolve_voice_config() sources its output from HcpProfile's own inline
+    columns, not from the linked instance -- the FK is now vestigial."""
     seed_hcp.voice_live_instance_id = seed_instance.id
     seed_hcp.voice_live_instance = seed_instance
+    seed_hcp.voice_name = "en-US-AndrewNeural"
+    seed_hcp.avatar_character = "harry"
+    seed_hcp.voice_live_model = "gpt-realtime"
     await db_session.commit()
 
     config = resolve_voice_config(seed_hcp)
-    assert config["voice_name"] == seed_instance.voice_name
-    assert config["avatar_character"] == seed_instance.avatar_character
-    assert config["voice_live_model"] == seed_instance.voice_live_model
+    assert config["voice_name"] == "en-US-AndrewNeural"
+    assert config["avatar_character"] == "harry"
+    assert config["voice_live_model"] == "gpt-realtime"
+    assert config["voice_name"] != seed_instance.voice_name
+    assert config["avatar_character"] != seed_instance.avatar_character
+    assert config["voice_live_model"] != seed_instance.voice_live_model
 
 
-@pytest.mark.skip(
-    reason=(
-        "D-09/D-13: HcpProfile no longer has inline voice/avatar columns -- "
-        "resolve_voice_config's no-VL-instance fallback branch (in "
-        "voice_live_instance_service.py, owned by Plan 29-06) still reads "
-        "profile.voice_live_enabled/voice_name/etc. and will raise AttributeError. "
-        "voice_live_instance_id is now required at the API layer (D-13) so this "
-        "path should only be reachable for legacy rows; Plan 29-06 must update "
-        "the fallback to return safe defaults instead of reading deleted columns."
-    )
-)
 @pytest.mark.asyncio
 async def test_resolve_config_fallback_to_inline(db_session, seed_hcp):
-    """When HcpProfile has no VoiceLiveInstance, config comes from inline fields."""
+    """When HcpProfile has no VoiceLiveInstance, config comes from its own
+    inline fields (VMODE-01 restores these as HcpProfile columns)."""
     seed_hcp.voice_live_instance_id = None
     seed_hcp.voice_live_instance = None
     config = resolve_voice_config(seed_hcp)

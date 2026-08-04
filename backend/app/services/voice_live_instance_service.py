@@ -1,10 +1,10 @@
 """Voice Live Instance CRUD service.
 
-Manages reusable Voice Live configuration instances that can be
-assigned to HCP Profiles. Provides config resolution via
-resolve_voice_config() -- returns VoiceLiveInstance fields when one
-is assigned, or a hardcoded safe-defaults dict when it is not (D-12:
-the deprecated inline HcpProfile voice/avatar columns no longer exist).
+Manages reusable Voice Live configuration instances that can be assigned to
+HCP Profiles (legacy/display purposes only as of VMODE-01). Provides config
+resolution via resolve_voice_config() -- since VMODE-01 (2026-08-04 rescope),
+this reads exclusively from HcpProfile's own inline voice-mode columns
+(restored by the g40a migration), not from profile.voice_live_instance.
 """
 
 import logging
@@ -258,65 +258,38 @@ async def unassign_from_hcp(db: AsyncSession, hcp_profile_id: str) -> HcpProfile
 def resolve_voice_config(profile: HcpProfile) -> dict:
     """Resolve voice/avatar config for an HCP Profile.
 
-    Returns VoiceLiveInstance fields when one is assigned (profile.voice_live_instance
-    is set). Otherwise returns a hardcoded safe-defaults dict -- D-10 makes VL Instance
-    assignment mandatory for all HCPs, so this fallback is a defensive path for the
-    brief window between unassign and reassign, not a supported steady state. It reads
-    no HcpProfile column (the deprecated inline voice/avatar columns were dropped by
-    the D-09 migration and no longer exist on the model).
-    """
-    inst = profile.voice_live_instance
-    if inst:
-        logger.debug(
-            "resolve_voice_config: hcp=%s source=VoiceLiveInstance id=%s",
-            profile.id,
-            inst.id,
-        )
-        return {
-            "voice_live_enabled": inst.enabled,
-            "voice_live_model": inst.voice_live_model,
-            "voice_name": inst.voice_name,
-            "voice_type": inst.voice_type,
-            "voice_temperature": inst.voice_temperature,
-            "voice_custom": inst.voice_custom,
-            "avatar_character": inst.avatar_character,
-            "avatar_style": inst.avatar_style,
-            "avatar_customized": inst.avatar_customized,
-            "turn_detection_type": inst.turn_detection_type,
-            "noise_suppression": inst.noise_suppression,
-            "echo_cancellation": inst.echo_cancellation,
-            "eou_detection": inst.eou_detection,
-            "recognition_language": inst.recognition_language,
-            "model_instruction": inst.model_instruction,
-            # AI Foundry Playground fields (n17a)
-            "response_temperature": inst.response_temperature,
-            "proactive_engagement": inst.proactive_engagement,
-            "auto_detect_language": inst.auto_detect_language,
-            "playback_speed": inst.playback_speed,
-            "custom_lexicon_enabled": inst.custom_lexicon_enabled,
-            "custom_lexicon_url": inst.custom_lexicon_url,
-            "avatar_enabled": inst.avatar_enabled,
-        }
+    VMODE-01 (2026-08-04 rescope): sources voice_live_model/voice_name/
+    avatar_character/avatar_style/avatar_enabled/recognition_language directly
+    from HcpProfile's own inline columns -- these are now the sole source of
+    truth, mirroring the AI Foundry portal's direct-config style. This
+    function no longer reads profile.voice_live_instance at all; the FK
+    (voice_live_instance_id) is vestigial, retained only for legacy/display
+    purposes. Falls back to each column's own model default only if the
+    inline value is somehow empty/None.
 
+    The remaining keys in the returned dict are not exposed in the UI for
+    this phase and are hardcoded to fixed values matching the retired
+    VoiceLiveInstance defaults.
+    """
     logger.debug(
-        "resolve_voice_config: hcp=%s source=safe-defaults (no VoiceLiveInstance assigned)",
+        "resolve_voice_config: hcp=%s source=inline HcpProfile columns (VMODE-01)",
         profile.id,
     )
     return {
-        "voice_live_enabled": False,
-        "voice_live_model": "gpt-4o",
-        "voice_name": "en-US-AvaNeural",
+        "voice_live_enabled": True,
+        "voice_live_model": profile.voice_live_model or "gpt-4o",
+        "voice_name": profile.voice_name or "en-US-AvaNeural",
         "voice_type": "azure-standard",
         "voice_temperature": 0.9,
         "voice_custom": False,
-        "avatar_character": "lori",
-        "avatar_style": "casual",
+        "avatar_character": profile.avatar_character or "lisa",
+        "avatar_style": profile.avatar_style or "casual",
         "avatar_customized": False,
         "turn_detection_type": "server_vad",
         "noise_suppression": False,
         "echo_cancellation": False,
         "eou_detection": False,
-        "recognition_language": "auto",
+        "recognition_language": profile.recognition_language or "auto",
         "model_instruction": "",
         "response_temperature": 0.8,
         "proactive_engagement": True,
@@ -324,5 +297,5 @@ def resolve_voice_config(profile: HcpProfile) -> dict:
         "playback_speed": 1.0,
         "custom_lexicon_enabled": False,
         "custom_lexicon_url": "",
-        "avatar_enabled": False,
+        "avatar_enabled": bool(profile.avatar_enabled),
     }

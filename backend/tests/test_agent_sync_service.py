@@ -1593,7 +1593,14 @@ def test_build_agent_instructions_override_with_whitespace_stripped():
 
 
 def test_build_voice_live_metadata_uses_resolve_voice_config():
-    """build_voice_live_metadata uses resolve_voice_config and includes avatar/instance fields."""
+    """build_voice_live_metadata uses resolve_voice_config and includes avatar fields.
+
+    VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources voice_name/
+    avatar_character/avatar_style/avatar_enabled/recognition_language directly
+    from the HcpProfile's own inline columns (not profile.voice_live_instance).
+    The remaining keys (voice type/temperature/rate, turn detection, noise/echo,
+    proactive engagement) are hardcoded fixed values for this phase.
+    """
     import json
 
     from app.services.agent_sync_service import (
@@ -1603,32 +1610,13 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     )
 
     mock_profile = MagicMock()
-    # Simulate a profile with a VoiceLiveInstance attached
-    mock_instance = MagicMock()
-    mock_instance.enabled = True
-    mock_instance.voice_live_model = "gpt-4o"
-    mock_instance.voice_name = "zh-CN-XiaoxiaoMultilingualNeural"
-    mock_instance.voice_type = "azure-standard"
-    mock_instance.voice_temperature = 0.7
-    mock_instance.voice_custom = False
-    mock_instance.avatar_character = "lisa"
-    mock_instance.avatar_style = "formal"
-    mock_instance.avatar_customized = False
-    mock_instance.turn_detection_type = "server_vad"
-    mock_instance.noise_suppression = True
-    mock_instance.echo_cancellation = True
-    mock_instance.eou_detection = True
-    mock_instance.recognition_language = "zh-CN"
-    mock_instance.model_instruction = ""
-    mock_instance.response_temperature = 0.6
-    mock_instance.proactive_engagement = False
-    mock_instance.auto_detect_language = False
-    mock_instance.playback_speed = 1.2
-    mock_instance.custom_lexicon_enabled = True
-    mock_instance.custom_lexicon_url = "https://example.com/lexicon.xml"
-    mock_instance.avatar_enabled = True
-
-    mock_profile.voice_live_instance = mock_instance
+    mock_profile.voice_live_instance = None
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "zh-CN-XiaoxiaoMultilingualNeural"
+    mock_profile.avatar_character = "lisa"
+    mock_profile.avatar_style = "formal"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "zh-CN"
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1645,13 +1633,14 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     assert "session" in config
     session = config["session"]
 
-    # Voice settings — name always present; defaults omitted to save space
+    # Voice settings — name sourced from profile's inline column
     assert session["voice"]["name"] == "zh-CN-XiaoxiaoMultilingualNeural"
-    # "type" omitted when "azure-standard" (default)
+    # "type" omitted -- hardcoded to "azure-standard" (default)
     assert "type" not in session["voice"]
-    # Non-default values ARE present
-    assert session["voice"]["temperature"] == 0.7
-    assert session["voice"]["rate"] == "1.2"
+    # temperature hardcoded to 0.9 (!= 0.8 default), always present
+    assert session["voice"]["temperature"] == 0.9
+    # rate omitted -- playback_speed hardcoded to 1.0 (default)
+    assert "rate" not in session["voice"]
 
     # Input audio transcription — only present when language is non-default
     # zh-CN is not the default "auto-detect", so it should be present
@@ -1659,24 +1648,24 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     # "model" key omitted to save space (always "azure-speech")
     assert "model" not in session["inputAudioTranscription"]
 
-    # Turn detection with EOU (camelCase)
+    # Turn detection — hardcoded to "server_vad"; EOU hardcoded False (omitted)
     assert session["turnDetection"]["type"] == "server_vad"
-    assert session["turnDetection"]["endOfUtteranceDetection"] == {"model": "semantic_detection_v1"}
+    assert "endOfUtteranceDetection" not in session["turnDetection"]
     # removeFillerWords omitted (Foundry default is true)
     assert "removeFillerWords" not in session["turnDetection"]
 
-    # Noise/echo — present when enabled (omitted when disabled instead of null)
-    assert session["inputAudioNoiseReduction"] is not None
-    assert session["inputAudioEchoCancellation"] is not None
+    # Noise/echo hardcoded disabled -- omitted from session
+    assert "inputAudioNoiseReduction" not in session
+    assert "inputAudioEchoCancellation" not in session
 
-    # Avatar settings — only non-default fields
+    # Avatar settings — character/style sourced from profile's inline columns
     assert session["avatar"]["character"] == "lisa"
     assert session["avatar"]["style"] == "formal"
-    # "customized" omitted when False (default)
+    # "customized" omitted -- hardcoded False (default)
     assert "customized" not in session["avatar"]
 
-    # proactiveEngagement omitted when False (default)
-    assert "proactiveEngagement" not in session
+    # proactiveEngagement hardcoded True -- always present
+    assert session["proactiveEngagement"] is True
 
 
 def test_build_voice_live_metadata_fits_512_char_limit_worst_case():
@@ -1700,32 +1689,14 @@ def test_build_voice_live_metadata_fits_512_char_limit_worst_case():
     )
 
     mock_profile = MagicMock()
-    mock_instance = MagicMock()
-    # Worst-case long values
-    mock_instance.enabled = True
-    mock_instance.voice_live_model = "gpt-4o-realtime-preview"
-    mock_instance.voice_name = "zh-CN-XiaoxiaoMultilingualNeural"
-    mock_instance.voice_type = "azure-standard"
-    mock_instance.voice_temperature = 0.65
-    mock_instance.voice_custom = False
-    mock_instance.avatar_character = "lisa"
-    mock_instance.avatar_style = "casual-sitting"
-    mock_instance.avatar_customized = True
-    mock_instance.turn_detection_type = "azure_semantic_vad"
-    mock_instance.noise_suppression = True
-    mock_instance.echo_cancellation = True
-    mock_instance.eou_detection = True
-    mock_instance.recognition_language = "auto-detect"
-    mock_instance.model_instruction = ""
-    mock_instance.response_temperature = 0.9
-    mock_instance.proactive_engagement = True
-    mock_instance.auto_detect_language = True
-    mock_instance.playback_speed = 1.5
-    mock_instance.custom_lexicon_enabled = True
-    mock_instance.custom_lexicon_url = "https://example.com/custom-lexicon.xml"
-    mock_instance.avatar_enabled = True
-
-    mock_profile.voice_live_instance = mock_instance
+    mock_profile.voice_live_instance = None
+    # Worst-case long values for the inline fields resolve_voice_config() reads directly
+    mock_profile.voice_live_model = "gpt-4o-realtime-preview"
+    mock_profile.voice_name = "zh-CN-XiaoxiaoMultilingualNeural"
+    mock_profile.avatar_character = "lisa"
+    mock_profile.avatar_style = "casual-sitting"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "zh-CN"
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1745,8 +1716,9 @@ def test_build_voice_live_metadata_fits_512_char_limit_worst_case():
     assert session["voice"]["name"] == "zh-CN-XiaoxiaoMultilingualNeural"
     assert session["avatar"]["character"] == "lisa"
     assert session["avatar"]["style"] == "casual-sitting"
-    assert "inputAudioNoiseReduction" in session
-    assert "inputAudioEchoCancellation" in session
+    # noise/echo hardcoded disabled since VMODE-01 -- omitted from session
+    assert "inputAudioNoiseReduction" not in session
+    assert "inputAudioEchoCancellation" not in session
 
 
 def test_build_cleared_voice_metadata_returns_disabled_state():
@@ -1762,30 +1734,27 @@ def test_build_cleared_voice_metadata_returns_disabled_state():
     assert result[VOICE_LIVE_CONFIG_KEY] == "{}"
 
 
-def test_build_voice_live_metadata_returns_none_when_disabled():
-    """build_voice_live_metadata returns None when voice_live_enabled is False."""
+def test_build_voice_live_metadata_never_returns_none_since_vmode01():
+    """build_voice_live_metadata never returns None since VMODE-01.
+
+    VMODE-01 (2026-08-04 rescope): resolve_voice_config() hardcodes
+    voice_live_enabled to True unconditionally -- there is no more "disabled
+    when unassigned" state (that was D-12, superseded). Voice is always usable
+    since every HcpProfile now carries its own inline voice-mode defaults.
+    """
     from app.services.agent_sync_service import build_voice_live_metadata
 
     mock_profile = MagicMock()
     mock_profile.voice_live_instance = None
-    mock_profile.voice_live_enabled = False
-    # Inline fallback fields
     mock_profile.voice_live_model = "gpt-4o"
     mock_profile.voice_name = "en-US-AvaNeural"
-    mock_profile.voice_type = "azure-standard"
-    mock_profile.voice_temperature = 0.9
-    mock_profile.voice_custom = False
     mock_profile.avatar_character = "lori"
     mock_profile.avatar_style = "casual"
-    mock_profile.avatar_customized = False
-    mock_profile.turn_detection_type = "server_vad"
-    mock_profile.noise_suppression = False
-    mock_profile.echo_cancellation = False
-    mock_profile.eou_detection = False
+    mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
 
     result = build_voice_live_metadata(mock_profile)
-    assert result is None
+    assert result is not None
 
 
 # ===========================================================================
@@ -2463,8 +2432,13 @@ async def test_get_agent_latest_version_exception_returns_fallback():
     assert version == "1"
 
 
-def test_build_voice_live_metadata_semantic_vad():
-    """build_voice_live_metadata correctly sets semantic_vad turn_detection_type."""
+def test_build_voice_live_metadata_turn_detection_hardcoded_server_vad():
+    """build_voice_live_metadata always uses turn_detection_type=server_vad.
+
+    VMODE-01 (2026-08-04 rescope): turn_detection_type/eou_detection are no
+    longer customizable per-HCP -- resolve_voice_config() hardcodes them, so
+    the output is fixed regardless of any legacy VoiceLiveInstance settings.
+    """
     import json
 
     from app.services.agent_sync_service import (
@@ -2473,31 +2447,13 @@ def test_build_voice_live_metadata_semantic_vad():
     )
 
     mock_profile = MagicMock()
-    mock_instance = MagicMock()
-    mock_instance.enabled = True
-    mock_instance.voice_live_model = "gpt-4o"
-    mock_instance.voice_name = "en-US-AvaNeural"
-    mock_instance.voice_type = "azure-standard"
-    mock_instance.voice_temperature = 0.9
-    mock_instance.voice_custom = False
-    mock_instance.avatar_character = "lori"
-    mock_instance.avatar_style = "casual"
-    mock_instance.avatar_customized = False
-    mock_instance.turn_detection_type = "semantic_vad"
-    mock_instance.noise_suppression = False
-    mock_instance.echo_cancellation = False
-    mock_instance.eou_detection = False
-    mock_instance.recognition_language = "auto"
-    mock_instance.model_instruction = ""
-    mock_instance.response_temperature = 0.8
-    mock_instance.proactive_engagement = True
-    mock_instance.auto_detect_language = True
-    mock_instance.playback_speed = 1.0
-    mock_instance.custom_lexicon_enabled = False
-    mock_instance.custom_lexicon_url = ""
-    mock_instance.avatar_enabled = True
-
-    mock_profile.voice_live_instance = mock_instance
+    mock_profile.voice_live_instance = None
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "en-US-AvaNeural"
+    mock_profile.avatar_character = "lori"
+    mock_profile.avatar_style = "casual"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "auto"
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -2507,13 +2463,18 @@ def test_build_voice_live_metadata_semantic_vad():
 
     # Foundry format: config["session"]["turnDetection"]
     session = config["session"]
-    assert session["turnDetection"]["type"] == "semantic_vad"
-    # No EOU since eou_detection=False — key omitted (not null) to save space
+    assert session["turnDetection"]["type"] == "server_vad"
+    # No EOU since eou_detection is hardcoded False — key omitted to save space
     assert "endOfUtteranceDetection" not in session["turnDetection"]
 
 
-def test_build_voice_live_metadata_non_azure_standard_voice():
-    """build_voice_live_metadata omits temperature for non-azure-standard voice types."""
+def test_build_voice_live_metadata_voice_type_hardcoded_azure_standard():
+    """build_voice_live_metadata always uses voice_type=azure-standard.
+
+    VMODE-01 (2026-08-04 rescope): voice_type/voice_custom are no longer
+    customizable per-HCP -- resolve_voice_config() hardcodes voice_type to
+    "azure-standard", so the "type" key is always omitted (it's the default).
+    """
     import json
 
     from app.services.agent_sync_service import (
@@ -2522,31 +2483,13 @@ def test_build_voice_live_metadata_non_azure_standard_voice():
     )
 
     mock_profile = MagicMock()
-    mock_instance = MagicMock()
-    mock_instance.enabled = True
-    mock_instance.voice_live_model = "gpt-4o"
-    mock_instance.voice_name = "custom-voice"
-    mock_instance.voice_type = "custom"
-    mock_instance.voice_temperature = 0.9
-    mock_instance.voice_custom = True
-    mock_instance.avatar_character = "lori"
-    mock_instance.avatar_style = "casual"
-    mock_instance.avatar_customized = False
-    mock_instance.turn_detection_type = "server_vad"
-    mock_instance.noise_suppression = False
-    mock_instance.echo_cancellation = False
-    mock_instance.eou_detection = False
-    mock_instance.recognition_language = "auto"
-    mock_instance.model_instruction = ""
-    mock_instance.response_temperature = 0.8
-    mock_instance.proactive_engagement = True
-    mock_instance.auto_detect_language = True
-    mock_instance.playback_speed = 1.0
-    mock_instance.custom_lexicon_enabled = False
-    mock_instance.custom_lexicon_url = ""
-    mock_instance.avatar_enabled = True
-
-    mock_profile.voice_live_instance = mock_instance
+    mock_profile.voice_live_instance = None
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "custom-voice"
+    mock_profile.avatar_character = "lori"
+    mock_profile.avatar_style = "casual"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "auto"
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -2554,13 +2497,13 @@ def test_build_voice_live_metadata_non_azure_standard_voice():
 
     # Foundry format: config["session"]["voice"]
     session = config["session"]
-    # All voice types include temperature in Foundry format
-    assert session["voice"]["type"] == "custom"
+    # "type" hardcoded to azure-standard (default) -- always omitted
+    assert "type" not in session["voice"]
     assert session["voice"]["name"] == "custom-voice"
 
 
 def test_build_voice_live_metadata_custom_lexicon_disabled():
-    """build_voice_live_metadata omits custom_lexicon when disabled."""
+    """build_voice_live_metadata never includes custom_lexicon (not surfaced in this phase)."""
     import json
 
     from app.services.agent_sync_service import (
@@ -2569,31 +2512,13 @@ def test_build_voice_live_metadata_custom_lexicon_disabled():
     )
 
     mock_profile = MagicMock()
-    mock_instance = MagicMock()
-    mock_instance.enabled = True
-    mock_instance.voice_live_model = "gpt-4o"
-    mock_instance.voice_name = "en-US-AvaNeural"
-    mock_instance.voice_type = "azure-standard"
-    mock_instance.voice_temperature = 0.9
-    mock_instance.voice_custom = False
-    mock_instance.avatar_character = "lori"
-    mock_instance.avatar_style = "casual"
-    mock_instance.avatar_customized = False
-    mock_instance.turn_detection_type = "server_vad"
-    mock_instance.noise_suppression = False
-    mock_instance.echo_cancellation = False
-    mock_instance.eou_detection = False
-    mock_instance.recognition_language = "auto"
-    mock_instance.model_instruction = ""
-    mock_instance.response_temperature = 0.8
-    mock_instance.proactive_engagement = True
-    mock_instance.auto_detect_language = True
-    mock_instance.playback_speed = 1.0
-    mock_instance.custom_lexicon_enabled = False
-    mock_instance.custom_lexicon_url = ""
-    mock_instance.avatar_enabled = True
-
-    mock_profile.voice_live_instance = mock_instance
+    mock_profile.voice_live_instance = None
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "en-US-AvaNeural"
+    mock_profile.avatar_character = "lori"
+    mock_profile.avatar_style = "casual"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "auto"
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None

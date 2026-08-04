@@ -59,39 +59,30 @@ def _make_mock_avatar_config():
 
 
 def _make_mock_hcp_profile():
-    """Create a mock HCP profile with a linked VoiceLiveInstance carrying
-    per-HCP voice/avatar settings (inline HcpProfile columns were dropped)."""
+    """Create a mock HCP profile with direct inline voice/avatar settings.
+
+    VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources
+    voice_live_model/voice_name/avatar_character/avatar_style/avatar_enabled/
+    recognition_language directly from HcpProfile's own inline columns (not
+    from profile.voice_live_instance, which is now vestigial). The remaining
+    keys (voice_temperature, turn_detection_type, noise_suppression, etc.)
+    are hardcoded fixed values in resolve_voice_config -- not scoped to the
+    UI for this phase -- so this fixture no longer varies them.
+    """
     profile = MagicMock()
     profile.agent_id = "asst_test123"
     profile.agent_sync_status = "synced"
     profile.agent_instructions_override = ""
 
-    inst = MagicMock()
-    inst.enabled = True
-    inst.voice_live_model = "gpt-4o-realtime-preview"
-    inst.voice_name = "zh-CN-YunxiNeural"
-    inst.voice_type = "azure-standard"
-    inst.voice_temperature = 0.7
-    inst.voice_custom = False
-    inst.avatar_character = "harry"
-    inst.avatar_style = "business"
-    inst.avatar_customized = False
-    inst.turn_detection_type = "azure_semantic_vad"
-    inst.noise_suppression = True
-    inst.echo_cancellation = False
-    inst.eou_detection = False
-    inst.recognition_language = "zh-CN"
-    inst.model_instruction = ""
-    inst.response_temperature = None
-    inst.proactive_engagement = False
-    inst.auto_detect_language = False
-    inst.playback_speed = 1.0
-    inst.custom_lexicon_enabled = False
-    inst.custom_lexicon_url = ""
-    inst.avatar_enabled = True
+    profile.voice_live_model = "gpt-4o-realtime-preview"
+    profile.voice_name = "zh-CN-YunxiNeural"
+    profile.avatar_character = "harry"
+    profile.avatar_style = "business"
+    profile.avatar_enabled = True
+    profile.recognition_language = "zh-CN"
 
-    profile.voice_live_instance_id = "vl-inst-test-1"
-    profile.voice_live_instance = inst
+    profile.voice_live_instance_id = None
+    profile.voice_live_instance = None
     return profile
 
 
@@ -145,10 +136,11 @@ class TestPerHcpTokenBroker:
         assert result.voice_name == "zh-CN-YunxiNeural"
         assert result.avatar_character == "harry"
         assert result.avatar_style == "business"
-        assert result.voice_temperature == 0.7
-        assert result.turn_detection_type == "azure_semantic_vad"
-        assert result.noise_suppression is True
         assert result.recognition_language == "zh-CN"
+        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        assert result.voice_temperature == 0.9
+        assert result.turn_detection_type == "server_vad"
+        assert result.noise_suppression is False
         # Agent mode: token masked, auth_type = bearer
         assert result.auth_type == "bearer"
         assert result.token == "***configured***"
@@ -405,9 +397,10 @@ class TestVoiceLiveAPIWithHcpProfileId:
         assert data["voice_name"] == "zh-CN-YunxiNeural"
         assert data["avatar_character"] == "harry"
         assert data["avatar_style"] == "business"
-        assert data["voice_temperature"] == 0.7
-        assert data["turn_detection_type"] == "azure_semantic_vad"
-        assert data["noise_suppression"] is True
+        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        assert data["voice_temperature"] == 0.9
+        assert data["turn_detection_type"] == "server_vad"
+        assert data["noise_suppression"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -497,60 +490,28 @@ async def _seed_avatar_config(session, user_id: str) -> ServiceConfig:
 
 
 async def _seed_hcp_profile(session, user_id: str, **overrides) -> HcpProfile:
-    """Seed an HcpProfile with per-HCP voice/avatar settings.
+    """Seed an HcpProfile with direct inline voice/avatar settings.
 
-    D-09: HcpProfile no longer has inline voice/avatar columns -- per-HCP
-    voice/avatar config now comes exclusively from a linked VoiceLiveInstance.
-    This helper creates a VoiceLiveInstance carrying the settings previously
-    passed as inline HcpProfile kwargs and links it via voice_live_instance_id.
+    VMODE-01 (2026-08-04 rescope): HcpProfile has its own inline voice/avatar
+    columns again (restored by the g40a migration) -- resolve_voice_config()
+    reads these directly and no longer consults a linked VoiceLiveInstance.
     """
     from app.models.hcp_profile import HcpProfile
-    from app.models.voice_live_instance import VoiceLiveInstance
 
-    vl_instance_overrides = {
-        k: overrides.pop(k)
-        for k in list(overrides)
-        if k
-        in {
-            "voice_live_model",
-            "voice_name",
-            "voice_type",
-            "voice_temperature",
-            "voice_custom",
-            "avatar_character",
-            "avatar_style",
-            "avatar_customized",
-            "turn_detection_type",
-            "noise_suppression",
-            "echo_cancellation",
-            "eou_detection",
-            "recognition_language",
-        }
-    }
-    # Drop legacy flag kwarg if any caller still passes it -- no longer a real field.
-    overrides.pop("voice_live_enabled", None)
-
-    vl_defaults = dict(
-        name="Per-HCP Real Data Instance",
-        created_by=user_id,
-        voice_live_model="gpt-4o-realtime-preview",
-        voice_name="zh-CN-YunxiNeural",
-        voice_type="azure-standard",
-        voice_temperature=0.7,
-        voice_custom=False,
-        avatar_character="harry",
-        avatar_style="business",
-        avatar_customized=False,
-        turn_detection_type="azure_semantic_vad",
-        noise_suppression=True,
-        echo_cancellation=False,
-        eou_detection=False,
-        recognition_language="zh-CN",
-    )
-    vl_defaults.update(vl_instance_overrides)
-    vl_instance = VoiceLiveInstance(**vl_defaults)
-    session.add(vl_instance)
-    await session.flush()
+    # Drop legacy VoiceLiveInstance-only kwargs no longer read by
+    # resolve_voice_config() (hardcoded fixed values, outside VMODE-01 UI scope).
+    for legacy_key in (
+        "voice_live_enabled",
+        "voice_type",
+        "voice_temperature",
+        "voice_custom",
+        "avatar_customized",
+        "turn_detection_type",
+        "noise_suppression",
+        "echo_cancellation",
+        "eou_detection",
+    ):
+        overrides.pop(legacy_key, None)
 
     defaults = dict(
         name="Dr. RealData Chen",
@@ -558,14 +519,18 @@ async def _seed_hcp_profile(session, user_id: str, **overrides) -> HcpProfile:
         created_by=user_id,
         agent_id="asst_real_test_agent",
         agent_sync_status="synced",
-        voice_live_instance_id=vl_instance.id,
+        voice_live_model="gpt-4o-realtime-preview",
+        voice_name="zh-CN-YunxiNeural",
+        avatar_character="harry",
+        avatar_style="business",
+        avatar_enabled=True,
+        recognition_language="zh-CN",
     )
     defaults.update(overrides)
     profile = HcpProfile(**defaults)
     session.add(profile)
     await session.flush()
     await session.refresh(profile)
-    profile.voice_live_instance = vl_instance
     return profile
 
 
@@ -594,10 +559,11 @@ class TestPerHcpTokenBrokerRealData:
         assert result.voice_name == "zh-CN-YunxiNeural"
         assert result.avatar_character == "harry"
         assert result.avatar_style == "business"
-        assert result.voice_temperature == 0.7
-        assert result.turn_detection_type == "azure_semantic_vad"
-        assert result.noise_suppression is True
         assert result.recognition_language == "zh-CN"
+        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        assert result.voice_temperature == 0.9
+        assert result.turn_detection_type == "server_vad"
+        assert result.noise_suppression is False
         # Agent mode: profile has synced agent_id
         assert result.auth_type == "bearer"
         assert result.token == "***configured***"
@@ -745,10 +711,11 @@ class TestVoiceLiveAPIWithHcpProfileIdRealData:
         assert data["voice_name"] == "zh-CN-YunxiNeural"
         assert data["avatar_character"] == "harry"
         assert data["avatar_style"] == "business"
-        assert data["voice_temperature"] == 0.7
-        assert data["turn_detection_type"] == "azure_semantic_vad"
-        assert data["noise_suppression"] is True
         assert data["recognition_language"] == "zh-CN"
+        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        assert data["voice_temperature"] == 0.9
+        assert data["turn_detection_type"] == "server_vad"
+        assert data["noise_suppression"] is False
         assert data["agent_id"] == "asst_real_test_agent"
         assert data["auth_type"] == "bearer"
 

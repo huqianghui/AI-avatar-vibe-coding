@@ -388,41 +388,33 @@ async def test_create_profile_sync_failure(mock_sync, aclient, db_session):
 # ---------------------------------------------------------------------------
 
 
-def _make_vl_instance(**overrides):
-    """MagicMock VoiceLiveInstance with concrete values for every field
-    resolve_voice_config() reads (MagicMock auto-attrs are not JSON-safe)."""
-    inst = MagicMock()
-    inst.enabled = True
-    inst.voice_live_model = "gpt-4o"
-    inst.voice_name = "en-US-AvaNeural"
-    inst.voice_type = "azure-standard"
-    inst.voice_temperature = 0.9
-    inst.voice_custom = None
-    inst.avatar_character = None
-    inst.avatar_style = None
-    inst.avatar_customized = None
-    inst.turn_detection_type = "server_vad"
-    inst.noise_suppression = False
-    inst.echo_cancellation = False
-    inst.eou_detection = False
-    inst.recognition_language = None
-    inst.model_instruction = ""
-    inst.response_temperature = None
-    inst.proactive_engagement = False
-    inst.auto_detect_language = False
-    inst.playback_speed = 1.0
-    inst.custom_lexicon_enabled = False
-    inst.custom_lexicon_url = ""
-    inst.avatar_enabled = False
-    for k, v in overrides.items():
-        setattr(inst, k, v)
-    return inst
+def _set_inline_voice_fields(profile, **overrides):
+    """Set the 6 inline voice-mode columns resolve_voice_config() reads directly
+    (VMODE-01, 2026-08-04 rescope) on a MagicMock HcpProfile, so json.dumps() in
+    build_voice_live_metadata() doesn't choke on unset MagicMock auto-attrs."""
+    defaults = {
+        "voice_live_model": "gpt-4o",
+        "voice_name": "en-US-AvaNeural",
+        "avatar_character": "lisa",
+        "avatar_style": "casual",
+        "avatar_enabled": True,
+        "recognition_language": "auto",
+    }
+    defaults.update(overrides)
+    for k, v in defaults.items():
+        setattr(profile, k, v)
 
 
 def test_build_voice_live_metadata_basic():
-    """Profile with linked VoiceLiveInstance produces correct Voice Live metadata JSON."""
+    """Profile's own inline voice-mode columns produce correct Voice Live metadata JSON.
+
+    VMODE-01 (2026-08-04 rescope): resolve_voice_config() no longer reads
+    profile.voice_live_instance -- sources voice_name/avatar/recognition_language
+    directly from the profile's own columns instead.
+    """
     profile = MagicMock()
-    profile.voice_live_instance = _make_vl_instance()
+    profile.voice_live_instance = None
+    _set_inline_voice_fields(profile)
 
     result = build_voice_live_metadata(profile)
 
@@ -433,57 +425,61 @@ def test_build_voice_live_metadata_basic():
     # Foundry Portal format: {"session": {camelCase keys}}
     assert "session" in config
     session = config["session"]
-    # "azure-standard" is the default — implementation omits it to save chars (512 limit)
+    # "azure-standard" is hardcoded — implementation omits it to save chars (512 limit)
     assert "type" not in session["voice"]
     assert session["voice"]["name"] == "en-US-AvaNeural"
+    # voice_temperature is hardcoded to 0.9 (!= 0.8 default), always present
     assert session["voice"]["temperature"] == 0.9
     assert session["turnDetection"]["type"] == "server_vad"
-    # Noise/echo are omitted entirely when disabled (not set to null)
+    # Noise/echo are hardcoded disabled since VMODE-01 -- always omitted
     assert "inputAudioNoiseReduction" not in session
     assert "inputAudioEchoCancellation" not in session
 
 
 # ---------------------------------------------------------------------------
-# Test 10: build_voice_live_metadata — with noise + echo
+# Test 10: build_voice_live_metadata — noise/echo/EOU are hardcoded disabled
 # ---------------------------------------------------------------------------
 
 
 def test_build_voice_live_metadata_with_noise_echo():
-    """Noise suppression and echo cancellation flags appear in metadata."""
+    """Noise suppression, echo cancellation, and EOU are hardcoded disabled.
+
+    VMODE-01 (2026-08-04 rescope): these are no longer customizable per-HCP --
+    resolve_voice_config() hardcodes them, so they never appear regardless of
+    any legacy VoiceLiveInstance settings.
+    """
     profile = MagicMock()
-    profile.voice_live_instance = _make_vl_instance(
-        voice_name="en-US-JennyNeural",
-        voice_temperature=0.7,
-        noise_suppression=True,
-        echo_cancellation=True,
-        eou_detection=True,
-    )
+    profile.voice_live_instance = None
+    _set_inline_voice_fields(profile, voice_name="en-US-JennyNeural")
 
     result = build_voice_live_metadata(profile)
 
     assert result is not None
     config = _reassemble_config(result)
     session = config["session"]
-    assert session["inputAudioNoiseReduction"]["type"] == "azure_deep_noise_suppression"
-    assert session["inputAudioEchoCancellation"]["type"] == "server_echo_cancellation"
-    eou = session["turnDetection"]["endOfUtteranceDetection"]
-    assert eou["model"] == "semantic_detection_v1"
+    assert "inputAudioNoiseReduction" not in session
+    assert "inputAudioEchoCancellation" not in session
+    assert "endOfUtteranceDetection" not in session["turnDetection"]
 
 
 # ---------------------------------------------------------------------------
-# Test 11: build_voice_live_metadata — disabled returns None
+# Test 11: build_voice_live_metadata — never returns None since VMODE-01
 # ---------------------------------------------------------------------------
 
 
 def test_build_voice_live_metadata_disabled():
-    """voice_live_enabled=False returns None (no metadata attached to agent)."""
+    """build_voice_live_metadata never returns None since VMODE-01.
+
+    resolve_voice_config() hardcodes voice_live_enabled to True unconditionally
+    -- there is no more "disabled" state (that was D-12, now superseded).
+    """
     profile = MagicMock()
-    profile.voice_live_instance = None  # Force inline fallback path
-    profile.voice_live_enabled = False
+    profile.voice_live_instance = None
+    _set_inline_voice_fields(profile)
 
     result = build_voice_live_metadata(profile)
 
-    assert result is None
+    assert result is not None
 
 
 # ---------------------------------------------------------------------------
@@ -525,19 +521,21 @@ def test_chunk_metadata_value_long():
 
 
 def test_build_voice_live_metadata_custom_voice():
-    """Custom voice type omits temperature field."""
+    """voice_type is hardcoded to azure-standard since VMODE-01 -- always omitted.
+
+    voice_type/voice_custom are no longer customizable per-HCP; only voice_name
+    varies (sourced from the profile's own inline column).
+    """
     profile = MagicMock()
-    profile.voice_live_instance = _make_vl_instance(
-        voice_name="my-custom-voice",
-        voice_type="custom-neural",
-    )
+    profile.voice_live_instance = None
+    _set_inline_voice_fields(profile, voice_name="my-custom-voice")
 
     result = build_voice_live_metadata(profile)
 
     assert result is not None
     config = _reassemble_config(result)
     session = config["session"]
-    assert session["voice"]["type"] == "custom-neural"
+    assert "type" not in session["voice"]
     assert session["voice"]["name"] == "my-custom-voice"
 
 
@@ -606,17 +604,30 @@ async def _seed_real_service_configs(session, user_id: str) -> dict:
 
 
 async def _seed_real_hcp_profile(session, user_id: str, **overrides) -> HcpProfile:
-    """Seed a real HcpProfile ORM object with an assigned VoiceLiveInstance in the test DB.
+    """Seed a real HcpProfile ORM object in the test DB.
 
-    D-09/D-13: HcpProfile no longer carries its own voice/avatar columns -- config
-    now comes exclusively from the VoiceLiveInstance FK. Voice/avatar/turn-detection
-    overrides are routed to the VoiceLiveInstance; profile-only overrides
-    (agent_id, agent_sync_status, name, specialty, hospital, title) apply directly
-    to the HcpProfile row.
+    VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources voice_live_model/
+    voice_name/avatar_character/avatar_style/avatar_enabled/recognition_language
+    directly from the HcpProfile's own inline columns -- these are now the sole
+    source of truth. Overrides for those 6 field names are applied directly to
+    the HcpProfile row. Any other legacy VoiceLiveInstance-only field names
+    (voice_type, voice_temperature, turn_detection_type, noise_suppression,
+    echo_cancellation, eou_detection, playback_speed, custom_lexicon_*, etc.)
+    are accepted but routed to a still-linked VoiceLiveInstance for legacy/
+    display purposes only -- resolve_voice_config() no longer reads them, so
+    they have no effect on build_voice_live_metadata()'s output.
     """
     from app.models.voice_live_instance import VoiceLiveInstance
 
-    _profile_fields = {
+    _inline_profile_fields = {
+        "voice_live_model",
+        "voice_name",
+        "avatar_character",
+        "avatar_style",
+        "avatar_enabled",
+        "recognition_language",
+    }
+    _profile_only_fields = {
         "name",
         "specialty",
         "hospital",
@@ -625,8 +636,16 @@ async def _seed_real_hcp_profile(session, user_id: str, **overrides) -> HcpProfi
         "agent_id",
         "agent_sync_status",
     }
-    profile_overrides = {k: v for k, v in overrides.items() if k in _profile_fields}
-    vl_overrides = {k: v for k, v in overrides.items() if k not in _profile_fields}
+    profile_overrides = {
+        k: v
+        for k, v in overrides.items()
+        if k in _inline_profile_fields or k in _profile_only_fields
+    }
+    vl_overrides = {
+        k: v
+        for k, v in overrides.items()
+        if k not in _inline_profile_fields and k not in _profile_only_fields
+    }
     if "voice_live_enabled" in vl_overrides:
         vl_overrides["enabled"] = vl_overrides.pop("voice_live_enabled")
 
@@ -661,17 +680,20 @@ async def _seed_real_hcp_profile(session, user_id: str, **overrides) -> HcpProfi
         agent_id="asst_real_profile_agent",
         agent_sync_status="synced",
         voice_live_instance_id=vl_instance.id,
+        # Inline voice-mode defaults (VMODE-01) -- the actual source of truth
+        # for resolve_voice_config(), independent of the VL instance above.
+        voice_live_model="gpt-4o-realtime-preview",
+        voice_name="zh-CN-YunxiNeural",
+        avatar_character="harry",
+        avatar_style="business",
+        avatar_enabled=True,
+        recognition_language="zh-CN",
     )
     defaults.update(profile_overrides)
     profile = HcpProfile(**defaults)
     session.add(profile)
     await session.flush()
     await session.refresh(profile)
-    # Eagerly load the voice_live_instance relationship so sync code paths
-    # (e.g. build_voice_live_metadata -> resolve_voice_config) that access
-    # profile.voice_live_instance outside an async context don't trigger a
-    # lazy-load (which raises MissingGreenlet under async SQLAlchemy).
-    await session.refresh(profile, attribute_names=["voice_live_instance"])
     return profile
 
 
@@ -700,11 +722,13 @@ class TestTokenBrokerRealData:
         assert result.project_name == "test-default-project"
         assert result.auth_type == "bearer"
         assert result.token == "***configured***"
-        # Per-HCP voice settings sourced from real profile
+        # Per-HCP voice settings sourced from the profile's own inline columns
+        # (VMODE-01) -- turn_detection_type/noise_suppression are hardcoded
+        # fixed values now, no longer customizable via the VoiceLiveInstance.
         assert result.voice_name == "zh-CN-YunxiNeural"
         assert result.avatar_character == "harry"
-        assert result.turn_detection_type == "azure_semantic_vad"
-        assert result.noise_suppression is True
+        assert result.turn_detection_type == "server_vad"
+        assert result.noise_suppression is False
 
     @pytest.mark.asyncio
     async def test_voice_live_token_fallback_to_config_real_db(self, db_session):
@@ -810,7 +834,12 @@ class TestBuildVoiceLiveMetadataRealORM:
 
     @pytest.mark.asyncio
     async def test_build_metadata_with_noise_echo_real_orm(self, db_session):
-        """Noise suppression and echo cancellation flags appear in metadata (real ORM)."""
+        """Noise suppression, echo cancellation, and EOU are hardcoded disabled (real ORM).
+
+        VMODE-01 (2026-08-04 rescope): these are no longer customizable per-HCP
+        -- setting them on a legacy-linked VoiceLiveInstance has no effect on
+        resolve_voice_config()'s output.
+        """
         user = await _seed_real_user(db_session, "meta_noise_real")
         profile = await _seed_real_hcp_profile(
             db_session,
@@ -830,25 +859,33 @@ class TestBuildVoiceLiveMetadataRealORM:
         assert result is not None
         config = self._reassemble_metadata(result, "microsoft.voice-live.configuration")
         session = config["session"]
-        assert session["inputAudioNoiseReduction"]["type"] == "azure_deep_noise_suppression"
-        assert session["inputAudioEchoCancellation"]["type"] == "server_echo_cancellation"
-        eou = session["turnDetection"]["endOfUtteranceDetection"]
-        assert eou["model"] == "semantic_detection_v1"
+        assert "inputAudioNoiseReduction" not in session
+        assert "inputAudioEchoCancellation" not in session
+        assert "endOfUtteranceDetection" not in session["turnDetection"]
 
     @pytest.mark.asyncio
     async def test_build_metadata_disabled_real_orm(self, db_session):
-        """voice_live_enabled=False returns None from real HcpProfile."""
+        """build_voice_live_metadata never returns None from a real HcpProfile since VMODE-01.
+
+        resolve_voice_config() hardcodes voice_live_enabled to True
+        unconditionally -- setting voice_live_enabled=False on a legacy-linked
+        VoiceLiveInstance no longer disables it (that was D-12, superseded).
+        """
         user = await _seed_real_user(db_session, "meta_disabled_real")
         profile = await _seed_real_hcp_profile(db_session, user.id, voice_live_enabled=False)
         await db_session.commit()
 
         result = build_voice_live_metadata(profile)
 
-        assert result is None
+        assert result is not None
 
     @pytest.mark.asyncio
     async def test_build_metadata_custom_voice_real_orm(self, db_session):
-        """Custom voice type omits temperature from real HcpProfile ORM object."""
+        """voice_type is hardcoded to azure-standard from a real HcpProfile ORM object.
+
+        Only voice_name varies (sourced from the profile's own inline column);
+        voice_type/voice_temperature/turn_detection_type/noise/echo are fixed.
+        """
         user = await _seed_real_user(db_session, "meta_custom_real")
         profile = await _seed_real_hcp_profile(
             db_session,
@@ -868,7 +905,7 @@ class TestBuildVoiceLiveMetadataRealORM:
         assert result is not None
         config = self._reassemble_metadata(result, "microsoft.voice-live.configuration")
         session = config["session"]
-        assert session["voice"]["type"] == "custom-neural"
+        assert "type" not in session["voice"]
         assert session["voice"]["name"] == "my-custom-voice"
 
 

@@ -456,18 +456,20 @@ class TestPreviewInstructionsRouteOrder:
         )
 
 
-class TestVoiceLiveInstanceRequired:
-    """Tests for D-13: voice_live_instance_id is required on create and update."""
+class TestVoiceLiveInstanceOptional:
+    """Tests for VMODE-01 (D-13 reversed): voice_live_instance_id is optional on
+    create and update -- HcpProfile now carries its own direct voice-mode config."""
 
-    async def test_create_without_voice_live_instance_id_returns_422(self, client):
-        """POST with no voice_live_instance_id key returns 422."""
+    async def test_create_without_voice_live_instance_id_returns_201(self, client):
+        """POST with no voice_live_instance_id key succeeds (instance link optional)."""
         _, token = await _create_admin_and_token()
         response = await client.post(
             "/api/v1/hcp-profiles",
             json={"name": "Dr. NoVL", "specialty": "Onc"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert response.status_code == 422
+        assert response.status_code == 201
+        assert response.json()["voice_live_instance_id"] is None
 
     async def test_create_with_empty_voice_live_instance_id_returns_422(self, client):
         """POST with voice_live_instance_id set to an empty string returns 422."""
@@ -495,14 +497,17 @@ class TestVoiceLiveInstanceRequired:
         assert response.status_code == 201
         assert response.json()["voice_live_instance_id"] == vl_id
 
-    async def test_update_clearing_voice_live_instance_id_returns_422(self, client):
-        """PUT explicitly clearing voice_live_instance_id (empty string) returns 422."""
+    async def test_update_clearing_voice_live_instance_id_with_empty_string_returns_422(
+        self, client
+    ):
+        """PUT with voice_live_instance_id set to empty string still fails schema
+        validation (min_length=1) -- clearing must use null, not empty string."""
         user_id, token = await _create_admin_and_token()
         vl_id = await _create_vl_instance(user_id)
         create_resp = await client.post(
             "/api/v1/hcp-profiles",
             json={
-                "name": "Dr. CannotClear",
+                "name": "Dr. CannotClearEmpty",
                 "specialty": "Onc",
                 "voice_live_instance_id": vl_id,
             },
@@ -516,6 +521,30 @@ class TestVoiceLiveInstanceRequired:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 422
+
+    async def test_update_clearing_voice_live_instance_id_with_null_succeeds(self, client):
+        """PUT explicitly clearing voice_live_instance_id via null now succeeds
+        (VMODE-01/D-13 reversed) -- the FK is vestigial and safely clearable."""
+        user_id, token = await _create_admin_and_token()
+        vl_id = await _create_vl_instance(user_id)
+        create_resp = await client.post(
+            "/api/v1/hcp-profiles",
+            json={
+                "name": "Dr. CanClear",
+                "specialty": "Onc",
+                "voice_live_instance_id": vl_id,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        profile_id = create_resp.json()["id"]
+
+        response = await client.put(
+            f"/api/v1/hcp-profiles/{profile_id}",
+            json={"voice_live_instance_id": None},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["voice_live_instance_id"] is None
 
     async def test_update_omitting_voice_live_instance_id_preserves_existing(self, client):
         """PUT with a partial body omitting voice_live_instance_id leaves it unchanged."""

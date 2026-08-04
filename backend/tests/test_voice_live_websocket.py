@@ -212,27 +212,18 @@ async def seeded_db_with_avatar(db_session):
 
 @pytest.fixture
 async def hcp_profile_with_agent(seeded_db):
-    """Create an HCP profile with a synced agent_id."""
-    vl_inst = VoiceLiveInstance(
-        name="VL-HCP-Override-Agent",
-        voice_live_model="gpt-4o",
-        voice_name="zh-CN-XiaoxiaoMultilingualNeural",
-        voice_type="azure-standard",
-        avatar_character="Lisa-casual-sitting",
-        avatar_style="casual",
-        avatar_customized=False,
-        created_by="test-user",
-    )
-    seeded_db.add(vl_inst)
-    await seeded_db.flush()
-    await seeded_db.refresh(vl_inst)
+    """Create an HCP profile with a synced agent_id.
 
+    VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources voice/avatar
+    settings from HcpProfile's own inline columns, not from a linked
+    VoiceLiveInstance (now vestigial) -- so voice_name is set directly here.
+    """
     profile = HcpProfile(
         name="Dr. WebSocket Test",
         specialty="Oncology",
         agent_id="hosted-hcp-override-agent",
         agent_sync_status="synced",
-        voice_live_instance_id=vl_inst.id,
+        voice_name="zh-CN-XiaoxiaoMultilingualNeural",
         agent_instructions_override="",
         created_by="test-user",
     )
@@ -1786,25 +1777,19 @@ class TestLoadConnectionConfigErrors:
         assert cfg["use_agent_mode"] is False
 
     async def test_hcp_unsupported_model_fallback(self, seeded_db):
-        """_load_connection_config falls back to default model for unsupported HCP model."""
-        # Create HCP with unsupported model (via linked VoiceLiveInstance)
-        vl_inst = VoiceLiveInstance(
-            name="VL-Bad-Model",
-            voice_live_model="unsupported-model-xyz",
-            voice_name="en-US-AvaNeural",
-            voice_type="azure-standard",
-            created_by="test-user",
-        )
-        seeded_db.add(vl_inst)
-        await seeded_db.flush()
-        await seeded_db.refresh(vl_inst)
+        """_load_connection_config falls back to default model for unsupported HCP model.
 
+        VMODE-01 (2026-08-04 rescope): voice_live_model is set directly on the
+        HcpProfile's own inline column (resolve_voice_config() no longer reads
+        a linked VoiceLiveInstance).
+        """
         profile = HcpProfile(
             name="Dr. Bad Model",
             specialty="General",
             agent_id="hosted-bad-model-test",
             agent_sync_status="synced",
-            voice_live_instance_id=vl_inst.id,
+            voice_live_model="unsupported-model-xyz",
+            voice_name="en-US-AvaNeural",
             created_by="test-user",
         )
         seeded_db.add(profile)
@@ -2209,6 +2194,17 @@ class TestWebSocketHandlerErrorPaths:
         error_sent = any(json.loads(c[0][0]).get("type") == "error" for c in sent_calls)
         assert error_sent
 
+    @pytest.mark.skip(
+        reason=(
+            "VMODE-01 (2026-08-04 rescope): resolve_voice_config() now hardcodes "
+            "voice_live_enabled=True unconditionally (it is no longer sourced from "
+            "a linked VoiceLiveInstance's `enabled` flag, which is vestigial). The "
+            "'Voice Live is not enabled for this HCP profile' error path this test "
+            "exercises is currently unreachable -- kept skipped (not deleted) as "
+            "a marker in case a future plan reintroduces a per-HCP enable/disable "
+            "toggle in the UI-scoped inline fields."
+        )
+    )
     async def test_voice_live_disabled_for_hcp(self, seeded_db, mock_sdk):
         """Handler sends error when voice_live_enabled is False on HCP profile."""
         vl_inst = VoiceLiveInstance(

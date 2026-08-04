@@ -63,6 +63,15 @@ async def test_update_instance_triggers_resync():
     mock_profile.agent_id = "agent-001"
     mock_profile.agent_sync_status = "synced"
     mock_profile.voice_live_instance = mock_instance
+    # VMODE-01: resolve_voice_config() reads these inline columns directly, not
+    # profile.voice_live_instance -- must be real values, not MagicMock, for
+    # build_voice_live_metadata()'s json.dumps() to succeed.
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "en-US-AvaNeural"
+    mock_profile.avatar_character = "lisa"
+    mock_profile.avatar_style = "casual"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "auto"
 
     # Instance returned by get_instance has hcp_profiles.
     # Use _make_vl_instance_mock so resolve_voice_config can read voice attributes
@@ -112,6 +121,15 @@ async def test_assign_triggers_resync():
     mock_profile.agent_sync_status = "synced"
     mock_profile.voice_live_instance_id = "inst-002"
     mock_profile.voice_live_instance = mock_instance
+    # VMODE-01: resolve_voice_config() reads these inline columns directly, not
+    # profile.voice_live_instance -- must be real values, not MagicMock, for
+    # build_voice_live_metadata()'s json.dumps() to succeed.
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "en-US-AvaNeural"
+    mock_profile.avatar_character = "lisa"
+    mock_profile.avatar_style = "casual"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "auto"
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_profile
@@ -515,44 +533,72 @@ async def test_delete_instance_metadata_clear_failure_does_not_break():
     mock_db.commit.assert_called()
 
 
-def test_resolve_voice_config_with_vl_instance():
-    """resolve_voice_config returns VoiceLiveInstance fields when assigned."""
+def test_resolve_voice_config_with_inline_fields():
+    """resolve_voice_config (VMODE-01) sources its output from HcpProfile's own
+    inline voice-mode columns -- it no longer reads profile.voice_live_instance
+    at all."""
     from app.services.voice_live_instance_service import resolve_voice_config
 
-    mock_profile = MagicMock()
-    mock_instance = _make_vl_instance_mock(
-        voice_name="zh-CN-XiaoxiaoMultilingualNeural",
-        response_temperature=0.6,
-        custom_lexicon_enabled=True,
-        custom_lexicon_url="https://lexicon.example.com",
+    mock_profile = MagicMock(
+        spec=[
+            "id",
+            "voice_live_model",
+            "voice_name",
+            "avatar_character",
+            "avatar_style",
+            "avatar_enabled",
+            "recognition_language",
+        ]
     )
-    mock_profile.voice_live_instance = mock_instance
     mock_profile.id = "hcp-resolve"
+    mock_profile.voice_live_model = "gpt-realtime"
+    mock_profile.voice_name = "zh-CN-XiaoxiaoMultilingualNeural"
+    mock_profile.avatar_character = "harry"
+    mock_profile.avatar_style = "front_facing"
+    mock_profile.avatar_enabled = False
+    mock_profile.recognition_language = "zh-CN"
 
     result = resolve_voice_config(mock_profile)
 
+    assert result["voice_live_model"] == "gpt-realtime"
     assert result["voice_name"] == "zh-CN-XiaoxiaoMultilingualNeural"
-    assert result["response_temperature"] == 0.6
-    assert result["custom_lexicon_enabled"] is True
-    assert result["custom_lexicon_url"] == "https://lexicon.example.com"
+    assert result["avatar_character"] == "harry"
+    assert result["avatar_style"] == "front_facing"
+    assert result["avatar_enabled"] is False
+    assert result["recognition_language"] == "zh-CN"
+    assert result["voice_live_enabled"] is True
 
 
-def test_resolve_voice_config_inline_fallback():
-    """resolve_voice_config returns a hardcoded safe-defaults dict when no VL instance
-    is assigned -- D-12: does not read any deprecated HcpProfile column (they no longer
-    exist on the model post-Plan-29-05 migration)."""
+def test_resolve_voice_config_inline_defaults():
+    """resolve_voice_config falls back to each column's own model default when the
+    inline value is empty/None (VMODE-01 -- no VoiceLiveInstance fallback path)."""
     from app.services.voice_live_instance_service import resolve_voice_config
 
-    mock_profile = MagicMock(spec=["voice_live_instance", "id"])
-    mock_profile.voice_live_instance = None
+    mock_profile = MagicMock(
+        spec=[
+            "id",
+            "voice_live_model",
+            "voice_name",
+            "avatar_character",
+            "avatar_style",
+            "avatar_enabled",
+            "recognition_language",
+        ]
+    )
     mock_profile.id = "hcp-inline"
+    mock_profile.voice_live_model = "gpt-4o"
+    mock_profile.voice_name = "en-US-AvaNeural"
+    mock_profile.avatar_character = "lisa"
+    mock_profile.avatar_style = "casual"
+    mock_profile.avatar_enabled = True
+    mock_profile.recognition_language = "auto"
 
     result = resolve_voice_config(mock_profile)
 
     assert result["voice_name"] == "en-US-AvaNeural"
-    assert result["voice_live_enabled"] is False
-    assert result["avatar_enabled"] is False
-    assert result["avatar_character"] == "lori"
+    assert result["voice_live_enabled"] is True
+    assert result["avatar_enabled"] is True
+    assert result["avatar_character"] == "lisa"
     assert result["avatar_style"] == "casual"
     assert result["model_instruction"] == ""
     assert result["response_temperature"] == 0.8  # default
@@ -994,8 +1040,9 @@ class TestRealVoiceLiveInstanceService:
         with pytest.raises(NotFoundException, match="HCP Profile"):
             await unassign_from_hcp(db_session, "nonexistent-hcp-id-xyz")
 
-    async def test_resolve_voice_config_with_vl_instance_real_db(self, db_session):
-        """resolve_voice_config returns VoiceLiveInstance fields when assigned (real DB)."""
+    async def test_resolve_voice_config_with_inline_fields_real_db(self, db_session):
+        """resolve_voice_config (VMODE-01) sources output from HcpProfile's own inline
+        voice-mode columns, even when a (now-vestigial) VoiceLiveInstance is linked."""
         from sqlalchemy.orm import selectinload
 
         from app.models.hcp_profile import HcpProfile
@@ -1009,18 +1056,20 @@ class TestRealVoiceLiveInstanceService:
             user.id,
             name="Config Resolve Test",
             voice_name="zh-CN-XiaoxiaoMultilingualNeural",
-            response_temperature=0.6,
-            custom_lexicon_enabled=True,
-            custom_lexicon_url="https://lexicon.example.com",
         )
         await db_session.flush()
 
         hcp = _seed_hcp(db_session, user.id, name="Dr. Resolve")
         hcp.voice_live_instance_id = inst.id
+        hcp.voice_live_model = "gpt-realtime"
+        hcp.voice_name = "en-US-AndrewNeural"
+        hcp.avatar_character = "harry"
+        hcp.avatar_style = "front_facing"
+        hcp.avatar_enabled = False
+        hcp.recognition_language = "en-US"
         await db_session.flush()
         hcp_id = hcp.id
 
-        # Eagerly load the relationship for resolve_voice_config
         result = await db_session.execute(
             select(HcpProfile)
             .options(selectinload(HcpProfile.voice_live_instance))
@@ -1030,16 +1079,20 @@ class TestRealVoiceLiveInstanceService:
 
         config = resolve_voice_config(loaded_hcp)
 
-        assert config["voice_name"] == "zh-CN-XiaoxiaoMultilingualNeural"
-        assert config["response_temperature"] == 0.6
-        assert config["custom_lexicon_enabled"] is True
-        assert config["custom_lexicon_url"] == "https://lexicon.example.com"
+        # Sourced from HcpProfile's own inline columns, NOT the linked instance's
+        # voice_name ("zh-CN-XiaoxiaoMultilingualNeural") -- the FK is vestigial.
+        assert config["voice_name"] == "en-US-AndrewNeural"
+        assert config["voice_live_model"] == "gpt-realtime"
+        assert config["avatar_character"] == "harry"
+        assert config["avatar_style"] == "front_facing"
+        assert config["avatar_enabled"] is False
+        assert config["recognition_language"] == "en-US"
         assert config["voice_live_enabled"] is True
-        assert config["voice_live_model"] == "gpt-4o"
 
-    async def test_resolve_voice_config_inline_fallback_real_db(self, db_session):
-        """resolve_voice_config returns the hardcoded safe-defaults dict when no VL
-        instance is assigned (D-12)."""
+    async def test_resolve_voice_config_inline_defaults_real_db(self, db_session):
+        """resolve_voice_config returns the HcpProfile model's own inline column
+        defaults for a profile with no VL instance and no explicit direct-config
+        overrides (VMODE-01)."""
         from app.services.voice_live_instance_service import resolve_voice_config
 
         user = _seed_user(db_session)
@@ -1062,11 +1115,15 @@ class TestRealVoiceLiveInstanceService:
 
         config = resolve_voice_config(loaded_hcp)
 
-        assert config["voice_name"] == "en-US-AvaNeural"  # safe-defaults dict
-        assert config["model_instruction"] == ""  # safe-defaults dict
-        assert config["response_temperature"] == 0.8  # safe-defaults dict
-        assert config["custom_lexicon_enabled"] is False  # safe-defaults dict
-        assert config["voice_live_enabled"] is False  # D-12: no VL instance = voice disabled
+        assert config["voice_name"] == "en-US-AvaNeural"  # model column default
+        assert config["voice_live_model"] == "gpt-4o"  # model column default
+        assert config["avatar_character"] == "lisa"  # model column default
+        assert config["avatar_style"] == "casual"  # model column default
+        assert config["recognition_language"] == "auto"  # model column default
+        assert config["model_instruction"] == ""  # hardcoded, not exposed this phase
+        assert config["response_temperature"] == 0.8  # hardcoded, not exposed this phase
+        assert config["custom_lexicon_enabled"] is False  # hardcoded, not exposed this phase
+        assert config["voice_live_enabled"] is True  # VMODE-01: direct config always usable
 
     async def test_full_lifecycle_real_db(self, db_session):
         """End-to-end lifecycle: create -> assign -> update -> unassign -> delete."""

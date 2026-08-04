@@ -70,8 +70,10 @@ async def _seed_conference_fixture(
 
     hcps = []
     for i in range(audience_count):
-        # D-09: HcpProfile has no inline voice_name column -- link a VoiceLiveInstance
-        # so resolve_voice_config() has something to resolve.
+        # VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources voice_name
+        # directly from HcpProfile's own inline column -- set it there. The linked
+        # VoiceLiveInstance is retained for legacy/display purposes only and has
+        # no effect on the resolved config.
         vl_instance = VoiceLiveInstance(
             name=f"VL Instance {i}",
             voice_name=f"zh-CN-TestVoice{i}Neural",
@@ -85,6 +87,7 @@ async def _seed_conference_fixture(
             specialty="Oncology",
             personality_type="analytical",
             voice_live_instance_id=vl_instance.id,
+            voice_name=f"zh-CN-TestVoice{i}Neural",
             created_by=user.id,
         )
         session.add(hcp)
@@ -152,12 +155,14 @@ class TestCreateConferenceSession:
             assert config[1]["speaker_priority"] == "secondary"
             assert "conference_prompt_config" in config[0]
 
-    async def test_audience_config_prefers_voice_live_instance_voice(self):
-        """Resolved audience config reflects whichever VoiceLiveInstance is linked.
+    async def test_audience_config_uses_profile_inline_fields_not_linked_instance(self):
+        """Resolved audience config reflects the HcpProfile's own inline fields.
 
-        D-09: HcpProfile has no inline voice_name/avatar_* columns anymore --
-        resolve_voice_config() reads exclusively from the linked VoiceLiveInstance,
-        so switching the link changes the resolved config.
+        VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources voice_name/
+        avatar_character/avatar_style directly from HcpProfile's own inline
+        columns -- switching the (now vestigial) VoiceLiveInstance link has no
+        effect on the resolved config; only updating the profile's own inline
+        columns does.
         """
         async with TestSessionLocal() as db:
             data = await _seed_conference_fixture(db)
@@ -171,6 +176,7 @@ class TestCreateConferenceSession:
             db.add(voice_instance)
             await db.flush()
 
+            # Re-linking the FK alone should NOT change the resolved config.
             data["hcps"][0].voice_live_instance_id = voice_instance.id
             await db.flush()
             await db.refresh(data["hcps"][0], attribute_names=["voice_live_instance"])
@@ -179,9 +185,10 @@ class TestCreateConferenceSession:
             config = json.loads(session.audience_config)
 
             assert config[0]["voice_live_instance_id"] == voice_instance.id
-            assert config[0]["voice_name"] == "zh-CN-YunjianNeural"
-            assert config[0]["avatar_character"] == "jeff"
-            assert config[0]["avatar_style"] == "formal"
+            # Still the profile's own inline voice_name, NOT the linked instance's
+            assert config[0]["voice_name"] == "zh-CN-TestVoice0Neural"
+            assert config[0]["avatar_character"] != "jeff"
+            assert config[0]["avatar_style"] != "formal"
 
     async def test_custom_conference_prompt_config_is_snapshotted(self):
         """Creates session with scenario-level conference prompt config."""

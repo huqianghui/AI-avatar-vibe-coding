@@ -30,9 +30,18 @@ class HcpProfileCreate(BaseModel):
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     is_active: bool = True
 
-    # Voice Live Instance reference (required, D-13 -- every HCP must reference exactly
-    # one VoiceLiveInstance for its full voice+avatar configuration)
-    voice_live_instance_id: str = Field(..., min_length=1)
+    # Direct voice-mode config (VMODE-01) -- source of truth for resolve_voice_config().
+    voice_live_model: str = "gpt-4o"
+    voice_name: str = "en-US-AvaNeural"
+    recognition_language: str = "auto"
+    avatar_character: str = "lisa"
+    avatar_style: str = "casual"
+    avatar_enabled: bool = True
+
+    # Voice Live Instance reference -- optional (VMODE-01 reverses D-13; a VL instance
+    # is no longer mandatory since HcpProfile now carries its own direct config). If
+    # provided, must be non-empty.
+    voice_live_instance_id: str | None = Field(default=None, min_length=1)
 
     agent_instructions_override: str = ""
 
@@ -58,10 +67,18 @@ class HcpProfileUpdate(BaseModel):
     difficulty: Literal["easy", "medium", "hard"] | None = None
     is_active: bool | None = None
 
+    # Direct voice-mode config (VMODE-01) -- all optional, partial-update semantics.
+    voice_live_model: str | None = None
+    voice_name: str | None = None
+    recognition_language: str | None = None
+    avatar_character: str | None = None
+    avatar_style: str | None = None
+    avatar_enabled: bool | None = None
+
     # Voice Live Instance reference. Optional at the type level so partial updates can
-    # omit it and leave the existing value untouched -- but if the caller DOES send it,
-    # empty string is rejected here. The "cannot be cleared" invariant (D-13) is enforced
-    # in the service layer since the schema alone cannot know the pre-update DB value.
+    # omit it and leave the existing value untouched. VMODE-01 reverses D-13: this
+    # reference can now be explicitly cleared (set to None) since resolve_voice_config()
+    # no longer reads it -- clearing it is a no-op for session behavior.
     voice_live_instance_id: str | None = Field(default=None, min_length=1)
     agent_instructions_override: str | None = None
 
@@ -90,7 +107,15 @@ class HcpProfileResponse(BaseModel):
     agent_sync_status: str = "none"
     agent_sync_error: str = ""
 
-    # Voice Live Instance reference
+    # Direct voice-mode config (VMODE-01) -- source of truth for resolve_voice_config().
+    voice_live_model: str = "gpt-4o"
+    voice_name: str = "en-US-AvaNeural"
+    recognition_language: str = "auto"
+    avatar_character: str = "lisa"
+    avatar_style: str = "casual"
+    avatar_enabled: bool = True
+
+    # Voice Live Instance reference -- retained for legacy/display purposes only.
     voice_live_instance_id: str | None = None
     voice_live_instance: VoiceLiveInstanceSummary | None = None
 
