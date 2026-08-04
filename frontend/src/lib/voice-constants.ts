@@ -32,6 +32,29 @@ export const RECOGNITION_LANGUAGES = [
   { value: "ko-KR", labelKey: "langKorean" },
 ] as const;
 
+/* ── Shared Voice Locales (HCP + Persona editors) ────────────────────── */
+
+/** Locales with dedicated voice/UI copy support across the platform. */
+export const SUPPORTED_VOICE_LOCALES = ["zh-CN", "en-US", "es-ES", "es-MX", "es-US"] as const;
+
+/** Flag emoji per locale -- mirrors settings.tsx's Voice per Language card. */
+export const LOCALE_FLAGS: Record<string, string> = {
+  "zh-CN": "\u{1F1E8}\u{1F1F3}",
+  "en-US": "\u{1F1FA}\u{1F1F8}",
+  "es-ES": "\u{1F1EA}\u{1F1F8}",
+  "es-MX": "\u{1F1F2}\u{1F1FD}",
+  "es-US": "\u{1F1FA}\u{1F1F8}",
+};
+
+/** Maps locale code to its common.json `lang.*` sub-key. */
+export const LOCALE_LABEL_KEY: Record<string, string> = {
+  "zh-CN": "zhCN",
+  "en-US": "enUS",
+  "es-ES": "esES",
+  "es-MX": "esMX",
+  "es-US": "esUS",
+};
+
 /* ── Azure Avatar CDN ────────────────────────────────────────────────── */
 
 /** CDN base URL for official Azure avatar preview images. */
