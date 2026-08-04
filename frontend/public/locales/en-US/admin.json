@@ -755,6 +755,21 @@
     "greetingHelper": "Spoken by the digital human right after the session connects.",
     "promptFragmentLabel": "Persona Prompt Fragment",
     "promptFragmentHelper": "Injected into the system prompt alongside the user's CRM/preference context. Sanitized automatically.",
-    "useDefaultVoiceOption": "(use default)"
+    "useDefaultVoiceOption": "(use default)",
+    "editor": {
+      "backAriaLabel": "Back to personas list",
+      "speechSectionTitle": "Speech",
+      "languageLabel": "Language",
+      "voiceLabel": "Voice",
+      "configuredLocalesLabel": "Configured languages",
+      "previewTitle": "Preview",
+      "previewGreetingLabel": "Greeting preview",
+      "previewGreetingFallback": "Hi, I'm here to help you today.",
+      "reset": "Reset",
+      "saved": "Persona saved",
+      "created": "Persona created",
+      "modelDeploymentNote": "Informational only — not yet persisted on personas (matches the current HCP profile behavior).",
+      "noLiveTestNote": "Live voice test is unavailable for personas — they are not backed by an assigned Voice Live instance or Foundry agent."
+    }
   }
 }

@@ -1,29 +1,24 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonaTable } from "@/components/admin/persona-table";
-import { PersonaDialog } from "@/components/admin/persona-dialog";
 import { useAvatarPersonas } from "@/hooks/use-avatar-personas";
 import type { AvatarPersona } from "@/api/avatar-personas";
 
 export default function AvatarPersonasPage() {
   const { t } = useTranslation("admin");
+  const navigate = useNavigate();
   const { data, isLoading } = useAvatarPersonas();
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<AvatarPersona | null>(null);
 
   const personas = data ?? [];
 
   const openCreate = () => {
-    setEditTarget(null);
-    setDialogOpen(true);
+    navigate("/admin/avatar-personas/new");
   };
 
   const openEdit = (persona: AvatarPersona) => {
-    setEditTarget(persona);
-    setDialogOpen(true);
+    navigate(`/admin/avatar-personas/${persona.id}/edit`);
   };
 
   return (
@@ -43,12 +38,6 @@ export default function AvatarPersonasPage() {
       </div>
 
       <PersonaTable personas={personas} isLoading={isLoading} onEdit={openEdit} />
-
-      <PersonaDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        persona={editTarget}
-      />
     </div>
   );
 }

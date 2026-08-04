@@ -14,6 +14,14 @@ export function useAvatarPersonas() {
   });
 }
 
+export function useAvatarPersona(id: string | undefined) {
+  return useQuery({
+    queryKey: [QUERY_KEY, id],
+    queryFn: () => avatarPersonasApi.get(id!),
+    enabled: !!id,
+  });
+}
+
 export function useCreateAvatarPersona() {
   const queryClient = useQueryClient();
   return useMutation({

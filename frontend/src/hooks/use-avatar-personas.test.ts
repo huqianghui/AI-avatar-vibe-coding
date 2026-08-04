@@ -18,6 +18,7 @@ vi.mock("@/api/avatar-personas", () => ({
 import { avatarPersonasApi } from "@/api/avatar-personas";
 import {
   useAvatarPersonas,
+  useAvatarPersona,
   useCreateAvatarPersona,
   useUpdateAvatarPersona,
   useDeleteAvatarPersona,
@@ -25,6 +26,7 @@ import {
 } from "./use-avatar-personas";
 
 const mockedList = vi.mocked(avatarPersonasApi.list);
+const mockedGet = vi.mocked(avatarPersonasApi.get);
 const mockedCreate = vi.mocked(avatarPersonasApi.create);
 const mockedUpdate = vi.mocked(avatarPersonasApi.update);
 const mockedRemove = vi.mocked(avatarPersonasApi.remove);
@@ -83,6 +85,31 @@ describe("useAvatarPersonas", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedList).toHaveBeenCalledWith();
     expect(result.current.data).toEqual([mockPersona]);
+  });
+});
+
+describe("useAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.get with the given id and exposes the result via data", async () => {
+    mockedGet.mockResolvedValueOnce(mockPersona);
+
+    const { result } = renderHook(() => useAvatarPersona("p1"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedGet).toHaveBeenCalledWith("p1");
+    expect(result.current.data).toEqual(mockPersona);
+  });
+
+  it("does not call avatarPersonasApi.get when id is undefined", () => {
+    const { result } = renderHook(() => useAvatarPersona(undefined), {
+      wrapper: createWrapper(),
+    });
+
+    expect(mockedGet).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe("idle");
   });
 });
 

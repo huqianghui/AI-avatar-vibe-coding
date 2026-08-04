@@ -755,6 +755,21 @@
     "greetingHelper": "El avatar lo pronuncia justo después de conectarse la sesión.",
     "promptFragmentLabel": "Fragmento de Prompt de la Persona",
     "promptFragmentHelper": "Se inyecta en el prompt del sistema junto con el contexto de CRM/preferencias del usuario. Se sanea automáticamente.",
-    "useDefaultVoiceOption": "(usar predeterminada)"
+    "useDefaultVoiceOption": "(usar predeterminada)",
+    "editor": {
+      "backAriaLabel": "Volver a la lista de personas",
+      "speechSectionTitle": "Voz",
+      "languageLabel": "Idioma",
+      "voiceLabel": "Voz",
+      "configuredLocalesLabel": "Idiomas configurados",
+      "previewTitle": "Vista previa",
+      "previewGreetingLabel": "Vista previa del saludo",
+      "previewGreetingFallback": "Hola, estoy aquí para ayudarte hoy.",
+      "reset": "Restablecer",
+      "saved": "Persona guardada",
+      "created": "Persona creada",
+      "modelDeploymentNote": "Solo informativo — aún no se guarda en las personas (coincide con el comportamiento actual del perfil de HCP).",
+      "noLiveTestNote": "La prueba de voz en vivo no está disponible para las personas — no están vinculadas a una instancia de Voice Live ni a un agente de Foundry."
+    }
   }
 }

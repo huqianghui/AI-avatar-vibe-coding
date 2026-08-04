@@ -185,24 +185,36 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
       originalDefaultRow.getByText("Default", { exact: true }),
     ).toBeVisible({ timeout: 10000 });
 
-    // Helper: create a throwaway persona via the UI dialog, mirroring the
-    // original single-persona creation flow exactly (name + character grid
-    // + per-locale greeting + prompt fragment), just parameterized by name.
+    // Helper: create a throwaway persona via the full-page editor (Phase
+    // 37 replaced the create/edit modal with a dedicated route), mirroring
+    // the original single-persona creation flow (name + character grid +
+    // active-locale greeting + prompt fragment), just parameterized by
+    // name. Always starts from the list page so repeated calls (A, then B)
+    // each get a fresh "Create Persona" click, and always returns to the
+    // list page on success so the caller's row-based assertions can proceed
+    // immediately (the editor navigates to the new persona's edit route on
+    // save, it does not close a dialog).
     async function createPersonaViaUi(name: string): Promise<string> {
+      await page.goto("/admin/avatar-personas");
+      await expect(
+        page.getByRole("heading", { name: /avatar personas/i, level: 1 }),
+      ).toBeVisible({ timeout: 10000 });
+
       await page.getByRole("button", { name: /create persona/i }).click();
+      await page.waitForURL(/\/admin\/avatar-personas\/new$/, { timeout: 10000 });
 
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible({ timeout: 5000 });
-
-      await dialog.getByLabel(/^name$/i).fill(name);
+      await page.getByPlaceholder(/e\.g\., lisa - casual/i).fill(name);
 
       // Character & Style grid: pick the first available option (Lisa's first style)
-      await dialog.locator("button", { hasText: /lisa/i }).first().click();
+      await page.locator("button", { hasText: /lisa/i }).first().click();
 
-      // Greeting (per-locale — Section 4 was reworked in 37-03 Task 1) + prompt fragment
-      await dialog.locator("#persona-greeting-en-US").fill(`Hello from ${name}!`);
-      await dialog
-        .locator("#persona-prompt-fragment")
+      // Speech section defaults to the en-US locale (DEFAULT_LOCALE) on a
+      // fresh persona, so filling the single active-locale greeting field
+      // here is equivalent to the old per-locale `#persona-greeting-en-US`
+      // field it replaces. Prompt fragment is unchanged in shape.
+      await page.locator("#persona-editor-greeting").fill(`Hello from ${name}!`);
+      await page
+        .locator("#persona-editor-prompt-fragment")
         .fill("Speak concisely and warmly.");
 
       const createResponse = page.waitForResponse(
@@ -210,12 +222,19 @@ test.describe("Admin Avatar Personas — CRUD workflow", () => {
           response.url().includes("/api/v1/admin/avatar-personas") &&
           response.request().method() === "POST",
       );
-      await dialog.getByRole("button", { name: /save persona/i }).click();
+      await page.getByRole("button", { name: /save persona/i }).click();
       const createBody = await (await createResponse).json();
       const id = createBody.id as string;
       expect(id).toBeTruthy();
 
-      await expect(dialog).not.toBeVisible({ timeout: 5000 });
+      // Save success navigates (replace) to the new persona's edit route --
+      // wait for that transition, then head back to the list page.
+      await page.waitForURL(new RegExp(`/admin/avatar-personas/${id}/edit$`), {
+        timeout: 5000,
+      });
+      await page.goto("/admin/avatar-personas");
+      await expect(table).toBeVisible({ timeout: 10000 });
+
       return id;
     }
 

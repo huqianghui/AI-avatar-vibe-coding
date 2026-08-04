@@ -755,6 +755,21 @@
     "greetingHelper": "会话连接后数字人将立即说出此问候语。",
     "promptFragmentLabel": "人设提示词片段",
     "promptFragmentHelper": "将与用户的 CRM/偏好上下文一起注入系统提示词，自动进行安全过滤。",
-    "useDefaultVoiceOption": "（使用默认）"
+    "useDefaultVoiceOption": "（使用默认）",
+    "editor": {
+      "backAriaLabel": "返回人设列表",
+      "speechSectionTitle": "语音",
+      "languageLabel": "语言",
+      "voiceLabel": "语音",
+      "configuredLocalesLabel": "已配置的语言",
+      "previewTitle": "预览",
+      "previewGreetingLabel": "问候语预览",
+      "previewGreetingFallback": "你好，我今天可以帮你什么？",
+      "reset": "重置",
+      "saved": "人设已保存",
+      "created": "人设已创建",
+      "modelDeploymentNote": "仅供参考——目前尚未保存到人设（与当前 HCP 档案的行为一致）。",
+      "noLiveTestNote": "人设暂不支持实时语音测试——人设未绑定 Voice Live 实例或 Foundry Agent。"
+    }
   }
 }

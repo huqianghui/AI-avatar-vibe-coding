@@ -53,7 +53,7 @@ export interface PersonaSwitcherProps {
 }
 
 /** 32px (or custom-sized) thumbnail circle with an image+onError fallback to
- * a gradient + initials, matching the admin persona-dialog convention. */
+ * a gradient + initials, matching the admin persona-editor convention. */
 function PersonaThumbnail({
   persona,
   className,
