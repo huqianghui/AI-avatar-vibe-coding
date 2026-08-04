@@ -37,18 +37,13 @@ describe("AvatarCharacterGallery", () => {
     render(<AvatarCharacterGallery character="" style="" onSelect={onSelect} />);
     const grid = screen.getByTestId("avatar-character-grid");
 
-    const videoItem = within(grid).getByRole("button", {
-      name: new RegExp(
-        `^${firstVideoAvatar.displayName}\\s*\\(${firstVideoAvatar.styles[0]!.replace(/-/g, " ")}\\)$`,
-        "i",
-      ),
-    });
+    const videoItem = within(grid).getByTestId(
+      `avatar-item-${firstVideoAvatar.id}-${firstVideoAvatar.styles[0]!}`,
+    );
     await user.click(videoItem);
     expect(onSelect).toHaveBeenCalledWith(firstVideoAvatar.id, firstVideoAvatar.styles[0]);
 
-    const photoItem = within(grid).getByRole("button", {
-      name: new RegExp(`^${firstPhotoAvatar.displayName}$`, "i"),
-    });
+    const photoItem = within(grid).getByTestId(`avatar-item-${firstPhotoAvatar.id}`);
     await user.click(photoItem);
     expect(onSelect).toHaveBeenCalledWith(firstPhotoAvatar.id, "");
   });
@@ -62,18 +57,13 @@ describe("AvatarCharacterGallery", () => {
       />,
     );
     const grid = screen.getByTestId("avatar-character-grid");
-    const selectedItem = within(grid).getByRole("button", {
-      name: new RegExp(
-        `^${firstVideoAvatar.displayName}\\s*\\(${firstVideoAvatar.styles[0]!.replace(/-/g, " ")}\\)$`,
-        "i",
-      ),
-    });
+    const selectedItem = within(grid).getByTestId(
+      `avatar-item-${firstVideoAvatar.id}-${firstVideoAvatar.styles[0]!}`,
+    );
     expect(selectedItem.className).toContain("ring-2");
     expect(selectedItem.className).toContain("border-primary");
 
-    const otherItem = within(grid).getByRole("button", {
-      name: new RegExp(`^${firstPhotoAvatar.displayName}$`, "i"),
-    });
+    const otherItem = within(grid).getByTestId(`avatar-item-${firstPhotoAvatar.id}`);
     expect(otherItem.className).not.toContain("ring-2");
   });
 
