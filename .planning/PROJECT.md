@@ -8,20 +8,20 @@ An AI-powered digital human (avatar) platform for BeiGene (百济神州), built 
 
 Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
 
-## Current Milestone: v2.3 Voice Mode Config (Foundry Portal Style)
+## Current State
 
-**Goal:** 将 "Voice Live Instance" 选择卡替换为 AI Foundry portal 最新 voice mode 直接配置（模型部署、Language、Speech output 语音、Avatar 画廊），HCP 档案编辑页与 Persona 编辑页两处统一，配置持久化并被语音会话实际使用。
+**Shipped:** v2.3 Voice Mode Config (Foundry Portal Style) — 2026-08-05 (Phase 38, 3/3 plans, VMODE-01/02 delivered, verification 4/4 passed)
 
-**Target features:**
-- HCP 编辑页移除 Voice Live Instance 选择器，替换为 Foundry-portal 风格直接配置（model deployment / language / speech-output voice / avatar 开关 + 角色画廊）
-- HCP 直接 voice 配置持久化到 HcpProfile 内联字段（Alembic 迁移 + 回填），语音会话直接使用，不再依赖预置 Voice Live 实例
-- Persona 编辑页复用同一套配置组件/布局（共享 AvatarCharacterGallery、Speech output 分区、语言下拉）
-- 原 Persona Editor Foundry Parity 需求（PEDIT-01..06, BRAND-01）延后至 Future Requirements（用户 2026-08-04 rescope 决定）
+平台现状：匿名 grounded 问答 + 登录个性化（Excel CRM POC）+ 5 locale（zh-CN/en-US/es-ES/es-MX/es-US）+ Persona 目录/切换/保真 + Foundry-portal 风格 voice mode 直接配置（HCP 编辑页与 Persona 编辑页统一，HcpProfile 内联字段持久化，不再依赖预置 Voice Live 实例）。
 
-**Key context:**
-- 替换机制来源：Phase 28 的 HCP Voice Live instance 关联被内联字段取代；`resolve_voice_config()` 输出 21-key dict 形状保持不变，`voice_live_websocket.py` 与 `agent_sync_service.py` 消费方零改动
-- 遗留 VoiceLiveInstance CRUD 端点保留但对 HCP 语音行为已无影响（code review WR-1，后续里程碑可清理）
-- 执行遵循 CLAUDE.md 最高优先级规则：逐个需求 实现 → 100% unit test → Playwright E2E → 全通过 → commit → push
+**Known tech debt (from v2.3 code review, non-blocking):**
+- WR-01: 遗留 VoiceLiveInstance CRUD 端点保留但对 HCP 语音行为已无影响（后续里程碑可清理）
+- WR-02: HCP editor 测试注释中的过时 D-10 引用
+- IN-01..03: 重复 "Model Deployment" 标签、`build_voice_live_metadata` 不可达 fallback 默认值、avatar_character 默认值不一致（lisa vs lori）
+
+## Next Milestone Goals
+
+**v2.4 Fluent UI v9 Migration（规划中）：** `@/components/ui/*` 适配器迁移（对齐 Azure AI Foundry 视觉）— 导入路径与 props 签名不变，内部实现从 Radix+Tailwind 逐个换成 `@fluentui/react-components` v9；126 个消费文件基本不动。详细方案见 `.omc/plans/fluent-ui-migration-plan.md`（阶段 A-F：Provider/主题桥接 → 叶子组件 → 复合组件 → 图标层 → Toast 桥 → 卸载 Radix/lucide/sonner）。
 
 ## Requirements
 
@@ -75,7 +75,7 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 
 ### Active
 
-（无 — v2.3 里程碑全部需求已交付）
+- [ ] Fluent UI v9 组件库迁移（v2.4 规划中）— `@/components/ui/*` 内部实现 Radix→Fluent 适配器替换，视觉对齐 Azure AI Foundry portal，见 `.omc/plans/fluent-ui-migration-plan.md`
 
 ### Out of Scope
 
@@ -140,4 +140,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-04 — v2.3 milestone (Voice Mode Config, Foundry Portal Style) 完成：Phase 38 交付 VMODE-01/02，验证 4/4 通过（38-VERIFICATION.md）*
+*Last updated: 2026-08-05 after v2.3 milestone completion (archived to .planning/milestones/); next: v2.4 Fluent UI v9 Migration*

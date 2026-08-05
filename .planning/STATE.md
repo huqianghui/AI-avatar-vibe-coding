@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Voice Mode Config (Foundry Portal Style)
-status: executing
-stopped_at: Completed 37-04-PLAN.md
-last_updated: "2026-08-04T06:22:14.518Z"
-last_activity: 2026-08-04
+status: milestone_complete
+stopped_at: v2.3 milestone archived 2026-08-05
+last_updated: "2026-08-05T13:54:45.411Z"
+last_activity: 2026-08-05
 progress:
   total_phases: 6
   completed_phases: 6
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-24)
+See: .planning/PROJECT.md (updated 2026-08-05)
 
 **Core value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
-**Current focus:** Phase 38 — voice-mode-config-foundry-portal
+**Current focus:** Planning next milestone (v2.4 Fluent UI v9 Migration)
 
 ## Current Position
 
-Phase: 38
-Plan: Not started
-Status: Executing Phase 38
-Last activity: 2026-08-04
+Phase: — (v2.3 complete, no active phase)
+Plan: —
+Status: v2.3 milestone complete — awaiting /gsd-new-milestone for v2.4
+Last activity: 2026-08-05
 
 ## Performance Metrics
 
