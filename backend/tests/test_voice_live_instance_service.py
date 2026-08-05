@@ -605,6 +605,66 @@ def test_resolve_voice_config_inline_defaults():
     assert result["custom_lexicon_enabled"] is False  # default
 
 
+def test_resolve_voice_config_for_persona_prefers_zh_cn_locale():
+    """resolve_voice_config_for_persona (Increment E) picks the zh-CN entry from
+    voice_map when present, regardless of insertion order."""
+    from app.services.voice_live_instance_service import resolve_voice_config_for_persona
+
+    mock_persona = MagicMock(spec=["id", "character", "style", "voice_map"])
+    mock_persona.id = "persona-1"
+    mock_persona.character = "lisa"
+    mock_persona.style = "casual-sitting"
+    mock_persona.voice_map = (
+        '{"en-US": "en-US-AvaNeural", "zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}'
+    )
+
+    result = resolve_voice_config_for_persona(mock_persona)
+
+    assert result["voice_name"] == "zh-CN-XiaoxiaoMultilingualNeural"
+    assert result["recognition_language"] == "zh-CN"
+    assert result["avatar_character"] == "lisa"
+    assert result["avatar_style"] == "casual-sitting"
+    # Avatar is always enabled for personas, regardless of any HCP-only column
+    assert result["avatar_enabled"] is True
+    assert result["voice_live_enabled"] is True
+
+
+def test_resolve_voice_config_for_persona_falls_back_to_first_locale():
+    """When voice_map has no zh-CN entry, falls back to the first entry present."""
+    from app.services.voice_live_instance_service import resolve_voice_config_for_persona
+
+    mock_persona = MagicMock(spec=["id", "character", "style", "voice_map"])
+    mock_persona.id = "persona-2"
+    mock_persona.character = "harry"
+    mock_persona.style = "business"
+    mock_persona.voice_map = '{"en-US": "en-US-GuyNeural"}'
+
+    result = resolve_voice_config_for_persona(mock_persona)
+
+    assert result["voice_name"] == "en-US-GuyNeural"
+    assert result["recognition_language"] == "en-US"
+
+
+def test_resolve_voice_config_for_persona_empty_voice_map_uses_global_default():
+    """When voice_map is empty, falls back to DEFAULT_PUBLIC_VOICE_BY_LOCALE["zh-CN"]."""
+    from app.services.voice_live_instance_service import resolve_voice_config_for_persona
+    from app.services.voice_live_webrtc import DEFAULT_PUBLIC_VOICE_BY_LOCALE
+
+    mock_persona = MagicMock(spec=["id", "character", "style", "voice_map"])
+    mock_persona.id = "persona-3"
+    mock_persona.character = ""
+    mock_persona.style = ""
+    mock_persona.voice_map = "{}"
+
+    result = resolve_voice_config_for_persona(mock_persona)
+
+    assert result["voice_name"] == DEFAULT_PUBLIC_VOICE_BY_LOCALE["zh-CN"]
+    assert result["recognition_language"] == "zh-CN"
+    # Empty character/style columns fall back to sensible defaults
+    assert result["avatar_character"] == "lisa"
+    assert result["avatar_style"] == "casual"
+
+
 # ===========================================================================
 # Real-data integration tests: use real DB (in-memory SQLite via conftest)
 # ===========================================================================

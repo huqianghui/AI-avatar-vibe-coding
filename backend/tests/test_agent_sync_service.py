@@ -1595,11 +1595,13 @@ def test_build_agent_instructions_override_with_whitespace_stripped():
 def test_build_voice_live_metadata_uses_resolve_voice_config():
     """build_voice_live_metadata uses resolve_voice_config and includes avatar fields.
 
-    VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources voice_name/
-    avatar_character/avatar_style/avatar_enabled/recognition_language directly
-    from the HcpProfile's own inline columns (not profile.voice_live_instance).
-    The remaining keys (voice type/temperature/rate, turn detection, noise/echo,
-    proactive engagement) are hardcoded fixed values for this phase.
+    persona-hcp-foundry-alignment Increment E: output format follows the
+    OFFICIAL Microsoft Voice Live Agents quickstart -- snake_case session
+    keys, fields included explicitly (not omitted to fit 512 chars; chunking
+    now handles oversized values). VMODE-01 (2026-08-04 rescope):
+    resolve_voice_config() sources voice_name/avatar_character/avatar_style/
+    avatar_enabled/recognition_language directly from the HcpProfile's own
+    inline columns (not profile.voice_live_instance).
     """
     import json
 
@@ -1622,64 +1624,58 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     assert result is not None
     assert result[VOICE_LIVE_ENABLED_KEY] == "true"
 
-    # Parse config JSON (single value, no chunking)
+    # No chunking needed for this profile -- base key holds full JSON
     config_json = result[VOICE_LIVE_CONFIG_KEY]
+    assert VOICE_LIVE_CONFIG_KEY + ".1" not in result
     config = json.loads(config_json)
 
-    # Azure metadata 512-char limit: verify JSON fits
-    assert len(config_json) <= 512, f"config_json is {len(config_json)} chars, exceeds 512 limit"
-
-    # Foundry Portal format: config wrapped in {"session": {...}} with camelCase keys
+    # Official format: config wrapped in {"session": {...}} with snake_case keys
     assert "session" in config
     session = config["session"]
 
-    # Voice settings — name sourced from profile's inline column
+    # Voice settings — name sourced from profile's inline column, all
+    # sub-fields included explicitly
     assert session["voice"]["name"] == "zh-CN-XiaoxiaoMultilingualNeural"
-    # "type" omitted -- hardcoded to "azure-standard" (default)
-    assert "type" not in session["voice"]
-    # temperature hardcoded to 0.9 (!= 0.8 default), always present
+    assert session["voice"]["type"] == "azure-standard"
     assert session["voice"]["temperature"] == 0.9
-    # rate omitted -- playback_speed hardcoded to 1.0 (default)
-    assert "rate" not in session["voice"]
+    assert session["voice"]["rate"] == "1.0"
 
-    # Input audio transcription — only present when language is non-default
-    # zh-CN is not the default "auto-detect", so it should be present
-    assert session["inputAudioTranscription"]["language"] == "zh-CN"
-    # "model" key omitted to save space (always "azure-speech")
-    assert "model" not in session["inputAudioTranscription"]
+    # Input audio transcription — always present
+    assert session["input_audio_transcription"]["model"] == "azure-speech"
+    assert session["input_audio_transcription"]["language"] == "zh-CN"
 
-    # Turn detection — hardcoded to "server_vad"; EOU hardcoded False (omitted)
-    assert session["turnDetection"]["type"] == "server_vad"
-    assert "endOfUtteranceDetection" not in session["turnDetection"]
-    # removeFillerWords omitted (Foundry default is true)
-    assert "removeFillerWords" not in session["turnDetection"]
+    # Turn detection — hardcoded to "server_vad"; EOU hardcoded False (omitted
+    # sub-key since there's no meaningful "off" value for it)
+    assert session["turn_detection"]["type"] == "server_vad"
+    assert "end_of_utterance_detection" not in session["turn_detection"]
 
-    # Noise/echo hardcoded disabled -- omitted from session
-    assert "inputAudioNoiseReduction" not in session
-    assert "inputAudioEchoCancellation" not in session
+    # Noise/echo hardcoded disabled -- explicit null, not omitted
+    assert session["input_audio_noise_reduction"] is None
+    assert session["input_audio_echo_cancellation"] is None
 
     # Avatar settings — character/style sourced from profile's inline columns
     assert session["avatar"]["character"] == "lisa"
     assert session["avatar"]["style"] == "formal"
-    # "customized" omitted -- hardcoded False (default)
-    assert "customized" not in session["avatar"]
+    assert session["avatar"]["customized"] is False
 
-    # proactiveEngagement hardcoded True -- always present
-    assert session["proactiveEngagement"] is True
+    # proactive_engagement hardcoded True -- always present
+    assert session["proactive_engagement"] is True
 
 
-def test_build_voice_live_metadata_fits_512_char_limit_worst_case():
-    """Azure metadata values must be ≤512 chars per key.
+def test_build_voice_live_metadata_chunks_oversized_config():
+    """Configs >512 chars are chunked via the official .1/.2/... suffix convention.
 
-    This test exercises the WORST-CASE scenario: a long avatar style
-    (casual-sitting), long voice name (XiaoxiaoMultilingualNeural),
-    all optional features enabled (noise, echo, EOU, proactive, customized,
-    non-default temperature/rate).  If this passes, all real configurations
-    will fit within the 512-char Azure metadata limit.
-
-    Rule: We omit null fields and default-value fields from the JSON.
-    The Azure Foundry Portal fills in defaults server-side.
-    See agent_sync_service.build_voice_live_metadata() for details.
+    persona-hcp-foundry-alignment Increment E: fields are now included
+    explicitly (voice type/temperature/rate, transcription model, always-
+    present turn_detection/noise/echo/avatar/proactive_engagement keys), which
+    makes the JSON commonly exceed Azure's 512-char per-metadata-value limit.
+    _chunk_metadata_value() splits the JSON across VOICE_LIVE_CONFIG_KEY (first
+    chunk) + VOICE_LIVE_CONFIG_KEY.1, .2, ... (continuation chunks) -- this is
+    the format used directly in the official Voice Live Agents quickstart, and
+    is now used unconditionally instead of the old "omit defaults to fit 512"
+    hack (which itself replaced an earlier custom chunk_N/wrapper scheme that
+    empirically broke the Foundry Portal's Voice mode toggle -- see commit
+    5e03905).
     """
     import json
 
@@ -1690,7 +1686,6 @@ def test_build_voice_live_metadata_fits_512_char_limit_worst_case():
 
     mock_profile = MagicMock()
     mock_profile.voice_live_instance = None
-    # Worst-case long values for the inline fields resolve_voice_config() reads directly
     mock_profile.voice_live_model = "gpt-4o-realtime-preview"
     mock_profile.voice_name = "zh-CN-XiaoxiaoMultilingualNeural"
     mock_profile.avatar_character = "lisa"
@@ -1701,24 +1696,77 @@ def test_build_voice_live_metadata_fits_512_char_limit_worst_case():
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
 
-    config_json = result[VOICE_LIVE_CONFIG_KEY]
-    config = json.loads(config_json)
+    # Every individual metadata value must still respect the 512-char limit --
+    # verified across all chunk keys, not just the base key.
+    chunk_keys = [VOICE_LIVE_CONFIG_KEY] + [
+        k for k in result if k.startswith(VOICE_LIVE_CONFIG_KEY + ".")
+    ]
+    for k in chunk_keys:
+        assert len(result[k]) <= 512, f"{k} is {len(result[k])} chars, exceeds 512 limit"
 
-    # THE critical assertion: must fit within Azure's 512-char per-value limit
-    assert len(config_json) <= 512, (
-        f"Voice config JSON is {len(config_json)} chars, exceeds Azure 512-char "
-        f"metadata limit.  Compact the JSON by omitting null/default fields.\n"
-        f"JSON: {config_json}"
-    )
-
-    # Verify essential fields are still present
+    # Reassemble and verify the JSON round-trips and essential fields survive
+    reassembled = "".join(result[k] for k in sorted(chunk_keys, key=_chunk_sort_key))
+    config = json.loads(reassembled)
     session = config["session"]
     assert session["voice"]["name"] == "zh-CN-XiaoxiaoMultilingualNeural"
     assert session["avatar"]["character"] == "lisa"
     assert session["avatar"]["style"] == "casual-sitting"
-    # noise/echo hardcoded disabled since VMODE-01 -- omitted from session
-    assert "inputAudioNoiseReduction" not in session
-    assert "inputAudioEchoCancellation" not in session
+    # Explicit null (present, not omitted) since noise/echo hardcoded disabled
+    assert session["input_audio_noise_reduction"] is None
+    assert session["input_audio_echo_cancellation"] is None
+
+
+def _chunk_sort_key(key: str) -> int:
+    """Sort VOICE_LIVE_CONFIG_KEY (base, index 0) before .1, .2, ... suffixes."""
+    parts = key.rsplit(".", 1)
+    return int(parts[1]) if len(parts) == 2 and parts[1].isdigit() else 0
+
+
+def test_build_voice_live_metadata_dispatches_to_persona_config():
+    """build_voice_live_metadata routes AvatarPersona instances through
+    resolve_voice_config_for_persona (isinstance dispatch), not the
+    hasattr(profile, "voice_live_model") gate that previously caused personas
+    to sync with empty voice-live metadata (persona-hcp-foundry-alignment
+    Increment E).
+    """
+    import json
+
+    from app.models.avatar_persona import AvatarPersona
+    from app.services.agent_sync_service import (
+        VOICE_LIVE_CONFIG_KEY,
+        VOICE_LIVE_ENABLED_KEY,
+        build_voice_live_metadata,
+    )
+
+    persona = AvatarPersona(
+        name="Lisa",
+        character="lisa",
+        style="casual",
+        voice_map=json.dumps({"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}),
+        greeting_map="{}",
+        prompt_fragment="",
+        enabled=True,
+        is_default=False,
+    )
+
+    result = build_voice_live_metadata(persona)
+    assert result is not None
+    assert result[VOICE_LIVE_ENABLED_KEY] == "true"
+
+    chunk_keys = [VOICE_LIVE_CONFIG_KEY] + [
+        k for k in result if k.startswith(VOICE_LIVE_CONFIG_KEY + ".")
+    ]
+    reassembled = "".join(result[k] for k in sorted(chunk_keys, key=_chunk_sort_key))
+    session = json.loads(reassembled)["session"]
+
+    # Voice sourced from persona.voice_map (zh-CN preferred)
+    assert session["voice"]["name"] == "zh-CN-XiaoxiaoMultilingualNeural"
+    # Avatar sourced from persona's own character/style columns. Personas are
+    # digital-human personas by definition, so avatar_enabled is always True
+    # (resolve_voice_config_for_persona) -- confirmed by "avatar" key presence
+    # (build_voice_live_metadata only emits it when avatar_enabled is truthy).
+    assert session["avatar"]["character"] == "lisa"
+    assert session["avatar"]["style"] == "casual"
 
 
 def test_build_cleared_voice_metadata_returns_disabled_state():
@@ -2458,14 +2506,13 @@ def test_build_voice_live_metadata_turn_detection_hardcoded_server_vad():
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
 
-    # Parse config JSON (single value, no chunking)
     config = json.loads(result[VOICE_LIVE_CONFIG_KEY])
 
-    # Foundry format: config["session"]["turnDetection"]
+    # Official format: config["session"]["turn_detection"] (snake_case)
     session = config["session"]
-    assert session["turnDetection"]["type"] == "server_vad"
-    # No EOU since eou_detection is hardcoded False — key omitted to save space
-    assert "endOfUtteranceDetection" not in session["turnDetection"]
+    assert session["turn_detection"]["type"] == "server_vad"
+    # No EOU sub-key since eou_detection is hardcoded False
+    assert "end_of_utterance_detection" not in session["turn_detection"]
 
 
 def test_build_voice_live_metadata_voice_type_hardcoded_azure_standard():
@@ -2495,10 +2542,10 @@ def test_build_voice_live_metadata_voice_type_hardcoded_azure_standard():
     assert result is not None
     config = json.loads(result[VOICE_LIVE_CONFIG_KEY])
 
-    # Foundry format: config["session"]["voice"]
+    # Official format: config["session"]["voice"] (snake_case)
     session = config["session"]
-    # "type" hardcoded to azure-standard (default) -- always omitted
-    assert "type" not in session["voice"]
+    # "type" hardcoded to azure-standard, always included explicitly
+    assert session["voice"]["type"] == "azure-standard"
     assert session["voice"]["name"] == "custom-voice"
 
 

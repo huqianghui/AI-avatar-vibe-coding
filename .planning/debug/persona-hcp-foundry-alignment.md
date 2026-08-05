@@ -2,19 +2,34 @@
 status: awaiting_human_verify
 trigger: "Investigate issue: persona-hcp-foundry-alignment — Avatar Persona admin page still not aligned with HCP profile page and Azure AI Foundry portal design. Three gaps: (1) Foundry-portal voice-mode layout parity (gear Configure button opening right-side Configuration panel) on BOTH HCP and Persona pages; (2) Persona editor missing Foundry features HCP has (Knowledge/Foundry IQ); (3) Persona must be a real Foundry agent, synced like HCP (Agent Synced card, Agent ID, version, Force re-sync, View in Azure Portal)."
 created: 2026-08-04T00:00:00Z
-updated: 2026-08-04T22:35:00Z
+updated: 2026-08-05T11:25:00Z
 ---
 
 ## Current Focus
 <!-- OVERWRITE on each update - reflects NOW -->
 
-hypothesis: CONFIRMED for all 3 gaps (see Resolution). All 4 increments (A/B/C/D) implemented,
-gated, and committed. Perf follow-up (non-blocking Foundry sync) also implemented, gated, and
-verified. Awaiting human browser verification before final archive.
-test: n/a — implementation complete, awaiting human sign-off.
-expecting: n/a
+hypothesis: Increment E CONFIRMED and FIXED (new bug found post-D): agents synced to Azure AI
+Foundry showed "Voice mode" OFF because build_voice_live_metadata emitted camelCase keys (an
+older/classic-portal format the new portal's toggle doesn't recognize) and personas were fully
+skipped by a hasattr(profile, "voice_live_model") gate. Rewrote build_voice_live_metadata to emit
+the official snake_case Voice Live Agents quickstart schema with every field explicit, chunked via
+the official .1/.2/... suffix convention when >512 chars, and dispatch to a new
+resolve_voice_config_for_persona() for AvatarPersona instances (avatar always enabled, voice from
+persona.voice_map). Verified live against real Foundry for one HCP (Dr-Wang-Fang) and one persona
+(Lisa) — both now carry correct, non-empty, snake_case voice-live metadata.
+test: Live re-sync + metadata re-fetch against real Foundry (see Evidence 2026-08-05T10:45:00Z);
+unit tests rewritten/added for snake_case format, chunking, persona dispatch, clear path.
+expecting: microsoft.voice-live.configuration JSON is snake_case, all fields present (explicit
+null for disabled noise/echo), chunked correctly if oversized, and identical in shape for both
+HcpProfile and AvatarPersona profiles.
 next_action: |
-  All 4 increments DONE:
+  Increment E DONE and fully gate-confirmed: live Foundry re-verification passed for both an HCP
+  and a persona; a stale-test regression discovered mid-gate-run in a third test file
+  (test_hcp_agent_sync_integration.py) was fixed; final full backend pytest run is clean modulo 3
+  unrelated live-Azure-network flakes (see Resolution.verification). Remaining step: create the
+  single commit for Increment E (fix(sync): store Voice Live config in official chunked metadata
+  format; include personas), delete no further throwaway scripts (already deleted), then report.
+  All 4 prior increments (A/B/C/D) still DONE:
     Increment A (commit cc8a962) — backend Foundry agent sync fields/hooks/routes for AvatarPersona.
     Increment B (commit fb7e9ef) — frontend AgentStatusSection rendering for personas.
     Increment C (commit 41699ab) — backend + frontend Knowledge/Foundry IQ for personas.
@@ -142,6 +157,137 @@ started: Longstanding. Phase 38 (2026-08-04) explicitly deferred the Foundry-age
   login-redirect test) are documented here so a future session doesn't waste time re-diagnosing
   them as caused by this work.
 
+- timestamp: 2026-08-05T00:00:00Z
+  checked: Human verification of the gear "Configuration" panel (语音和数字人配置) found
+  two follow-up gaps: (1) the speech-output voice dropdown had zero Spanish voices, and
+  (2) voice options never filtered by the selected recognition language (an en-US voice
+  stayed pickable/visible after switching to es-ES, and vice versa). Root cause:
+  `VOICE_NAME_OPTIONS` in `frontend/src/lib/voice-constants.ts` had no `locale` field and
+  no Spanish entries, and every voice Select (ConfigurationPanel, vl-instance-dialog.tsx,
+  vl-instance-editor.tsx) unconditionally rendered the full unfiltered list.
+  found: Fixed frontend-only. Added 6 Azure standard neural Spanish voices (es-ES-Elvira/
+  Alvaro, es-MX-Dalia/Jorge, es-US-Paloma/Alonso) with a `locale` field on every
+  VOICE_NAME_OPTIONS entry and a `multilingual` flag on zh-CN-XiaoxiaoMultilingualNeural;
+  added `voiceOptionsForLanguage(language)` (auto/unrecognized locale -> all options,
+  otherwise locale match + multilingual). Wired into ConfigurationPanel's voice Select
+  (keeping an out-of-locale saved voice visible via a fallback SelectItem so it's never
+  silently dropped) and identically into vl-instance-dialog.tsx + vl-instance-editor.tsx
+  keyed off `form.recognition_language`. Updated RECOGNITION_LANGUAGES (used by the VL
+  instance dialog/editor) to drop ja-JP/ko-KR and add es-ES/es-MX/es-US, matching the
+  3-language (zh-CN/en-US/es-*) requirement. Added the 6 new voice i18n keys +
+  langSpanishSpain/Mexico/US to all 5 admin.json locale files; kept the Spanish voice
+  proper-noun labels in zh-CN/en-US identical ("Elvira (ES-ES)" etc.) but had to give the
+  3 es-* locale files a translated country-name parenthetical ("Elvira (España)" etc.)
+  instead of a byte-identical string, because `src/i18n/locale-parity.test.ts` enforces
+  es-* values differ from en-US unless whitelisted, and the untranslated-whitelist
+  guardrail was already at its 15-entry cap.
+  implication: Updated hcp-editor-voice-tab.spec.ts's language+voice E2E test (it
+  previously selected es-ES language then an English "Andrew" voice, which the new
+  filtering now correctly hides) to select "Elvira" instead — this is the filtering
+  feature working as intended, not a regression. All gates green: `npx tsc -b` clean,
+  `npm run build` succeeds, full `npx vitest run` 2750/2751 passed (the 1 failure is the
+  pre-existing documented `login.test.tsx` flake, unrelated). Playwright: full run of the
+  3 named specs 22/23 passed, the 1 failure (a `beforeEach` API-login timeout in an
+  unrelated pre-existing knowledge-base test) reproduced as passing in isolation (3/3,
+  5.7s vs the 30s timeout) confirming it's an environment flake, not caused by this
+  change. Committed as `0a305c2 feat(voice): add Spanish voices and filter voice list by
+  recognition language`.
+
+- timestamp: 2026-08-05T10:00:00Z
+  checked: Increment E (new bug, post-D): agents synced to Azure AI Foundry (new portal) show
+  "Voice mode" toggle OFF, and voice/avatar settings never appear in the Foundry agent, for both
+  HCP profiles and Avatar Personas. Empirically diagnosed via a throwaway script
+  (`_diag_voice_metadata.py`, deleted before commit) calling `agent_sync_service._get_project_client`/
+  `get_project_endpoint` to fetch real agent metadata for `Dr-Wang-Fang`, `Dr-Li-Mei`, and `Lisa`.
+  found: (1) `Dr-Wang-Fang` (a stale agent, last synced before commit `5e03905`) had a non-standard
+  chunked format: `.chunk_N` keys + a `{"chunked":true,...}` JSON-pointer wrapper -- git archaeology
+  (`git log -S "totalChunks"`) confirmed `5e03905` removed exactly this scheme after it broke the
+  (old) Foundry Portal's Voice mode toggle. (2) `Dr-Zhang-Wei` (freshly synced same day, i.e. the
+  TRUE current-code baseline) had `microsoft.voice-live.enabled: "true"` plus a small, non-chunked,
+  camelCase JSON blob with several fields OMITTED (to stay under the 512-char limit) -- confirming
+  the CURRENT (pre-fix) code emits camelCase with omitted defaults, not the chunked scheme from (1).
+  (3) `Lisa` (persona) had ZERO `microsoft.voice-live.*` keys at all -- confirms the
+  `hasattr(profile, "voice_live_model")` gate in `sync_agent_for_profile` was silently skipping
+  `build_voice_live_metadata` entirely for every persona (AvatarPersona has no such column). (4) No
+  agent in the project had been manually toggled via the portal's Voice-mode UI, so no 100%-authoritative
+  ground-truth schema existed in the live project; proceeded on the officially-documented Microsoft
+  Voice Live Agents quickstart schema (snake_case `session` keys: `voice`, `input_audio_transcription`,
+  `turn_detection`, `input_audio_noise_reduction`, `input_audio_echo_cancellation`, `avatar`,
+  `proactive_engagement`; oversized values chunked via official `.1`/`.2`/... key-suffix convention,
+  not a custom wrapper).
+  implication: Root cause is camelCase key casing (an older/classic-portal format) that the current
+  (new) Foundry Portal's Voice mode toggle does not recognize, PLUS personas being fully excluded by
+  a type-gate that assumed only `HcpProfile`-shaped objects ever reach `build_voice_live_metadata`.
+  Re-introducing chunking (in the correct official `.1`/`.2` suffix format, NOT the wrapper scheme
+  commit `5e03905` removed) is safe and is required now because emitting every field explicitly
+  (no more omit-to-fit-512 hack) commonly exceeds the 512-char single-value limit.
+
+- timestamp: 2026-08-05T10:45:00Z
+  checked: Live re-verification after applying the fix (see Resolution.fix below) -- ran a real
+  metadata-only re-sync (`agent_sync_service.update_agent_metadata_only`) against the live Foundry
+  project for one HCP (`Dr-Wang-Fang`) and one persona (`Lisa`), then re-fetched each agent via
+  `client.agents.get()` and inspected `agent.versions["latest"]["metadata"]` (NOT the top-level
+  `agent.metadata` attribute -- see finding below).
+  found: Both agents now carry `microsoft.voice-live.enabled: "true"` plus a `microsoft.voice-live.
+  configuration` value whose JSON is `{"session": {"voice": {...}, "input_audio_transcription": {...},
+  "turn_detection": {"type": "server_vad"}, "input_audio_noise_reduction": null,
+  "input_audio_echo_cancellation": null, "avatar": {"character": "lisa", "style": "casual-sitting",
+  "customized": false}, "proactive_engagement": true}}` -- fully snake_case, every field explicit
+  (nulls shown, not omitted), matching the official quickstart schema exactly. Dr-Wang-Fang's config
+  is 405 chars, Lisa's is 388 chars -- both fit in a single (unchunked) key for these particular
+  profiles, but the oversized-config chunking path is separately covered by
+  `test_build_voice_live_metadata_chunks_oversized_config` (synthetic long avatar_style/voice_name).
+  Lisa's voice resolved to `en-US-AvaNeural` (her `voice_map` has no `zh-CN` entry, so
+  `resolve_voice_config_for_persona`'s fallback correctly picked the first available locale entry)
+  and `avatar.character`/`avatar.style` came from her own `character`/`style` columns -- confirms the
+  persona dispatch branch works end-to-end against real Foundry, not just in mocked unit tests.
+  ADDITIONAL FINDING (out of this ticket's scope, documented for future reference): the current
+  `azure-ai-projects` SDK's `AgentDetails` object returned by `client.agents.get()` has NO top-level
+  `.metadata` attribute -- `hasattr(agent, "metadata")` always evaluates False, so
+  `update_agent_metadata_only`'s "fetch current metadata, strip old VL keys, merge" step always
+  operates on an empty `current_metadata` dict in practice. This is currently harmless because (a)
+  `create_version` fully replaces metadata rather than merging across versions (already established
+  in this session), and (b) no other non-voice-live metadata keys are ever set on these agents today
+  -- but it means that step's docstring ("removes old microsoft.voice-live.* keys") is not actually
+  exercised; the correctness instead comes entirely from `create_version`'s full-replace semantics.
+  The correct read path (used elsewhere, e.g. `get_agent_latest_version`) is
+  `agent.versions["latest"]["metadata"]`, not `agent.metadata`.
+  implication: Fix is verified working end-to-end against live Foundry for both an HCP profile and a
+  persona. The SDK attribute-mismatch finding is a separate latent (currently benign) issue in
+  `update_agent_metadata_only`'s read step, left unfixed as out-of-scope for this increment (no
+  observable bug results from it today; flagging here so a future session doesn't need to
+  re-discover it if non-voice-live metadata is ever introduced).
+
+- timestamp: 2026-08-05T11:05:00Z
+  checked: Full backend `pytest -q --no-cov -rf` run (background, ~918s) as the Step-4 gate for
+  Increment E, BEFORE this entry was written.
+  found: 7 failed, 2963 passed, 15 skipped. 6 of the 7 failures were real regressions I had missed:
+  `tests/test_hcp_agent_sync_integration.py` (a separate integration-test file, not previously
+  touched this increment) has its OWN copy of camelCase-format assertions for
+  `build_voice_live_metadata` (`test_build_voice_live_metadata_basic`,
+  `test_build_voice_live_metadata_with_noise_echo`, `test_build_voice_live_metadata_custom_voice`,
+  and the real-ORM equivalents in `TestBuildVoiceLiveMetadataRealORM`) that predated this session's
+  rewrite and were never updated when `test_agent_sync_service.py` was rewritten earlier in this
+  increment. The 7th failure, `test_voice_live_websocket.py::TestRealAzureSessionConfig::
+  test_real_transcription_model_azure_speech_accepted`, is unrelated (confirmed via
+  `git diff --name-only` -- that file is untouched by this fix; re-ran the whole
+  `TestRealAzureSessionConfig` class in isolation and a DIFFERENT sub-test failed that time
+  (`test_real_connect_model_mode_session_config_accepted`), confirming genuine live-Azure-network
+  flakiness rather than a deterministic regression from this change).
+  implication: Fixed the 6 real regressions by updating `test_hcp_agent_sync_integration.py`'s
+  assertions to the new snake_case/explicit-null format: `session["voice"]["type"]` is now asserted
+  present (`"azure-standard"`) instead of asserted absent; `turnDetection`/`inputAudioNoiseReduction`/
+  `inputAudioEchoCancellation`/`endOfUtteranceDetection` renamed to their snake_case equivalents
+  (`turn_detection`, `input_audio_noise_reduction`, `input_audio_echo_cancellation`,
+  `end_of_utterance_detection`); noise/echo assertions changed from "key not in session" to
+  "value is None" (explicit null, not omitted). Re-ran the fixed file alone (25/25 passed), the 8
+  targeted voice-live-metadata tests specifically (8/8 passed), and the full combined set of every
+  directly-touched-domain test file (`test_hcp_agent_sync_integration.py` +
+  `test_agent_sync_service.py` + `test_voice_live_instance_service.py` +
+  `test_avatar_persona_service.py`) together -- 212/212 passed, zero failures. `ruff check` and
+  `ruff format --check` on all touched files (including the newly-fixed test file) clean. A second
+  full-suite background run was started to get a clean final gate count before committing.
+
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->
 
@@ -222,6 +368,30 @@ fix: |
         without a manual refresh, mirroring `use-voice-score.ts`'s established polling pattern.
       - HCP's sync path (`hcp_profile_service.py`) is explicitly untouched — this follow-up is
         persona-only, matching the original ticket's scope.
+
+  Increment E (new bug, post-D) — APPLIED. Root cause: `build_voice_live_metadata` emitted
+    camelCase metadata keys (an older/classic-portal format) that the current Foundry Portal's
+    Voice mode toggle does not recognize, PLUS a `hasattr(profile, "voice_live_model")` gate that
+    silently skipped voice-live metadata entirely for every persona. Fix:
+    - `agent_sync_service.build_voice_live_metadata(profile)` rewritten to emit the OFFICIAL
+      Microsoft Voice Live Agents quickstart format: `{"session": {snake_case keys: voice,
+      input_audio_transcription, turn_detection, input_audio_noise_reduction,
+      input_audio_echo_cancellation, avatar, proactive_engagement}}`, every field included
+      explicitly (explicit `null` for disabled noise/echo, not omitted), oversized values chunked
+      via the existing (previously-unused) `_chunk_metadata_value()` helper using the official
+      `.1`/`.2`/... key-suffix convention -- NOT the custom `.chunk_N`/wrapper scheme a prior
+      session (commit `5e03905`) had already found broke the old portal.
+    - Now dispatches internally via `isinstance(profile, AvatarPersona)` to either
+      `resolve_voice_config()` (HcpProfile's inline voice-mode columns, unchanged) or a new
+      `resolve_voice_config_for_persona()` (added to `voice_live_instance_service.py`) --
+      resolves voice from the persona's per-locale `voice_map` (zh-CN preferred, else first
+      locale, else global default), avatar from the persona's own `character`/`style` columns,
+      avatar always enabled. Both resolvers return the same dict shape, so `build_voice_live_metadata`
+      needs no branching beyond the dispatch itself.
+    - `sync_agent_for_profile` in `agent_sync_service.py`: removed the
+      `has_voice_config = hasattr(profile, "voice_live_model")` gate; `build_voice_live_metadata`
+      is now called unconditionally for every profile (HCP or persona) since the dispatch lives
+      inside the function itself.
 verification: |
   Increment A: ruff check + ruff format --check clean on all 8 changed/added files. Targeted
   pytest run (115 tests) covering every touched module plus the full pre-existing HCP agent-sync
@@ -252,6 +422,27 @@ verification: |
   backend). The test.setTimeout bumps and stale ~14s-sync comments in
   admin-avatar-personas.spec.ts and admin-persona-knowledge.spec.ts were removed/reduced since the
   sync no longer blocks the HTTP response.
+  Increment E: `ruff check .` + `ruff format --check .` clean on all touched files. Live-Foundry
+  re-verification (see Evidence 2026-08-05T10:45:00Z): both an HCP (Dr-Wang-Fang) and a persona
+  (Lisa) now carry correct, non-empty, snake_case `microsoft.voice-live.*` metadata after a real
+  re-sync. Unit tests: added `test_build_voice_live_metadata_dispatches_to_persona_config`
+  (persona dispatch), rewrote the snake_case/chunking assertions in `test_agent_sync_service.py`
+  and `test_voice_live_instance_service.py`. A first full-suite gate run (see Evidence
+  2026-08-05T11:05:00Z) surfaced 6 real regressions in a THIRD, previously-unmodified file,
+  `test_hcp_agent_sync_integration.py`, which had its own stale camelCase-format assertions for
+  `build_voice_live_metadata` predating this increment's rewrite — fixed by updating those 6
+  assertions to the new snake_case/explicit-null format (see Evidence 2026-08-05T11:05:00Z for the
+  full list and rationale). Final full backend `pytest -q --no-cov -rf` run (after the fix):
+  2967/2970 passed, 15 skipped, 28 deselected; the 3 failures
+  (`test_agent_sync_service.py::test_real_three_profiles_sync`,
+  `test_voice_live_websocket.py::TestRealAzureSessionConfig::test_real_transcription_model_azure_speech_accepted`,
+  `test_voice_live_websocket.py::TestRealVoiceLiveIntegration::test_real_model_mode_english_voice_accepted`)
+  are all `[REAL]`-tagged live-Azure-network integration tests, none overlapping with the prior
+  run's failure set, none touched by this diff (confirmed via `git diff --name-only`), and
+  `test_real_three_profiles_sync` reproduced as passing in isolation (42s) — confirmed as live
+  network flakiness, not a regression. Combined regression run of every directly-touched-domain
+  test file (`test_hcp_agent_sync_integration.py` + `test_agent_sync_service.py` +
+  `test_voice_live_instance_service.py` + `test_avatar_persona_service.py`): 212/212 passed.
 files_changed:
   - backend/app/models/avatar_persona.py
   - backend/alembic/versions/h41a_add_persona_agent_sync_fields.py
@@ -287,3 +478,12 @@ files_changed:
   - frontend/src/hooks/use-avatar-personas.test.ts (perf follow-up: polling tests)
   - frontend/e2e/admin-avatar-personas.spec.ts (perf follow-up: removed setTimeout bumps)
   - frontend/e2e/admin-persona-knowledge.spec.ts (perf follow-up: removed setTimeout bumps)
+  - backend/app/services/agent_sync_service.py (Increment E: snake_case format, .1/.2 chunking,
+    persona dispatch, removed hasattr gate)
+  - backend/app/services/voice_live_instance_service.py (Increment E: new
+    resolve_voice_config_for_persona)
+  - backend/tests/test_agent_sync_service.py (Increment E: snake_case/chunking/persona-dispatch
+    test rewrites)
+  - backend/tests/test_voice_live_instance_service.py (Increment E: new persona-resolver tests)
+  - backend/tests/test_hcp_agent_sync_integration.py (Increment E: fixed 6 stale camelCase-format
+    assertions to match the new snake_case/explicit-null format)

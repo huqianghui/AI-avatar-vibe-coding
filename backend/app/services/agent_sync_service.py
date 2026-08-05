@@ -124,117 +124,120 @@ def _chunk_metadata_value(key: str, value: str, max_len: int = 512) -> dict[str,
 
 
 def build_voice_live_metadata(profile: object) -> dict[str, str] | None:
-    """Build microsoft.voice-live.configuration metadata from HCP profile voice fields.
+    """Build microsoft.voice-live.configuration metadata from a profile's voice fields.
 
-    Uses resolve_voice_config() to get the effective voice/avatar settings --
-    since VMODE-01 (2026-08-04 rescope), these are sourced directly from the
-    HcpProfile's own inline voice-mode columns and are always enabled
-    (voice_live_enabled is hardcoded True), superseding the old D-12
-    "disabled when unassigned" behavior.
+    Works for both HcpProfile (resolve_voice_config, inline voice-mode columns)
+    and AvatarPersona (resolve_voice_config_for_persona, per-locale voice_map --
+    persona-hcp-foundry-alignment Increment E).
 
-    The output format matches Azure AI Foundry Portal's own save format:
-    ``{"session": {camelCase keys for voice, avatar, turnDetection, etc.}}``
+    The output format follows the OFFICIAL Microsoft Voice Live Agents quickstart
+    (https://learn.microsoft.com/azure/ai-services/speech-service/voice-live-agents-quickstart):
+    ``{"session": {snake_case keys: voice, input_audio_transcription, turn_detection,
+    input_audio_noise_reduction, input_audio_echo_cancellation, avatar,
+    proactive_engagement}}``. An earlier implementation used camelCase keys
+    (matching an older/classic Foundry Portal save format) which the current
+    portal's Voice mode toggle does not recognize -- confirmed empirically
+    (2026-08-05): agents synced by the camelCase code always showed Voice mode
+    OFF in the new portal despite ``microsoft.voice-live.enabled: "true"``
+    being present.
 
-    IMPORTANT: Azure Agent metadata values are limited to 512 characters per key.
-    The Portal likely uses an internal API without this limit.  We stay under 512
-    by omitting null fields and false-valued defaults — Foundry fills them in.
+    Fields are included explicitly (not omitted to fit under 512 chars) --
+    chunking via _chunk_metadata_value() now handles oversized values, so the
+    old "omit defaults to stay under 512" hack (introduced when chunking was
+    believed unsupported) is obsolete. Chunked continuation keys use the
+    official ``.1``, ``.2``, ... suffix convention.
 
     Returns dict[str, str] suitable for agent metadata, or None if voice_live_enabled is False.
     Includes ``description`` and ``modified_at`` keys to match Foundry Portal format.
     """
-    from app.services.voice_live_instance_service import resolve_voice_config
+    from app.models.avatar_persona import AvatarPersona
+    from app.services.voice_live_instance_service import (
+        resolve_voice_config,
+        resolve_voice_config_for_persona,
+    )
 
-    vc = resolve_voice_config(profile)
+    vc = (
+        resolve_voice_config_for_persona(profile)
+        if isinstance(profile, AvatarPersona)
+        else resolve_voice_config(profile)
+    )
 
     if not vc.get("voice_live_enabled", True):
         return None
 
-    # --- Build session config in Foundry Portal's camelCase format ---
-    # Only include non-null, non-default fields to stay within 512-char limit.
+    # --- Build session config in the official snake_case Voice Live format ---
     session: dict = {}
 
-    # Voice settings (always required)
+    # Voice settings (always required, all sub-fields included explicitly)
     voice_name = vc.get("voice_name", "en-US-AvaNeural")
-    voice: dict = {"name": voice_name}
-    voice_type = vc.get("voice_type", "azure-standard")
-    if voice_type and voice_type != "azure-standard":
-        voice["type"] = voice_type
-    voice_temp = vc.get("voice_temperature", 0.8)
-    if voice_temp != 0.8:
-        voice["temperature"] = voice_temp
-    playback_speed = vc.get("playback_speed", 1.0)
-    if playback_speed != 1.0:
-        voice["rate"] = str(playback_speed)
-    is_hd = ":DragonHDLatestNeural" in voice_name or "HD" in voice_name
-    if is_hd:
-        voice["isHdVoice"] = True
+    voice: dict = {
+        "name": voice_name,
+        "type": vc.get("voice_type", "azure-standard"),
+        "temperature": vc.get("voice_temperature", 0.8),
+        "rate": str(vc.get("playback_speed", 1.0)),
+    }
+    if ":DragonHDLatestNeural" in voice_name or "HD" in voice_name:
+        voice["is_hd_voice"] = True
     session["voice"] = voice
 
-    # Input audio transcription — omit "model" (always "azure-speech") to save chars.
-    # Only include when language is non-default.
+    # Input audio transcription — always present; language is "auto-detect"
+    # when the profile's recognition language is unset/auto.
     recognition_lang = vc.get("recognition_language", "auto")
     transcription_lang = (
         "auto-detect" if recognition_lang in ("auto", "auto-detect") else recognition_lang
     )
-    if transcription_lang != "auto-detect":
-        session["inputAudioTranscription"] = {"language": transcription_lang}
+    session["input_audio_transcription"] = {
+        "model": "azure-speech",
+        "language": transcription_lang,
+    }
 
-    # Turn detection — only include non-null, non-default sub-fields
+    # Turn detection — always present; end_of_utterance_detection included
+    # only when enabled (there is no meaningful "off" sub-object for it).
     turn_detection_type = vc.get("turn_detection_type", "azure_semantic_vad")
     turn_detection: dict = {"type": turn_detection_type}
     if vc.get("eou_detection", False):
-        turn_detection["endOfUtteranceDetection"] = {"model": "semantic_detection_v1"}
-    # Omit removeFillerWords:true — Foundry default is true
-    session["turnDetection"] = turn_detection
+        turn_detection["end_of_utterance_detection"] = {
+            "model": "semantic_detection_v1_multilingual"
+        }
+    session["turn_detection"] = turn_detection
 
-    # Noise suppression — only include when enabled (omit null)
-    if vc.get("noise_suppression", False):
-        session["inputAudioNoiseReduction"] = {"type": "azure_deep_noise_suppression"}
+    # Noise suppression / echo cancellation — always present, explicit null when off
+    # (matches Foundry's own null-when-disabled convention).
+    session["input_audio_noise_reduction"] = (
+        {"type": "azure_deep_noise_suppression"} if vc.get("noise_suppression", False) else None
+    )
+    session["input_audio_echo_cancellation"] = (
+        {"type": "server_echo_cancellation"} if vc.get("echo_cancellation", False) else None
+    )
 
-    # Echo cancellation — only include when enabled (omit null)
-    if vc.get("echo_cancellation", False):
-        session["inputAudioEchoCancellation"] = {"type": "server_echo_cancellation"}
+    # Avatar settings — always present when avatar is enabled on the profile
+    # (always True for personas; HcpProfile.avatar_enabled otherwise).
+    if vc.get("avatar_enabled", True):
+        session["avatar"] = {
+            "character": vc.get("avatar_character", "lisa"),
+            "style": vc.get("avatar_style", "casual"),
+            "customized": vc.get("avatar_customized", False),
+        }
+    else:
+        session["avatar"] = None
 
-    # fillerResponse — omit null (Foundry default is null)
+    # Proactive engagement — always present
+    session["proactive_engagement"] = vc.get("proactive_engagement", False)
 
-    # Avatar settings — only include when avatar is enabled
-    avatar_enabled = vc.get("avatar_enabled", True)
-    avatar_char = vc.get("avatar_character", "")
-    if avatar_enabled and avatar_char:
-        avatar: dict = {"character": avatar_char}
-        avatar_style = vc.get("avatar_style", "")
-        if avatar_style:
-            avatar["style"] = avatar_style
-        if vc.get("avatar_customized", False):
-            avatar["customized"] = True
-        session["avatar"] = avatar
-
-    # Proactive engagement — only include when True (default is False)
-    if vc.get("proactive_engagement", False):
-        session["proactiveEngagement"] = True
-
-    # Wrap in {"session": {...}} to match Foundry Portal format
+    # Wrap in {"session": {...}} to match the official Voice Live agent format
     config = {"session": session}
-
     config_json = json.dumps(config, separators=(",", ":"))
 
-    # Safety check: if still >512, log warning (should not happen with defaults omitted)
-    if len(config_json) > 512:
-        logger.warning(
-            "build_voice_live_metadata: config_json=%d chars (>512 limit), "
-            "agent metadata update may fail. Profile=%s",
-            len(config_json),
-            getattr(profile, "id", "?"),
-        )
-
     result = {VOICE_LIVE_ENABLED_KEY: "true"}
-    result[VOICE_LIVE_CONFIG_KEY] = config_json
+    # Chunk into VOICE_LIVE_CONFIG_KEY / .1 / .2 / ... if >512 chars (official
+    # quickstart convention) -- see _chunk_metadata_value().
+    result.update(_chunk_metadata_value(VOICE_LIVE_CONFIG_KEY, config_json))
 
     # Add Portal-compatible metadata keys (matches Foundry Portal save format)
     import time
 
     name = getattr(profile, "name", "")
-    result["description"] = f"HCP Agent: {name}" if name else "HCP Agent"
+    result["description"] = f"Agent: {name}" if name else "Agent"
     result["modified_at"] = str(int(time.time()))
 
     return result
@@ -754,18 +757,17 @@ async def sync_agent_for_profile(
             master.model_or_deployment if master else get_settings().voice_live_default_model
         )
 
-    # Build Voice Live metadata if enabled on the profile.
-    # AvatarPersona (persona-hcp-foundry-alignment Increment A) has no inline
-    # voice-mode columns (voice_live_model/voice_name/avatar_character/etc --
-    # it stores voice per-locale in voice_map/greeting_map JSON instead), so
-    # resolve_voice_config() would raise AttributeError if called on one.
-    # Persona runtime voice selection already flows through its own
-    # session-config wiring (Phase 36/37), not through Foundry agent
-    # metadata, so skipping this for non-HCP-shaped profiles is correct, not
-    # just a workaround -- see debug session persona-hcp-foundry-alignment.md,
-    # Evidence implication_2.
-    has_voice_config = hasattr(profile, "voice_live_model")
-    vl_metadata = build_voice_live_metadata(profile) if has_voice_config else None
+    # Build Voice Live metadata for every profile (HCP and AvatarPersona alike).
+    # persona-hcp-foundry-alignment Increment E: build_voice_live_metadata()
+    # now dispatches internally (isinstance(profile, AvatarPersona)) to either
+    # resolve_voice_config() (HcpProfile's inline voice-mode columns) or
+    # resolve_voice_config_for_persona() (AvatarPersona's per-locale voice_map
+    # + character/style columns, avatar always enabled) -- both return the
+    # same dict shape, so this call site needs no branching. Previously
+    # personas were skipped entirely (hasattr(profile, "voice_live_model")
+    # gate), which meant persona agents synced with NO voice-live metadata at
+    # all and always showed Voice mode OFF in the Foundry portal.
+    vl_metadata = build_voice_live_metadata(profile)
 
     # Build knowledge base tools from KB configs (Phase 17).
     # resolve_kb_remote_tool_connections() finds-or-creates the RemoteTool

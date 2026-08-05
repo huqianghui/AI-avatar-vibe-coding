@@ -299,3 +299,66 @@ def resolve_voice_config(profile: HcpProfile) -> dict:
         "custom_lexicon_url": "",
         "avatar_enabled": bool(profile.avatar_enabled),
     }
+
+
+def resolve_voice_config_for_persona(persona: object) -> dict:
+    """Resolve voice/avatar config for an AvatarPersona (persona-hcp-foundry-alignment
+    Increment E).
+
+    AvatarPersona has no single-value voice/language columns like HcpProfile --
+    it stores voice per-locale in ``voice_map`` JSON instead (Phase 36/37).
+    Picks the persona's "default" locale voice using the same zh-CN-first
+    fallback the rest of the app uses (``resolve_voice_for_locale`` /
+    ``DEFAULT_PUBLIC_VOICE_BY_LOCALE``): zh-CN entry if present, else the
+    first entry in voice_map, else the global default voice for zh-CN.
+
+    Avatar is always enabled for personas (they are digital-human personas by
+    definition) using the persona's own ``character``/``style`` columns.
+
+    Returns the same dict shape as resolve_voice_config() so
+    build_voice_live_metadata() can treat both sources uniformly.
+    """
+    from app.services.avatar_persona_service import parse_persona_voice_map
+    from app.services.voice_live_webrtc import DEFAULT_PUBLIC_VOICE_BY_LOCALE
+
+    voice_map = parse_persona_voice_map(persona)
+    if "zh-CN" in voice_map:
+        locale = "zh-CN"
+    elif voice_map:
+        locale = next(iter(voice_map))
+    else:
+        locale = "zh-CN"
+    voice_name = voice_map.get(locale) or DEFAULT_PUBLIC_VOICE_BY_LOCALE.get(
+        locale, DEFAULT_PUBLIC_VOICE_BY_LOCALE["zh-CN"]
+    )
+
+    logger.debug(
+        "resolve_voice_config_for_persona: persona=%s locale=%s voice=%s",
+        getattr(persona, "id", "?"),
+        locale,
+        voice_name,
+    )
+    return {
+        "voice_live_enabled": True,
+        "voice_live_model": "gpt-4o",
+        "voice_name": voice_name,
+        "voice_type": "azure-standard",
+        "voice_temperature": 0.9,
+        "voice_custom": False,
+        "avatar_character": persona.character or "lisa",
+        "avatar_style": persona.style or "casual",
+        "avatar_customized": False,
+        "turn_detection_type": "server_vad",
+        "noise_suppression": False,
+        "echo_cancellation": False,
+        "eou_detection": False,
+        "recognition_language": locale,
+        "model_instruction": "",
+        "response_temperature": 0.8,
+        "proactive_engagement": True,
+        "auto_detect_language": False,
+        "playback_speed": 1.0,
+        "custom_lexicon_enabled": False,
+        "custom_lexicon_url": "",
+        "avatar_enabled": True,
+    }
