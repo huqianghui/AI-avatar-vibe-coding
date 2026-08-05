@@ -331,4 +331,91 @@ describe("AgentStatusSection", () => {
     );
     expect(screen.getByText("No Agent")).toBeInTheDocument();
   });
+
+  // Pull-from-agent button (persona-hcp-foundry-alignment Increment H)
+  describe("Pull from Agent button", () => {
+    it("shows pull button when synced, not new, and onPullConfig is provided", () => {
+      render(
+        <AgentStatusSection
+          profile={makeProfile({ agent_sync_status: "synced" })}
+          isNew={false}
+          onRetrySync={vi.fn()}
+          retrySyncPending={false}
+          onPullConfig={vi.fn()}
+          pullConfigPending={false}
+        />,
+      );
+      expect(screen.getByText("admin:hcp.pullVoiceConfig")).toBeInTheDocument();
+    });
+
+    it("does not show pull button when onPullConfig is not provided", () => {
+      render(
+        <AgentStatusSection
+          profile={makeProfile({ agent_sync_status: "synced" })}
+          {...defaultProps}
+        />,
+      );
+      expect(screen.queryByText("admin:hcp.pullVoiceConfig")).not.toBeInTheDocument();
+    });
+
+    it("does not show pull button when status is not synced", () => {
+      render(
+        <AgentStatusSection
+          profile={makeProfile({ agent_sync_status: "failed" })}
+          isNew={false}
+          onRetrySync={vi.fn()}
+          retrySyncPending={false}
+          onPullConfig={vi.fn()}
+          pullConfigPending={false}
+        />,
+      );
+      expect(screen.queryByText("admin:hcp.pullVoiceConfig")).not.toBeInTheDocument();
+    });
+
+    it("does not show pull button when isNew is true", () => {
+      render(
+        <AgentStatusSection
+          profile={makeProfile({ agent_sync_status: "synced" })}
+          isNew={true}
+          onRetrySync={vi.fn()}
+          retrySyncPending={false}
+          onPullConfig={vi.fn()}
+          pullConfigPending={false}
+        />,
+      );
+      expect(screen.queryByText("admin:hcp.pullVoiceConfig")).not.toBeInTheDocument();
+    });
+
+    it("shows pending label when pullConfigPending is true", () => {
+      render(
+        <AgentStatusSection
+          profile={makeProfile({ agent_sync_status: "synced" })}
+          isNew={false}
+          onRetrySync={vi.fn()}
+          retrySyncPending={false}
+          onPullConfig={vi.fn()}
+          pullConfigPending={true}
+        />,
+      );
+      expect(screen.getByText("admin:hcp.pullVoiceConfigPending")).toBeInTheDocument();
+      expect(screen.queryByText("admin:hcp.pullVoiceConfig")).not.toBeInTheDocument();
+    });
+
+    it("calls onPullConfig when pull button is clicked", async () => {
+      const user = userEvent.setup();
+      const onPullConfig = vi.fn();
+      render(
+        <AgentStatusSection
+          profile={makeProfile({ agent_sync_status: "synced" })}
+          isNew={false}
+          onRetrySync={vi.fn()}
+          retrySyncPending={false}
+          onPullConfig={onPullConfig}
+          pullConfigPending={false}
+        />,
+      );
+      await user.click(screen.getByText("admin:hcp.pullVoiceConfig"));
+      expect(onPullConfig).toHaveBeenCalledOnce();
+    });
+  });
 });

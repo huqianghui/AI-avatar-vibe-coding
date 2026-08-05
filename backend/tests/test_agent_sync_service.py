@@ -1,5 +1,6 @@
 """Unit tests for agent_sync_service: instruction builder + AI Foundry SDK wrapper."""
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -3061,3 +3062,387 @@ async def test_resync_classic_agent_noop_when_already_hosted():
 
     assert result is False
     mock_sync.assert_not_called()
+
+
+# ===========================================================================
+# persona-hcp-foundry-alignment Increment H: pull-back from Foundry
+# (_decode_voice_live_metadata, pull_voice_live_metadata,
+# apply_voice_live_session_to_profile round-trip)
+# ===========================================================================
+
+
+class TestDecodeVoiceLiveMetadata:
+    """Unit tests for _decode_voice_live_metadata -- the pure/sync inverse of
+    _chunk_metadata_value()/build_voice_live_metadata()'s chunking."""
+
+    def test_reassembles_chunked_config(self):
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_CONFIG_KEY,
+            VOICE_LIVE_ENABLED_KEY,
+            _decode_voice_live_metadata,
+        )
+
+        session_json = json.dumps({"session": {"voice": {"name": "en-US-AvaNeural"}}})
+        # Split into 3 arbitrary chunks to exercise .1/.2 reassembly.
+        third = len(session_json) // 3 or 1
+        chunk0, chunk1, chunk2 = (
+            session_json[:third],
+            session_json[third : 2 * third],
+            session_json[2 * third :],
+        )
+        metadata = {
+            VOICE_LIVE_ENABLED_KEY: "true",
+            VOICE_LIVE_CONFIG_KEY: chunk0,
+            f"{VOICE_LIVE_CONFIG_KEY}.1": chunk1,
+            f"{VOICE_LIVE_CONFIG_KEY}.2": chunk2,
+        }
+
+        result = _decode_voice_live_metadata(metadata)
+
+        assert result == {"session": {"voice": {"name": "en-US-AvaNeural"}}}
+
+    def test_enabled_not_true_returns_none(self):
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_CONFIG_KEY,
+            VOICE_LIVE_ENABLED_KEY,
+            _decode_voice_live_metadata,
+        )
+
+        metadata = {
+            VOICE_LIVE_ENABLED_KEY: "false",
+            VOICE_LIVE_CONFIG_KEY: json.dumps({"session": {}}),
+        }
+
+        assert _decode_voice_live_metadata(metadata) is None
+
+    def test_missing_enabled_key_returns_none(self):
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_CONFIG_KEY,
+            _decode_voice_live_metadata,
+        )
+
+        metadata = {VOICE_LIVE_CONFIG_KEY: json.dumps({"session": {}})}
+
+        assert _decode_voice_live_metadata(metadata) is None
+
+    def test_missing_config_key_returns_none(self):
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_ENABLED_KEY,
+            _decode_voice_live_metadata,
+        )
+
+        metadata = {VOICE_LIVE_ENABLED_KEY: "true"}
+
+        assert _decode_voice_live_metadata(metadata) is None
+
+    def test_corrupt_json_returns_none(self):
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_CONFIG_KEY,
+            VOICE_LIVE_ENABLED_KEY,
+            _decode_voice_live_metadata,
+        )
+
+        metadata = {
+            VOICE_LIVE_ENABLED_KEY: "true",
+            VOICE_LIVE_CONFIG_KEY: "{not valid json",
+        }
+
+        assert _decode_voice_live_metadata(metadata) is None
+
+    def test_json_without_session_dict_returns_none(self):
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_CONFIG_KEY,
+            VOICE_LIVE_ENABLED_KEY,
+            _decode_voice_live_metadata,
+        )
+
+        metadata = {
+            VOICE_LIVE_ENABLED_KEY: "true",
+            VOICE_LIVE_CONFIG_KEY: json.dumps({"not_session": {}}),
+        }
+
+        assert _decode_voice_live_metadata(metadata) is None
+
+    def test_empty_metadata_returns_none(self):
+        from app.services.agent_sync_service import _decode_voice_live_metadata
+
+        assert _decode_voice_live_metadata(None) is None
+        assert _decode_voice_live_metadata({}) is None
+
+
+class TestPullVoiceLiveMetadata:
+    """Unit tests for pull_voice_live_metadata -- fetches an agent's latest
+    version metadata from Foundry and decodes it."""
+
+    @pytest.mark.asyncio
+    async def test_success_decodes_config_and_attaches_model(self):
+        from app.services.agent_sync_service import pull_voice_live_metadata
+
+        mock_db = AsyncMock()
+        mock_agent = MagicMock()
+        mock_agent.versions = {
+            "latest": {
+                "metadata": {
+                    "microsoft.voice-live.enabled": "true",
+                    "microsoft.voice-live.configuration": json.dumps(
+                        {"session": {"voice": {"name": "en-US-AvaNeural"}}}
+                    ),
+                },
+                "definition": {"model": "gpt-4o-realtime-preview"},
+            }
+        }
+        mock_client = MagicMock()
+        mock_client.agents.get.return_value = mock_agent
+
+        with (
+            patch(
+                "app.services.agent_sync_service.get_project_endpoint",
+                new_callable=AsyncMock,
+                return_value=("https://foundry/api/projects/proj", "key"),
+            ),
+            patch(
+                "app.services.agent_sync_service._get_project_client",
+                return_value=mock_client,
+            ),
+        ):
+            result = await pull_voice_live_metadata(mock_db, "some-agent")
+
+        assert result is not None
+        assert result["session"]["voice"]["name"] == "en-US-AvaNeural"
+        assert result["model"] == "gpt-4o-realtime-preview"
+        mock_client.agents.get.assert_called_once_with(agent_name="some-agent")
+
+    @pytest.mark.asyncio
+    async def test_agent_fetch_failure_returns_none(self):
+        from app.services.agent_sync_service import pull_voice_live_metadata
+
+        mock_db = AsyncMock()
+        mock_client = MagicMock()
+        mock_client.agents.get.side_effect = Exception("not found")
+
+        with (
+            patch(
+                "app.services.agent_sync_service.get_project_endpoint",
+                new_callable=AsyncMock,
+                return_value=("https://foundry/api/projects/proj", "key"),
+            ),
+            patch(
+                "app.services.agent_sync_service._get_project_client",
+                return_value=mock_client,
+            ),
+        ):
+            result = await pull_voice_live_metadata(mock_db, "missing-agent")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_no_voice_live_metadata_returns_none(self):
+        from app.services.agent_sync_service import pull_voice_live_metadata
+
+        mock_db = AsyncMock()
+        mock_agent = MagicMock()
+        mock_agent.versions = {"latest": {"metadata": {}, "definition": {}}}
+        mock_client = MagicMock()
+        mock_client.agents.get.return_value = mock_agent
+
+        with (
+            patch(
+                "app.services.agent_sync_service.get_project_endpoint",
+                new_callable=AsyncMock,
+                return_value=("https://foundry/api/projects/proj", "key"),
+            ),
+            patch(
+                "app.services.agent_sync_service._get_project_client",
+                return_value=mock_client,
+            ),
+        ):
+            result = await pull_voice_live_metadata(mock_db, "no-vl-agent")
+
+        assert result is None
+
+
+class TestApplyVoiceLiveSessionToProfile:
+    """Unit tests for apply_voice_live_session_to_profile -- the inverse
+    mapping of build_voice_live_metadata()/resolve_voice_config()/
+    resolve_voice_config_for_persona()."""
+
+    def _make_hcp(self, **overrides):
+        from app.models.hcp_profile import HcpProfile
+
+        defaults = {
+            "name": "Dr. RoundTrip",
+            "specialty": "GP",
+            "created_by": "user-1",
+            "voice_name": "en-US-AvaNeural",
+            "voice_temperature": 0.9,
+            "playback_speed": 1.0,
+            "custom_lexicon_url": "",
+            "speech_recognition_model": "azure-speech",
+            "recognition_language": "auto",
+            "phrase_list": "",
+            "eou_detection": False,
+            "noise_suppression": False,
+            "echo_cancellation": False,
+            "avatar_character": "lisa",
+            "avatar_style": "casual",
+            "avatar_enabled": True,
+            "proactive_engagement": False,
+            "interim_response_enabled": False,
+            "interim_response_type": "llm",
+            "interim_response_threshold_ms": 500,
+            "voice_live_model": "gpt-4o",
+        }
+        defaults.update(overrides)
+        return HcpProfile(**defaults)
+
+    def _make_persona(self, **overrides):
+        from app.models.avatar_persona import AvatarPersona
+
+        defaults = {
+            "name": "Lisa",
+            "character": "lisa",
+            "style": "casual",
+            "voice_map": json.dumps({"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}),
+            "greeting_map": "{}",
+            "prompt_fragment": "",
+            "enabled": True,
+            "is_default": False,
+        }
+        defaults.update(overrides)
+        return AvatarPersona(**defaults)
+
+    def test_round_trip_hcp_reproduces_original_values(self):
+        """build_voice_live_metadata -> _decode_voice_live_metadata ->
+        apply_voice_live_session_to_profile(fresh_profile) reproduces the
+        original column values on an HcpProfile."""
+        from app.services.agent_sync_service import (
+            VOICE_LIVE_CONFIG_KEY,
+            _decode_voice_live_metadata,
+            apply_voice_live_session_to_profile,
+            build_voice_live_metadata,
+        )
+
+        original = self._make_hcp(
+            voice_name="zh-CN-XiaoxiaoMultilingualNeural",
+            recognition_language="zh-CN",
+            avatar_character="lori",
+            avatar_style="formal",
+            proactive_engagement=True,
+            interim_response_enabled=True,
+            interim_response_type="static",
+            interim_response_threshold_ms=800,
+            voice_temperature=0.5,
+            playback_speed=1.2,
+            speech_recognition_model="whisper-1",
+        )
+        metadata = build_voice_live_metadata(original)
+        assert metadata is not None
+
+        config = _decode_voice_live_metadata(metadata)
+        assert config is not None
+
+        fresh = self._make_hcp()  # all defaults, distinct from `original`
+        changed = apply_voice_live_session_to_profile(fresh, config)
+
+        assert "voice_name" in changed
+        assert fresh.voice_name == "zh-CN-XiaoxiaoMultilingualNeural"
+        assert fresh.recognition_language == "zh-CN"
+        assert fresh.avatar_character == "lori"
+        assert fresh.avatar_style == "formal"
+        assert fresh.avatar_enabled is True
+        assert fresh.proactive_engagement is True
+        assert fresh.interim_response_enabled is True
+        assert fresh.interim_response_type == "static"
+        assert fresh.interim_response_threshold_ms == 800
+        assert fresh.voice_temperature == 0.5
+        assert fresh.playback_speed == 1.2
+        assert fresh.speech_recognition_model == "whisper-1"
+        # Sanity: config wasn't accidentally left unchunked-empty
+        assert VOICE_LIVE_CONFIG_KEY in metadata
+
+    def test_round_trip_persona_subset_reproduces_original_values(self):
+        """Same round-trip, restricted to the persona-applicable subset of
+        fields (voice_map single-locale write, character/style, interim
+        response, proactive engagement)."""
+        from app.services.agent_sync_service import (
+            _decode_voice_live_metadata,
+            apply_voice_live_session_to_profile,
+            build_voice_live_metadata,
+        )
+        from app.services.avatar_persona_service import parse_persona_voice_map
+
+        original = self._make_persona(
+            voice_map=json.dumps({"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}),
+            character="lori",
+            style="formal",
+            proactive_engagement=True,
+            interim_response_enabled=True,
+            interim_response_type="llm",
+            interim_response_threshold_ms=900,
+        )
+        metadata = build_voice_live_metadata(original)
+        assert metadata is not None
+        config = _decode_voice_live_metadata(metadata)
+        assert config is not None
+
+        fresh = self._make_persona(voice_map="{}")
+        changed = apply_voice_live_session_to_profile(fresh, config)
+
+        assert "voice_map" in changed
+        assert parse_persona_voice_map(fresh)["zh-CN"] == "zh-CN-XiaoxiaoMultilingualNeural"
+        assert fresh.character == "lori"
+        assert fresh.style == "formal"
+        assert fresh.proactive_engagement is True
+        assert fresh.interim_response_enabled is True
+        assert fresh.interim_response_threshold_ms == 900
+
+    def test_persona_ambiguous_voice_map_is_skipped(self):
+        """2+ non-zh-CN locales on voice_map -> pulled voice name is silently
+        skipped rather than guessed (documented Increment H deviation)."""
+        from app.services.agent_sync_service import apply_voice_live_session_to_profile
+
+        persona = self._make_persona(
+            voice_map=json.dumps({"en-US": "en-US-AvaNeural", "es-ES": "es-ES-ElviraNeural"})
+        )
+        config = {"session": {"voice": {"name": "zh-CN-XiaoxiaoMultilingualNeural"}}}
+
+        changed = apply_voice_live_session_to_profile(persona, config)
+
+        assert "voice_map" not in changed
+        from app.services.avatar_persona_service import parse_persona_voice_map
+
+        voice_map = parse_persona_voice_map(persona)
+        assert voice_map == {"en-US": "en-US-AvaNeural", "es-ES": "es-ES-ElviraNeural"}
+
+    def test_avatar_none_disables_avatar_enabled_on_hcp(self):
+        """A None `avatar` in the pulled session (Foundry avatar disabled)
+        sets HcpProfile.avatar_enabled to False."""
+        from app.services.agent_sync_service import apply_voice_live_session_to_profile
+
+        profile = self._make_hcp(avatar_enabled=True)
+        config = {"session": {"avatar": None}}
+
+        changed = apply_voice_live_session_to_profile(profile, config)
+
+        assert "avatar_enabled" in changed
+        assert profile.avatar_enabled is False
+
+    def test_interim_response_null_disables_it(self):
+        """A None `interim_response` in the pulled session disables it and
+        leaves type/threshold untouched."""
+        from app.services.agent_sync_service import apply_voice_live_session_to_profile
+
+        profile = self._make_hcp(
+            interim_response_enabled=True,
+            interim_response_type="static",
+            interim_response_threshold_ms=750,
+        )
+        config = {"session": {"interim_response": None}}
+
+        changed = apply_voice_live_session_to_profile(profile, config)
+
+        assert "interim_response_enabled" in changed
+        assert profile.interim_response_enabled is False
+        # type/threshold are only touched when interim_response is non-null
+        assert profile.interim_response_type == "static"
+        assert profile.interim_response_threshold_ms == 750

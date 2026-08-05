@@ -1,5 +1,7 @@
 """Tests for HCP Profiles API endpoints (admin-only CRUD)."""
 
+from unittest.mock import AsyncMock, patch
+
 from app.models.user import User
 from app.services.auth import create_access_token, get_password_hash
 from tests.conftest import TestSessionLocal
@@ -570,3 +572,136 @@ class TestVoiceLiveInstanceOptional:
         data = response.json()
         assert data["personality_type"] == "analytical"
         assert data["voice_live_instance_id"] == vl_id
+
+
+async def _create_hcp_profile_direct(**overrides):
+    """Create an HcpProfile row directly (no HTTP, no agent sync side effects)."""
+    from app.models.hcp_profile import HcpProfile
+
+    async with TestSessionLocal() as session:
+        defaults = {
+            "name": "Dr. PullVoiceConfig",
+            "specialty": "Onc",
+            "created_by": "test-user",
+            "expertise_areas": "[]",
+            "objections": "[]",
+            "probe_topics": "[]",
+        }
+        defaults.update(overrides)
+        profile = HcpProfile(**defaults)
+        session.add(profile)
+        await session.commit()
+        await session.refresh(profile)
+        return profile
+
+
+class TestPullVoiceConfigEndpoint:
+    """Tests for POST /{profile_id}/agent/pull-voice-config
+    (persona-hcp-foundry-alignment Increment H)."""
+
+    async def test_no_profile_returns_404(self, client):
+        _, token = await _create_admin_and_token()
+
+        response = await client.post(
+            "/api/v1/hcp-profiles/does-not-exist/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 404
+
+    async def test_no_agent_id_returns_422(self, client):
+        profile = await _create_hcp_profile_direct(agent_id="", agent_sync_status="none")
+        _, token = await _create_admin_and_token()
+
+        response = await client.post(
+            f"/api/v1/hcp-profiles/{profile.id}/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["code"] == "VALIDATION_ERROR"
+
+    async def test_unsynced_status_returns_422(self, client):
+        profile = await _create_hcp_profile_direct(
+            agent_id="hcp-agent-1", agent_sync_status="pending"
+        )
+        _, token = await _create_admin_and_token()
+
+        response = await client.post(
+            f"/api/v1/hcp-profiles/{profile.id}/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_no_voice_live_metadata_returns_404(self, client):
+        profile = await _create_hcp_profile_direct(
+            agent_id="hcp-agent-2", agent_sync_status="synced"
+        )
+        _, token = await _create_admin_and_token()
+
+        with patch(
+            "app.services.agent_sync_service.pull_voice_live_metadata",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
+            response = await client.post(
+                f"/api/v1/hcp-profiles/{profile.id}/agent/pull-voice-config",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 404
+
+    async def test_success_applies_pulled_config_and_updates_version(self, client):
+        profile = await _create_hcp_profile_direct(
+            agent_id="hcp-agent-3",
+            agent_sync_status="synced",
+            voice_name="en-US-AvaNeural",
+            avatar_character="lisa",
+            avatar_style="casual",
+        )
+        _, token = await _create_admin_and_token()
+
+        pulled_config = {
+            "session": {
+                "voice": {"name": "zh-CN-XiaoxiaoMultilingualNeural"},
+                "avatar": {"character": "lori", "style": "formal"},
+            }
+        }
+
+        with (
+            patch(
+                "app.services.agent_sync_service.pull_voice_live_metadata",
+                new_callable=AsyncMock,
+                return_value=pulled_config,
+            ),
+            patch(
+                "app.services.agent_sync_service.get_agent_latest_version",
+                new_callable=AsyncMock,
+                return_value="7",
+            ),
+        ):
+            response = await client.post(
+                f"/api/v1/hcp-profiles/{profile.id}/agent/pull-voice-config",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["voice_name"] == "zh-CN-XiaoxiaoMultilingualNeural"
+        assert data["avatar_character"] == "lori"
+        assert data["avatar_style"] == "formal"
+        assert data["agent_version"] == "7"
+
+    async def test_non_admin_returns_403(self, client):
+        profile = await _create_hcp_profile_direct(
+            agent_id="hcp-agent-4", agent_sync_status="synced"
+        )
+        _, token = await _create_user_and_token()
+
+        response = await client.post(
+            f"/api/v1/hcp-profiles/{profile.id}/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403

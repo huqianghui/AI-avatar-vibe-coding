@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   RefreshCw,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,11 @@ interface AgentStatusSectionProps {
   isNew: boolean;
   onRetrySync: () => void;
   retrySyncPending: boolean;
+  // Pull the latest voice-live config from the synced agent (Increment H).
+  // Optional so existing call sites/tests that predate this feature keep
+  // compiling; the button itself only renders when both are provided.
+  onPullConfig?: () => void;
+  pullConfigPending?: boolean;
 }
 
 export function AgentStatusSection({
@@ -59,6 +65,8 @@ export function AgentStatusSection({
   isNew,
   onRetrySync,
   retrySyncPending,
+  onPullConfig,
+  pullConfigPending = false,
 }: AgentStatusSectionProps) {
   const { t } = useTranslation(["admin", "common"]);
 
@@ -141,6 +149,25 @@ export function AgentStatusSection({
                 : agentStatus === "synced"
                   ? "Force re-sync"
                   : t("admin:hcp.retrySync")}
+            </Button>
+          )}
+          {!isNew && agentStatus === "synced" && onPullConfig && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPullConfig}
+              disabled={pullConfigPending}
+              className="w-full"
+            >
+              <Download
+                className={cn(
+                  "size-4 mr-2",
+                  pullConfigPending && "animate-pulse",
+                )}
+              />
+              {pullConfigPending
+                ? t("admin:hcp.pullVoiceConfigPending")
+                : t("admin:hcp.pullVoiceConfig")}
             </Button>
           )}
           {profile?.agent_id && (

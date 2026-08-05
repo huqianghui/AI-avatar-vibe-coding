@@ -326,6 +326,48 @@ async def get_agent_portal_url(
     )
 
 
+@router.post("/{profile_id}/agent/pull-voice-config", response_model=HcpProfileOut)
+async def pull_voice_config(
+    profile_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    """Pull the latest voice-live configuration from the profile's synced AI
+    Foundry Agent and apply it onto the profile's local voice/avatar columns.
+    Admin only.
+
+    (persona-hcp-foundry-alignment Increment H: "如果在里面修改了，也可以通过 agent
+    version 来获取到最新的版本" -- lets an admin who edited voice/avatar settings
+    directly in the Foundry portal pull those changes back into the local
+    HCP profile.) 422 if no agent is synced yet; 404 if the agent has no
+    voice-live metadata to pull (e.g. Voice mode was never enabled, or a
+    portal edit cleared it).
+    """
+    from app.services import agent_sync_service
+    from app.utils.exceptions import bad_request, not_found
+
+    profile = await hcp_profile_service.get_hcp_profile(db, profile_id)
+    if not profile.agent_id or profile.agent_sync_status != "synced":
+        bad_request("Agent must be synced before pulling voice configuration.")
+
+    config = await agent_sync_service.pull_voice_live_metadata(db, profile.agent_id)
+    if config is None:
+        not_found("No voice-live configuration found on the agent.")
+
+    agent_sync_service.apply_voice_live_session_to_profile(profile, config)
+
+    try:
+        profile.agent_version = await agent_sync_service.get_agent_latest_version(
+            db, profile.agent_id
+        )
+    except Exception:
+        pass
+
+    await db.flush()
+    await db.refresh(profile)
+    return profile
+
+
 @router.delete("/{profile_id}", status_code=204)
 async def delete_profile(
     profile_id: str,

@@ -32,6 +32,7 @@ vi.mock("sonner", () => ({
 const mockCreateMutate = vi.fn();
 const mockUpdateMutate = vi.fn();
 const mockRetrySyncMutate = vi.fn();
+const mockPullConfigMutate = vi.fn();
 
 let mockPersonaReturn: {
   data: AvatarPersona | undefined;
@@ -52,6 +53,11 @@ vi.mock("@/hooks/use-avatar-personas", () => ({
   useRetrySyncAvatarPersona: () => ({
     mutate: mockRetrySyncMutate,
     isPending: mockRetrySyncReturn.isPending,
+  }),
+  // persona-hcp-foundry-alignment Increment H
+  usePullVoiceConfigAvatarPersona: () => ({
+    mutate: mockPullConfigMutate,
+    isPending: false,
   }),
 }));
 

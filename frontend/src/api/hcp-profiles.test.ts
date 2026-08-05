@@ -11,6 +11,7 @@ import {
   testChatWithAgent,
   getAgentPortalUrl,
   previewInstructions,
+  pullVoiceConfig,
 } from "./hcp-profiles";
 
 vi.mock("./client", () => ({
@@ -331,6 +332,33 @@ describe("HCP Profiles API client", () => {
       mockClient.post.mockRejectedValue(new Error("422 Validation Error"));
 
       await expect(previewInstructions({})).rejects.toThrow("422 Validation Error");
+    });
+  });
+
+  describe("pullVoiceConfig", () => {
+    it("calls POST /hcp-profiles/:id/agent/pull-voice-config and returns updated profile", async () => {
+      const updated = {
+        id: "hp-1",
+        name: "Dr. Smith",
+        voice_name: "en-US-JennyNeural",
+        agent_sync_status: "synced",
+      };
+      mockClient.post.mockResolvedValue({ data: updated });
+
+      const result = await pullVoiceConfig("hp-1");
+
+      expect(mockClient.post).toHaveBeenCalledWith(
+        "/hcp-profiles/hp-1/agent/pull-voice-config",
+      );
+      expect(result.voice_name).toBe("en-US-JennyNeural");
+    });
+
+    it("propagates errors on pull voice config", async () => {
+      mockClient.post.mockRejectedValue(new Error("422 No agent to pull from"));
+
+      await expect(pullVoiceConfig("hp-1")).rejects.toThrow(
+        "422 No agent to pull from",
+      );
     });
   });
 });

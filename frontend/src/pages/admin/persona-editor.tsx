@@ -19,6 +19,7 @@ import {
   useCreateAvatarPersona,
   useUpdateAvatarPersona,
   useRetrySyncAvatarPersona,
+  usePullVoiceConfigAvatarPersona,
 } from "@/hooks/use-avatar-personas";
 import { AvatarView } from "@/components/voice/avatar-view";
 import { PersonaAgentStatusSection } from "@/components/admin/persona-agent-status-section";
@@ -29,7 +30,7 @@ import {
   LOCALE_FLAGS,
   LOCALE_LABEL_KEY,
 } from "@/lib/voice-constants";
-import type { AvatarPersonaCreate } from "@/api/avatar-personas";
+import type { AvatarPersona, AvatarPersonaCreate } from "@/api/avatar-personas";
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
@@ -94,6 +95,39 @@ function createDefaultPersonaForm(): PersonaEditorFormState {
   };
 }
 
+/**
+ * Shared mapper from an AvatarPersona API payload to the editor's local form
+ * shape. Extracted (persona-hcp-foundry-alignment Increment H) so the
+ * pull-from-agent handler can re-seed the form exactly like the initial-load
+ * effect and handleReset do, without duplicating the field list a third
+ * time.
+ */
+function personaToFormState(persona: AvatarPersona): PersonaEditorFormState {
+  return {
+    name: persona.name,
+    character: persona.character,
+    style: persona.style,
+    voiceMap: { ...persona.voice_map },
+    greetingMap: { ...persona.greeting_map },
+    prompt_fragment: persona.prompt_fragment,
+    enabled: persona.enabled,
+    is_default: persona.is_default,
+    proactiveEngagement: persona.proactive_engagement,
+    interimResponseEnabled: persona.interim_response_enabled,
+    interimResponseType: persona.interim_response_type,
+    interimResponseThresholdMs: persona.interim_response_threshold_ms,
+    speechRecognitionModel: persona.speech_recognition_model ?? "azure-speech",
+    autoDetectLanguage: persona.auto_detect_language ?? false,
+    eouDetection: persona.eou_detection ?? false,
+    noiseSuppression: persona.noise_suppression ?? false,
+    echoCancellation: persona.echo_cancellation ?? false,
+    phraseList: persona.phrase_list ?? "",
+    voiceTemperature: persona.voice_temperature ?? 0.9,
+    playbackSpeed: persona.playback_speed ?? 1.0,
+    customLexiconUrl: persona.custom_lexicon_url ?? "",
+  };
+}
+
 /* ── Page Component ───────────────────────────────────────────────────── */
 
 export default function PersonaEditorPage() {
@@ -110,6 +144,7 @@ export default function PersonaEditorPage() {
   const createMutation = useCreateAvatarPersona();
   const updateMutation = useUpdateAvatarPersona();
   const retrySyncMutation = useRetrySyncAvatarPersona();
+  const pullConfigMutation = usePullVoiceConfigAvatarPersona();
 
   /* ── Form state ────────────────────────────────────────────────────── */
 
@@ -131,29 +166,7 @@ export default function PersonaEditorPage() {
   useEffect(() => {
     if (persona && !formInitializedRef.current) {
       formInitializedRef.current = true;
-      setForm({
-        name: persona.name,
-        character: persona.character,
-        style: persona.style,
-        voiceMap: { ...persona.voice_map },
-        greetingMap: { ...persona.greeting_map },
-        prompt_fragment: persona.prompt_fragment,
-        enabled: persona.enabled,
-        is_default: persona.is_default,
-        proactiveEngagement: persona.proactive_engagement,
-        interimResponseEnabled: persona.interim_response_enabled,
-        interimResponseType: persona.interim_response_type,
-        interimResponseThresholdMs: persona.interim_response_threshold_ms,
-        speechRecognitionModel: persona.speech_recognition_model ?? "azure-speech",
-        autoDetectLanguage: persona.auto_detect_language ?? false,
-        eouDetection: persona.eou_detection ?? false,
-        noiseSuppression: persona.noise_suppression ?? false,
-        echoCancellation: persona.echo_cancellation ?? false,
-        phraseList: persona.phrase_list ?? "",
-        voiceTemperature: persona.voice_temperature ?? 0.9,
-        playbackSpeed: persona.playback_speed ?? 1.0,
-        customLexiconUrl: persona.custom_lexicon_url ?? "",
-      });
+      setForm(personaToFormState(persona));
     }
   }, [persona]);
 
@@ -190,29 +203,7 @@ export default function PersonaEditorPage() {
 
   const handleReset = useCallback(() => {
     if (persona) {
-      setForm({
-        name: persona.name,
-        character: persona.character,
-        style: persona.style,
-        voiceMap: { ...persona.voice_map },
-        greetingMap: { ...persona.greeting_map },
-        prompt_fragment: persona.prompt_fragment,
-        enabled: persona.enabled,
-        is_default: persona.is_default,
-        proactiveEngagement: persona.proactive_engagement,
-        interimResponseEnabled: persona.interim_response_enabled,
-        interimResponseType: persona.interim_response_type,
-        interimResponseThresholdMs: persona.interim_response_threshold_ms,
-        speechRecognitionModel: persona.speech_recognition_model ?? "azure-speech",
-        autoDetectLanguage: persona.auto_detect_language ?? false,
-        eouDetection: persona.eou_detection ?? false,
-        noiseSuppression: persona.noise_suppression ?? false,
-        echoCancellation: persona.echo_cancellation ?? false,
-        phraseList: persona.phrase_list ?? "",
-        voiceTemperature: persona.voice_temperature ?? 0.9,
-        playbackSpeed: persona.playback_speed ?? 1.0,
-        customLexiconUrl: persona.custom_lexicon_url ?? "",
-      });
+      setForm(personaToFormState(persona));
     } else {
       setForm(createDefaultPersonaForm());
     }
@@ -309,6 +300,27 @@ export default function PersonaEditorPage() {
         toast.error(t("hcp.syncFailed", { error: (err as Error).message })),
     });
   }, [id, retrySyncMutation, t]);
+
+  // Pull the latest voice-live config from the persona's synced AI Foundry
+  // Agent (persona-hcp-foundry-alignment Increment H). Unlike the HCP
+  // profile editor, this page only populates `form` ONCE from `persona`
+  // (see `formInitializedRef` above) -- the query-invalidation-triggered
+  // refetch alone would NOT re-seed the form. So `onSuccess` re-seeds it
+  // directly from the mutation's returned persona via the same
+  // `personaToFormState` mapper used on initial load / reset.
+  const handlePullConfig = useCallback(() => {
+    if (!id) return;
+    pullConfigMutation.mutate(id, {
+      onSuccess: (updated) => {
+        toast.success(t("hcp.pullVoiceConfigSuccess"));
+        setForm(personaToFormState(updated));
+      },
+      onError: (err) =>
+        toast.error(
+          t("hcp.pullVoiceConfigFailed", { error: (err as Error).message }),
+        ),
+    });
+  }, [id, pullConfigMutation, t]);
 
   /* ── Loading state ─────────────────────────────────────────────────── */
 
@@ -416,6 +428,8 @@ export default function PersonaEditorPage() {
             isNew={!isEdit}
             onRetrySync={handleRetrySync}
             retrySyncPending={retrySyncMutation.isPending}
+            onPullConfig={handlePullConfig}
+            pullConfigPending={pullConfigMutation.isPending}
           />
 
           {/* Character & Avatar (avatar gallery) and Speech (language-scoped

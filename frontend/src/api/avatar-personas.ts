@@ -134,6 +134,16 @@ export const avatarPersonasApi = {
     );
     return data;
   },
+  // Pull the latest voice-live configuration from the persona's synced AI
+  // Foundry Agent and apply it onto the persona's local voice/avatar columns
+  // (persona-hcp-foundry-alignment Increment H). Returns the full updated
+  // AvatarPersona so the caller can re-seed its form immediately.
+  pullVoiceConfig: async (id: string): Promise<AvatarPersona> => {
+    const { data } = await apiClient.post<AvatarPersona>(
+      `/admin/avatar-personas/${id}/agent/pull-voice-config`,
+    );
+    return data;
+  },
 };
 
 // AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A;

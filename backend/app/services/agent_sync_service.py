@@ -292,6 +292,258 @@ def build_cleared_voice_metadata() -> dict[str, str]:
     return {VOICE_LIVE_ENABLED_KEY: "false", VOICE_LIVE_CONFIG_KEY: "{}"}
 
 
+def _decode_voice_live_metadata(metadata: dict[str, str] | None) -> dict | None:
+    """Reassemble and parse an agent's microsoft.voice-live.configuration metadata.
+
+    Pure/sync helper (no network access, easily unit-testable) -- the exact
+    inverse of _chunk_metadata_value()/build_voice_live_metadata()'s chunking:
+    reassembles VOICE_LIVE_CONFIG_KEY plus any numbered ``.1``, ``.2``, ...
+    continuation keys (official Voice Live Agents quickstart chunking
+    convention) in numeric order, then ``json.loads`` the concatenated
+    string to ``{"session": {...}}``.
+
+    Returns None when metadata is empty/falsy, ``microsoft.voice-live.enabled``
+    is not the string ``"true"``, the configuration key is missing, or the
+    reassembled JSON fails to parse into a dict with a ``session`` sub-dict.
+    Never raises.
+    """
+    if not metadata:
+        return None
+    if metadata.get(VOICE_LIVE_ENABLED_KEY) != "true":
+        return None
+    if VOICE_LIVE_CONFIG_KEY not in metadata:
+        return None
+
+    chunks = [metadata[VOICE_LIVE_CONFIG_KEY]]
+    idx = 1
+    while f"{VOICE_LIVE_CONFIG_KEY}.{idx}" in metadata:
+        chunks.append(metadata[f"{VOICE_LIVE_CONFIG_KEY}.{idx}"])
+        idx += 1
+    config_json = "".join(chunks)
+
+    try:
+        config = json.loads(config_json)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning(
+            "_decode_voice_live_metadata: failed to parse reassembled JSON "
+            "(agent metadata may be corrupt or hand-edited in the portal)"
+        )
+        return None
+
+    if not isinstance(config, dict) or not isinstance(config.get("session"), dict):
+        return None
+    return config
+
+
+async def pull_voice_live_metadata(
+    db: AsyncSession,
+    agent_id: str,
+    *,
+    endpoint_override: str = "",
+    key_override: str = "",
+) -> dict | None:
+    """Fetch an agent's latest-version metadata from Azure AI Foundry and decode
+    its Voice Live configuration -- the read-back counterpart to
+    build_voice_live_metadata()/sync_agent_for_profile() (persona-hcp-foundry-
+    alignment Increment H: "如果在里面修改了，也可以通过 agent version 来获取到最新的版本").
+
+    Reads ``agent.versions["latest"]["metadata"]`` (NOT the top-level
+    ``agent.metadata`` attribute, which the installed azure-ai-projects SDK's
+    AgentDetails object does not expose -- see persona-hcp-foundry-alignment
+    Evidence 2026-08-05T10:45:00Z), mirroring the same latest-version read
+    pattern already used by update_agent_metadata_only() for instructions/model.
+
+    Also captures ``agent.versions["latest"]["definition"]["model"]`` (the LLM
+    deployment) from the SAME fetch and attaches it under the returned dict's
+    ``"model"`` key when present, so callers can pull back the model/deployment
+    selection alongside voice-live settings without a second network round trip.
+
+    Returns ``{"session": {...}}`` (optionally plus ``"model"``) on success, or
+    None if the agent fetch fails, there is no metadata, voice-live was never
+    enabled, or the configuration fails to decode. Never raises.
+    """
+    if endpoint_override:
+        project_endpoint, api_key = endpoint_override, key_override
+    else:
+        project_endpoint, api_key = await get_project_endpoint(db)
+    client = _get_project_client(project_endpoint, api_key)
+
+    try:
+        agent = await asyncio.to_thread(client.agents.get, agent_name=agent_id)
+    except Exception as e:
+        logger.warning("pull_voice_live_metadata: failed to fetch agent %s: %s", agent_id, e)
+        return None
+
+    latest = getattr(agent, "versions", {}).get("latest", {}) or {}
+    metadata = latest.get("metadata") or {}
+    config = _decode_voice_live_metadata(metadata)
+    if config is None:
+        return None
+
+    definition = latest.get("definition", {}) or {}
+    model = definition.get("model")
+    if model:
+        config["model"] = model
+    return config
+
+
+def _apply_persona_voice_name(persona: object, voice_name: str) -> bool:
+    """Write a pulled voice name back into ``persona.voice_map`` for the same
+    locale slot resolve_voice_config_for_persona() would resolve today.
+
+    Documented Increment H deviation: AvatarPersona.voice_map is per-locale
+    (up to 5 locales), but a Foundry agent's voice-live metadata carries only
+    ONE resolved voice name -- whichever locale resolve_voice_config_for_persona()
+    picked when the agent was last synced (zh-CN if present, else the sole
+    entry, else the global zh-CN default). We can only safely write back to
+    that SAME locale slot. If voice_map already has 2+ non-zh-CN locales there
+    is no way to tell which one a portal edit was meant for, so the pulled
+    voice name is silently skipped rather than guessed -- overwriting the
+    wrong locale would be worse than a no-op.
+
+    Returns True if voice_map was actually changed.
+    """
+    from app.services.avatar_persona_service import parse_persona_voice_map
+
+    voice_map = parse_persona_voice_map(persona)
+    if "zh-CN" in voice_map:
+        locale = "zh-CN"
+    elif len(voice_map) <= 1:
+        locale = next(iter(voice_map), "zh-CN")
+    else:
+        return False  # ambiguous: 2+ non-zh-CN locales, refuse to guess
+
+    if voice_map.get(locale) == voice_name:
+        return False
+    voice_map[locale] = voice_name
+    persona.voice_map = json.dumps(voice_map)
+    return True
+
+
+def apply_voice_live_session_to_profile(profile: object, config: dict) -> list[str]:
+    """Apply a decoded voice-live config (as returned by pull_voice_live_metadata)
+    back onto a profile's inline columns -- the inverse of
+    build_voice_live_metadata()/resolve_voice_config()/
+    resolve_voice_config_for_persona() (persona-hcp-foundry-alignment Increment H).
+
+    Works for both HcpProfile and AvatarPersona, applying only the columns
+    each model actually has (the two diverge on voice_name/recognition_language/
+    avatar_character/avatar_style/avatar_enabled/voice_live_model [HCP] vs.
+    voice_map/character/style/auto_detect_language [persona] -- see
+    _apply_persona_voice_name()'s docstring for the voice_map deviation).
+
+    Does not commit/flush/fetch anything -- pure mutation of the passed-in
+    ORM instance's attributes. Callers own the transaction.
+
+    Returns the list of attribute names actually changed (empty list if the
+    pulled config was identical to the profile's current values), for
+    logging/tests.
+    """
+    from app.models.avatar_persona import AvatarPersona
+    from app.models.hcp_profile import HcpProfile
+
+    session = config.get("session") or {}
+    changed: list[str] = []
+    is_hcp = isinstance(profile, HcpProfile)
+    is_persona = isinstance(profile, AvatarPersona)
+
+    def _set(attr: str, value: object) -> None:
+        if not hasattr(profile, attr):
+            return
+        if getattr(profile, attr) != value:
+            setattr(profile, attr, value)
+            changed.append(attr)
+
+    # --- Voice ---
+    voice = session.get("voice") or {}
+    voice_name = voice.get("name")
+    if voice_name:
+        if is_hcp:
+            _set("voice_name", voice_name)
+        elif is_persona and _apply_persona_voice_name(profile, voice_name):
+            changed.append("voice_map")
+    if "temperature" in voice:
+        try:
+            _set("voice_temperature", float(voice["temperature"]))
+        except (TypeError, ValueError):
+            pass
+    if "rate" in voice:
+        try:
+            _set("playback_speed", float(voice["rate"]))
+        except (TypeError, ValueError):
+            pass
+    _set("custom_lexicon_url", voice.get("custom_lexicon_url", "") or "")
+
+    # --- Input audio transcription: model, language/auto-detect, phrase list ---
+    transcription = session.get("input_audio_transcription") or {}
+    if transcription.get("model"):
+        _set("speech_recognition_model", transcription["model"])
+    language = transcription.get("language")
+    if language:
+        is_auto = language == "auto-detect"
+        if is_hcp:
+            _set("recognition_language", "auto" if is_auto else language)
+        elif is_persona:
+            _set("auto_detect_language", is_auto)
+    phrase_list = transcription.get("phrase_list")
+    if phrase_list is not None:
+        _set("phrase_list", "\n".join(phrase_list))
+
+    # --- Turn detection: EOU ---
+    turn_detection = session.get("turn_detection") or {}
+    _set("eou_detection", bool(turn_detection.get("end_of_utterance_detection")))
+
+    # --- Noise suppression / echo cancellation ---
+    _set("noise_suppression", session.get("input_audio_noise_reduction") is not None)
+    _set("echo_cancellation", session.get("input_audio_echo_cancellation") is not None)
+
+    # --- Avatar ---
+    avatar = session.get("avatar")
+    if avatar is not None:
+        if is_hcp:
+            if avatar.get("character"):
+                _set("avatar_character", avatar["character"])
+            if avatar.get("style"):
+                _set("avatar_style", avatar["style"])
+            _set("avatar_enabled", True)
+        elif is_persona:
+            if avatar.get("character"):
+                _set("character", avatar["character"])
+            if avatar.get("style"):
+                _set("style", avatar["style"])
+    elif is_hcp:
+        _set("avatar_enabled", False)
+    # AvatarPersona has no avatar_enabled column -- avatar is always enabled by
+    # persona semantics, so a None avatar from the portal is intentionally a
+    # no-op for personas (documented Increment H deviation).
+
+    # --- Proactive engagement ---
+    _set("proactive_engagement", bool(session.get("proactive_engagement", False)))
+
+    # --- Interim response ---
+    interim = session.get("interim_response")
+    if interim is not None:
+        _set("interim_response_enabled", True)
+        _set(
+            "interim_response_type",
+            "llm" if interim.get("type") == "llm_interim_response" else "static",
+        )
+        if "latency_threshold_ms" in interim:
+            try:
+                _set("interim_response_threshold_ms", int(interim["latency_threshold_ms"]))
+            except (TypeError, ValueError):
+                pass
+    else:
+        _set("interim_response_enabled", False)
+
+    # --- Model / deployment (HCP only -- AvatarPersona has no voice_live_model column) ---
+    model = config.get("model")
+    if model and is_hcp:
+        _set("voice_live_model", model)
+
+    return changed
+
+
 async def update_agent_metadata_only(
     db: AsyncSession,
     agent_id: str,

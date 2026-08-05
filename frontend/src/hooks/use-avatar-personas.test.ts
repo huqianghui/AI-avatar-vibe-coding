@@ -14,6 +14,7 @@ vi.mock("@/api/avatar-personas", () => ({
     setDefault: vi.fn(),
     retrySync: vi.fn(),
     getAgentPortalUrl: vi.fn(),
+    pullVoiceConfig: vi.fn(),
   },
 }));
 
@@ -26,6 +27,7 @@ import {
   useDeleteAvatarPersona,
   useSetDefaultAvatarPersona,
   useRetrySyncAvatarPersona,
+  usePullVoiceConfigAvatarPersona,
 } from "./use-avatar-personas";
 
 const mockedList = vi.mocked(avatarPersonasApi.list);
@@ -35,6 +37,7 @@ const mockedUpdate = vi.mocked(avatarPersonasApi.update);
 const mockedRemove = vi.mocked(avatarPersonasApi.remove);
 const mockedSetDefault = vi.mocked(avatarPersonasApi.setDefault);
 const mockedRetrySync = vi.mocked(avatarPersonasApi.retrySync);
+const mockedPullVoiceConfig = vi.mocked(avatarPersonasApi.pullVoiceConfig);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -261,5 +264,36 @@ describe("useRetrySyncAvatarPersona", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockedRetrySync).toHaveBeenCalledWith("p1");
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+});
+
+describe("usePullVoiceConfigAvatarPersona", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("calls avatarPersonasApi.pullVoiceConfig and invalidates on success", async () => {
+    const updated = { ...mockPersona, voice_map: { "en-US": "en-US-JennyNeural" } };
+    mockedPullVoiceConfig.mockResolvedValueOnce(updated);
+    const { Wrapper, invalidateSpy } = createWrapperWithSpy();
+
+    const { result } = renderHook(() => usePullVoiceConfigAvatarPersona(), { wrapper: Wrapper });
+
+    result.current.mutate("p1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedPullVoiceConfig).toHaveBeenCalledWith("p1");
+    expect(result.current.data).toEqual(updated);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["avatar-personas"] });
+  });
+
+  it("handles pull voice config failure", async () => {
+    mockedPullVoiceConfig.mockRejectedValueOnce(new Error("No agent to pull from"));
+
+    const { result } = renderHook(() => usePullVoiceConfigAvatarPersona(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("p1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

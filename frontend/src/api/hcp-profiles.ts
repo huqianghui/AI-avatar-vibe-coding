@@ -92,6 +92,19 @@ export async function getAgentPortalUrl(profileId: string) {
   return data;
 }
 
+/**
+ * Pull the latest voice-live configuration from the profile's synced AI
+ * Foundry Agent and apply it onto the profile's local voice/avatar columns
+ * (persona-hcp-foundry-alignment Increment H). Returns the full updated
+ * HcpProfile so the caller can re-seed its form immediately.
+ */
+export async function pullVoiceConfig(profileId: string) {
+  const { data } = await apiClient.post<HcpProfile>(
+    `/hcp-profiles/${profileId}/agent/pull-voice-config`,
+  );
+  return data;
+}
+
 export interface InstructionsPreviewRequest {
   name?: string;
   specialty?: string;

@@ -24,6 +24,7 @@ vi.mock("sonner", () => ({
 const mockCreateMutate = vi.fn();
 const mockUpdateMutate = vi.fn();
 const mockRetrySyncMutate = vi.fn();
+const mockPullConfigMutate = vi.fn();
 
 let mockProfileReturn: {
   data: HcpProfile | undefined;
@@ -36,6 +37,11 @@ vi.mock("@/hooks/use-hcp-profiles", () => ({
   useUpdateHcpProfile: () => ({ mutate: mockUpdateMutate, isPending: false }),
   useRetrySyncHcpProfile: () => ({
     mutate: mockRetrySyncMutate,
+    isPending: false,
+  }),
+  // persona-hcp-foundry-alignment Increment H
+  usePullVoiceConfigHcpProfile: () => ({
+    mutate: mockPullConfigMutate,
     isPending: false,
   }),
 }));

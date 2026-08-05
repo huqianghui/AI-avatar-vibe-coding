@@ -2,11 +2,36 @@
 status: awaiting_human_verify
 trigger: "Investigate issue: persona-hcp-foundry-alignment — Avatar Persona admin page still not aligned with HCP profile page and Azure AI Foundry portal design. Three gaps: (1) Foundry-portal voice-mode layout parity (gear Configure button opening right-side Configuration panel) on BOTH HCP and Persona pages; (2) Persona editor missing Foundry features HCP has (Knowledge/Foundry IQ); (3) Persona must be a real Foundry agent, synced like HCP (Agent Synced card, Agent ID, version, Force re-sync, View in Azure Portal)."
 created: 2026-08-04T00:00:00Z
-updated: 2026-08-05T16:25:00Z
+updated: 2026-08-05T18:20:00Z
 ---
 
 ## Current Focus
 <!-- OVERWRITE on each update - reflects NOW -->
+
+hypothesis: Increment H (pull voice-live config back from latest Foundry agent version) DELIVERED.
+Backend: agent_sync_service.py gained _decode_voice_live_metadata (de-chunks .1/.2 suffix keys,
+json.loads, requires enabled=="true" + {"session": dict}), pull_voice_live_metadata (reads
+agent.versions["latest"]["metadata"] + definition.model), _apply_persona_voice_name (writes zh-CN
+or sole-locale voice_map slot, refuses to guess with 2+ non-zh-CN locales), and
+apply_voice_live_session_to_profile (exact inverse of build_voice_live_metadata onto HcpProfile OR
+AvatarPersona inline columns; audited mapping-by-mapping: rate str<->float playback_speed,
+phrase_list join/splitlines, "auto-detect"<->"auto", llm_interim_response<->"llm", null-when-off
+conventions). New endpoints: POST /hcp-profiles/{id}/agent/pull-voice-config and
+POST /admin/avatar-personas/{id}/agent/pull-voice-config (admin-only, require synced agent,
+refresh agent_version from Foundry). Frontend: usePullVoiceConfigHcpProfile /
+usePullVoiceConfigAvatarPersona hooks, "Pull from Agent" (Download icon) button in both
+agent-status sections gated on synced && !isNew, form re-seed after pull (HCP via useEffect +
+invalidation; persona via extracted personaToFormState() called in mutation onSuccess), 4 new i18n
+keys x 5 locales (es-* genuinely translated).
+test: ruff clean; full pytest 2996 passed / 2 failed (both known [REAL] live-Azure flakes),
+coverage 90.48% >= 89% gate; tsc -b clean; vitest 2802 passed / 1 known login flake; REAL E2E in
+browser against live Foundry: persona Lisa pull -> 200, agent_version 2->"3",
+proactive_engagement:true pulled; HCP Dr. Wang Fang pull -> 200, agent_version "15",
+voice_live_model "gpt-5.4-mini", voice_name zh-CN-XiaoxiaoMultilingualNeural.
+next_action: awaiting human confirmation before archiving this session to resolved/. Deferred
+follow-up: user's "使用相同的UI 组件" (Fluent UI) question — re-raise options after this ships.
+
+---
 
 hypothesis: Increment G (4 Foundry Configuration-panel parity gaps: speech recognition/
 transcription model, language auto-detect toggle, Speech input Advanced settings, Speech output

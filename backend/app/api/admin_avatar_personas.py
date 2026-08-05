@@ -163,6 +163,44 @@ async def get_agent_portal_url(
     )
 
 
+@router.post("/{persona_id}/agent/pull-voice-config", response_model=AvatarPersonaOut)
+async def pull_voice_config(
+    persona_id: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+) -> AvatarPersonaOut:
+    """Pull the latest voice-live configuration from the persona's synced AI
+    Foundry Agent and apply it onto the persona's local voice/avatar columns.
+    Admin only.
+
+    (persona-hcp-foundry-alignment Increment H; mirrors hcp_profiles.py's
+    /{profile_id}/agent/pull-voice-config route.) 422 if no agent is synced
+    yet; 404 if the agent has no voice-live metadata to pull."""
+    from app.services import agent_sync_service
+    from app.utils.exceptions import not_found
+
+    persona = await avatar_persona_service.get_persona(db, persona_id)
+    if not persona.agent_id or persona.agent_sync_status != "synced":
+        bad_request("Agent must be synced before pulling voice configuration.")
+
+    config = await agent_sync_service.pull_voice_live_metadata(db, persona.agent_id)
+    if config is None:
+        not_found("No voice-live configuration found on the agent.")
+
+    agent_sync_service.apply_voice_live_session_to_profile(persona, config)
+
+    try:
+        persona.agent_version = await agent_sync_service.get_agent_latest_version(
+            db, persona.agent_id
+        )
+    except Exception:
+        pass
+
+    await db.flush()
+    await db.refresh(persona)
+    return AvatarPersonaOut.model_validate(persona)
+
+
 @router.get("/{persona_id}/knowledge-configs", response_model=list[PersonaKnowledgeConfigOut])
 async def get_persona_knowledge_configs(
     persona_id: str,

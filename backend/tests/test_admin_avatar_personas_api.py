@@ -403,3 +403,119 @@ class TestPersonaKnowledgeConfigsEndpoints:
         )
 
         assert response.status_code == 403
+
+
+class TestPullVoiceConfigEndpoint:
+    """Tests for POST /{persona_id}/agent/pull-voice-config
+    (persona-hcp-foundry-alignment Increment H; mirrors hcp_profiles.py's
+    /{profile_id}/agent/pull-voice-config route)."""
+
+    async def test_no_persona_returns_404(self, client):
+        _, token = await _create_admin_and_token()
+
+        response = await client.post(
+            f"{BASE}/does-not-exist/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 404
+
+    async def test_no_agent_id_returns_422(self, client):
+        persona = await _create_persona(name="No Agent Yet", agent_id="", agent_sync_status="none")
+        _, token = await _create_admin_and_token()
+
+        response = await client.post(
+            f"{BASE}/{persona.id}/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["code"] == "VALIDATION_ERROR"
+
+    async def test_unsynced_status_returns_422(self, client):
+        persona = await _create_persona(
+            name="Pending Sync", agent_id="persona-agent-1", agent_sync_status="pending"
+        )
+        _, token = await _create_admin_and_token()
+
+        response = await client.post(
+            f"{BASE}/{persona.id}/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_no_voice_live_metadata_returns_404(self, client):
+        persona = await _create_persona(
+            name="No VL Metadata", agent_id="persona-agent-2", agent_sync_status="synced"
+        )
+        _, token = await _create_admin_and_token()
+
+        with patch(
+            "app.services.agent_sync_service.pull_voice_live_metadata",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
+            response = await client.post(
+                f"{BASE}/{persona.id}/agent/pull-voice-config",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 404
+
+    async def test_success_applies_pulled_config_and_updates_version(self, client):
+        import json
+
+        persona = await _create_persona(
+            name="Has Agent",
+            agent_id="persona-agent-3",
+            agent_sync_status="synced",
+            character="lisa",
+            style="casual",
+            voice_map=json.dumps({"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}),
+        )
+        _, token = await _create_admin_and_token()
+
+        pulled_config = {
+            "session": {
+                "voice": {"name": "zh-CN-YunxiNeural"},
+                "avatar": {"character": "lori", "style": "formal"},
+            }
+        }
+
+        with (
+            patch(
+                "app.services.agent_sync_service.pull_voice_live_metadata",
+                new_callable=AsyncMock,
+                return_value=pulled_config,
+            ),
+            patch(
+                "app.services.agent_sync_service.get_agent_latest_version",
+                new_callable=AsyncMock,
+                return_value="4",
+            ),
+        ):
+            response = await client.post(
+                f"{BASE}/{persona.id}/agent/pull-voice-config",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["voice_map"]["zh-CN"] == "zh-CN-YunxiNeural"
+        assert data["character"] == "lori"
+        assert data["style"] == "formal"
+        assert data["agent_version"] == "4"
+
+    async def test_non_admin_returns_403(self, client):
+        persona = await _create_persona(
+            name="Any", agent_id="persona-agent-4", agent_sync_status="synced"
+        )
+        _, token = await _create_user_and_token()
+
+        response = await client.post(
+            f"{BASE}/{persona.id}/agent/pull-voice-config",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403

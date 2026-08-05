@@ -13,6 +13,7 @@ vi.mock("@/api/hcp-profiles", () => ({
   retrySyncHcpProfile: vi.fn(),
   batchSyncAgents: vi.fn(),
   previewInstructions: vi.fn(),
+  pullVoiceConfig: vi.fn(),
 }));
 
 import {
@@ -24,6 +25,7 @@ import {
   retrySyncHcpProfile,
   batchSyncAgents,
   previewInstructions,
+  pullVoiceConfig,
 } from "@/api/hcp-profiles";
 import {
   useHcpProfiles,
@@ -34,6 +36,7 @@ import {
   useRetrySyncHcpProfile,
   useBatchSyncAgents,
   usePreviewInstructions,
+  usePullVoiceConfigHcpProfile,
 } from "@/hooks/use-hcp-profiles";
 
 function createWrapper() {
@@ -357,5 +360,72 @@ describe("usePreviewInstructions", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.is_override).toBe(true);
+  });
+});
+
+describe("usePullVoiceConfigHcpProfile", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("should pull voice config for an HCP profile", async () => {
+    const updated = { id: "h1", name: "Dr. Wang", voice_name: "en-US-JennyNeural" } as HcpProfile;
+    vi.mocked(pullVoiceConfig).mockResolvedValueOnce(updated);
+
+    const { result } = renderHook(() => usePullVoiceConfigHcpProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("h1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(pullVoiceConfig).toHaveBeenCalledWith("h1");
+    expect(result.current.data).toEqual(updated);
+  });
+
+  it("should invalidate hcp-profiles queries on success", async () => {
+    vi.mocked(pullVoiceConfig).mockResolvedValueOnce({
+      id: "h1",
+      name: "Dr. Wang",
+    } as HcpProfile);
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 0 },
+        mutations: { retry: false },
+      },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      );
+    }
+
+    const { result } = renderHook(() => usePullVoiceConfigHcpProfile(), {
+      wrapper: Wrapper,
+    });
+
+    result.current.mutate("h1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["hcp-profiles"],
+    });
+  });
+
+  it("should handle pull voice config failure", async () => {
+    vi.mocked(pullVoiceConfig).mockRejectedValueOnce(
+      new Error("No agent to pull from"),
+    );
+
+    const { result } = renderHook(() => usePullVoiceConfigHcpProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("h1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

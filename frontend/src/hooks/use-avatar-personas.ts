@@ -81,3 +81,18 @@ export function useRetrySyncAvatarPersona() {
     },
   });
 }
+
+// Pull the latest voice-live configuration from the persona's synced AI
+// Foundry Agent (persona-hcp-foundry-alignment Increment H). Invalidates the
+// same query key as update/retry-sync so useAvatarPersona refetches; the
+// editor page itself also re-seeds its form directly from the mutation's
+// returned data (its "populate once" effect otherwise ignores query updates).
+export function usePullVoiceConfigAvatarPersona() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => avatarPersonasApi.pullVoiceConfig(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    },
+  });
+}

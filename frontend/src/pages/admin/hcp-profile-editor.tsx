@@ -38,6 +38,7 @@ import {
   useCreateHcpProfile,
   useUpdateHcpProfile,
   useRetrySyncHcpProfile,
+  usePullVoiceConfigHcpProfile,
 } from "@/hooks/use-hcp-profiles";
 import type { HcpProfileCreate, HcpProfileUpdate } from "@/types/hcp";
 
@@ -118,6 +119,7 @@ export default function HcpProfileEditorPage() {
   const createMutation = useCreateHcpProfile();
   const updateMutation = useUpdateHcpProfile();
   const retrySyncMutation = useRetrySyncHcpProfile();
+  const pullConfigMutation = usePullVoiceConfigHcpProfile();
 
   const [testChatOpen, setTestChatOpen] = useState(false);
 
@@ -246,6 +248,25 @@ export default function HcpProfileEditorPage() {
       onError: (err) =>
         toast.error(
           t("admin:hcp.syncFailed", { error: (err as Error).message }),
+        ),
+    });
+  };
+
+  // Pull the latest voice-live config from the profile's synced AI Foundry
+  // Agent (persona-hcp-foundry-alignment Increment H). No manual form.reset()
+  // call needed here: the mutation invalidates the "hcp-profiles" query key,
+  // useHcpProfile refetches, `profile` gets a new reference, and the
+  // existing `useEffect(() => { if (profile) form.reset(...) }, [profile,
+  // form])` above already re-seeds the form from the fresh data.
+  const handlePullConfig = () => {
+    if (!id) return;
+    pullConfigMutation.mutate(id, {
+      onSuccess: () => toast.success(t("admin:hcp.pullVoiceConfigSuccess")),
+      onError: (err) =>
+        toast.error(
+          t("admin:hcp.pullVoiceConfigFailed", {
+            error: (err as Error).message,
+          }),
         ),
     });
   };
@@ -414,6 +435,8 @@ export default function HcpProfileEditorPage() {
                     isNew={isNew}
                     onRetrySync={handleRetrySync}
                     retrySyncPending={retrySyncMutation.isPending}
+                    onPullConfig={handlePullConfig}
+                    pullConfigPending={pullConfigMutation.isPending}
                   />
                   {!isNew && profile && (
                     <Button
