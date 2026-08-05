@@ -3,15 +3,42 @@ import type { VoiceLiveInstanceCreate } from "@/types/voice-live";
 /* ── Voice Name Options ──────────────────────────────────────────────── */
 
 export const VOICE_NAME_OPTIONS = [
-  { value: "en-US-AvaNeural", labelKey: "voiceAva" },
-  { value: "en-US-Ava:DragonHDLatestNeural", labelKey: "voiceAvaHd" },
-  { value: "en-US-AndrewNeural", labelKey: "voiceAndrew" },
-  { value: "en-US-JennyNeural", labelKey: "voiceJenny" },
-  { value: "zh-CN-XiaoxiaoMultilingualNeural", labelKey: "voiceXiaoxiaoMultilingual" },
-  { value: "zh-CN-XiaoxiaoNeural", labelKey: "voiceXiaoxiao" },
-  { value: "zh-CN-YunxiNeural", labelKey: "voiceYunxi" },
-  { value: "zh-CN-YunjianNeural", labelKey: "voiceYunjian" },
+  { value: "en-US-AvaNeural", labelKey: "voiceAva", locale: "en-US" },
+  { value: "en-US-Ava:DragonHDLatestNeural", labelKey: "voiceAvaHd", locale: "en-US" },
+  { value: "en-US-AndrewNeural", labelKey: "voiceAndrew", locale: "en-US" },
+  { value: "en-US-JennyNeural", labelKey: "voiceJenny", locale: "en-US" },
+  {
+    value: "zh-CN-XiaoxiaoMultilingualNeural",
+    labelKey: "voiceXiaoxiaoMultilingual",
+    locale: "zh-CN",
+    multilingual: true,
+  },
+  { value: "zh-CN-XiaoxiaoNeural", labelKey: "voiceXiaoxiao", locale: "zh-CN" },
+  { value: "zh-CN-YunxiNeural", labelKey: "voiceYunxi", locale: "zh-CN" },
+  { value: "zh-CN-YunjianNeural", labelKey: "voiceYunjian", locale: "zh-CN" },
+  { value: "es-ES-ElviraNeural", labelKey: "voiceElvira", locale: "es-ES" },
+  { value: "es-ES-AlvaroNeural", labelKey: "voiceAlvaro", locale: "es-ES" },
+  { value: "es-MX-DaliaNeural", labelKey: "voiceDalia", locale: "es-MX" },
+  { value: "es-MX-JorgeNeural", labelKey: "voiceJorge", locale: "es-MX" },
+  { value: "es-US-PalomaNeural", labelKey: "voicePaloma", locale: "es-US" },
+  { value: "es-US-AlonsoNeural", labelKey: "voiceAlonso", locale: "es-US" },
 ] as const;
+
+/**
+ * Filters `VOICE_NAME_OPTIONS` to those matching the given recognition
+ * language, plus any multilingual voice (which is always a valid pick
+ * regardless of the selected language). Falls back to every option for
+ * "auto" or an unrecognized locale (e.g. no options match that locale).
+ */
+export function voiceOptionsForLanguage(language: string) {
+  const hasExactLocaleMatch = VOICE_NAME_OPTIONS.some((opt) => opt.locale === language);
+  if (language === "auto" || !hasExactLocaleMatch) {
+    return VOICE_NAME_OPTIONS;
+  }
+  return VOICE_NAME_OPTIONS.filter(
+    (opt) => opt.locale === language || "multilingual" in opt,
+  );
+}
 
 /* ── Turn Detection Types ────────────────────────────────────────────── */
 
@@ -28,8 +55,9 @@ export const RECOGNITION_LANGUAGES = [
   { value: "auto", labelKey: "autoDetect" },
   { value: "zh-CN", labelKey: "langChinese" },
   { value: "en-US", labelKey: "langEnglish" },
-  { value: "ja-JP", labelKey: "langJapanese" },
-  { value: "ko-KR", labelKey: "langKorean" },
+  { value: "es-ES", labelKey: "langSpanishSpain" },
+  { value: "es-MX", labelKey: "langSpanishMexico" },
+  { value: "es-US", labelKey: "langSpanishUS" },
 ] as const;
 
 /* ── Shared Voice Locales (HCP + Persona editors) ────────────────────── */

@@ -25,6 +25,7 @@ import {
   LOCALE_FLAGS,
   LOCALE_LABEL_KEY,
   VOICE_NAME_OPTIONS,
+  voiceOptionsForLanguage,
 } from "@/lib/voice-constants";
 
 export interface ConfigurationPanelProps {
@@ -131,6 +132,20 @@ export function ConfigurationPanel({
   const showAvatarToggle = avatarEnabled !== undefined && onAvatarEnabledChange !== undefined;
   const showGreeting = greeting !== undefined && onGreetingChange !== undefined;
 
+  // Filter the speech-output voice list to the active recognition language
+  // (plus multilingual voices). If the currently-selected voice isn't in that
+  // filtered set -- e.g. the panel opens with a language/voice combo saved
+  // before this filtering existed -- keep it visible as an extra option so
+  // the saved value isn't silently dropped from the Select.
+  const filteredVoiceOptions = voiceOptionsForLanguage(language);
+  const selectedVoiceVisible =
+    voice === voiceDefaultOption?.value ||
+    voice === "" ||
+    filteredVoiceOptions.some((opt) => opt.value === voice);
+  const selectedVoiceFallback = !selectedVoiceVisible
+    ? VOICE_NAME_OPTIONS.find((opt) => opt.value === voice)
+    : undefined;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -202,11 +217,19 @@ export function ConfigurationPanel({
                       {voiceDefaultOption.label}
                     </SelectItem>
                   )}
-                  {VOICE_NAME_OPTIONS.map((opt) => (
+                  {filteredVoiceOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {t(`admin:hcp.${opt.labelKey}`)}
                     </SelectItem>
                   ))}
+                  {selectedVoiceFallback && (
+                    <SelectItem
+                      key={selectedVoiceFallback.value}
+                      value={selectedVoiceFallback.value}
+                    >
+                      {t(`admin:hcp.${selectedVoiceFallback.labelKey}`)}
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

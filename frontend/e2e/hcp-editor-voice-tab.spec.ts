@@ -185,9 +185,12 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await page.getByRole("option", { name: /español \(españa\)/i }).click();
     await page.waitForTimeout(200);
 
-    // (3) Select a speech output voice.
+    // (3) Select a speech output voice. The voice list is filtered to the
+    // just-selected recognition language (es-ES) plus multilingual voices,
+    // so pick a Spanish (Spain) voice -- an English voice like Andrew is no
+    // longer offered here (persona-hcp-foundry-alignment voice-filter fix).
     await comboboxes.nth(2).click();
-    await page.getByRole("option", { name: /andrew/i }).click();
+    await page.getByRole("option", { name: /elvira/i }).click();
     await page.waitForTimeout(200);
 
     // (4) Select an avatar character + style from the gallery.
@@ -250,7 +253,7 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     await expect(
       reopenedPanel.getByText(/español \(españa\)/i).first(),
     ).toBeVisible();
-    await expect(reopenedPanel.getByText(/andrew/i).first()).toBeVisible();
+    await expect(reopenedPanel.getByText(/elvira/i).first()).toBeVisible();
     await expect(reopenedPanel.getByRole("switch").first()).toBeChecked();
     if (selectedAvatarLabel) {
       await expect(

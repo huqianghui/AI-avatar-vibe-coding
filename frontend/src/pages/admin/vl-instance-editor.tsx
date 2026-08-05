@@ -44,6 +44,7 @@ import {
   RECOGNITION_LANGUAGES,
   CDN_BASE,
   createDefaultVlInstanceForm,
+  voiceOptionsForLanguage,
 } from "@/lib/voice-constants";
 import type { VoiceLiveInstanceCreate } from "@/types/voice-live";
 
@@ -168,6 +169,22 @@ export default function VlInstanceEditorPage() {
       setForm({ ...DEFAULT_FORM });
     }
   }, [instance]);
+
+  // Filter the speech-output voice list to the form's recognition language
+  // (plus multilingual voices); "auto" shows every voice. Keep the currently
+  // selected voice visible even if it falls outside the filtered set, so a
+  // previously-saved value isn't silently dropped from the Select.
+  const filteredVoiceOptions = useMemo(
+    () => voiceOptionsForLanguage(form.recognition_language ?? "auto"),
+    [form.recognition_language],
+  );
+  const selectedVoiceFallback = useMemo(() => {
+    const currentVoice = form.voice_name ?? "en-US-AvaNeural";
+    if (filteredVoiceOptions.some((opt) => opt.value === currentVoice)) {
+      return undefined;
+    }
+    return VOICE_NAME_OPTIONS.find((opt) => opt.value === currentVoice);
+  }, [filteredVoiceOptions, form.voice_name]);
 
   /* ── Voice test session state (delegated to VoiceTestPlayground) ──── */
 
@@ -494,11 +511,19 @@ export default function VlInstanceEditorPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {VOICE_NAME_OPTIONS.map((opt) => (
+                  {filteredVoiceOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {t(`hcp.${opt.labelKey}`)}
                     </SelectItem>
                   ))}
+                  {selectedVoiceFallback && (
+                    <SelectItem
+                      key={selectedVoiceFallback.value}
+                      value={selectedVoiceFallback.value}
+                    >
+                      {t(`hcp.${selectedVoiceFallback.labelKey}`)}
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

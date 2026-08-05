@@ -266,6 +266,60 @@ describe("ConfigurationPanel", () => {
     expect(capturedGalleryProps!.onSelect).toBe(onAvatarSelect);
   });
 
+  /* ── voice filtering by recognition language ─────────────────────────── */
+
+  it("shows only Spanish (es-ES) and multilingual voices when language is es-ES", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        language="es-ES"
+        voice="es-ES-ElviraNeural"
+      />,
+    );
+    await userEvent.click(screen.getAllByRole("combobox")[1]!); // voice select
+    // Elvira is also the current selection, so its label appears in both the
+    // trigger and the dropdown option -- assert via the option role.
+    expect(
+      screen.getByRole("option", { name: "admin:hcp.voiceElvira" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("admin:hcp.voiceAlvaro")).toBeInTheDocument();
+    expect(
+      screen.getByText("admin:hcp.voiceXiaoxiaoMultilingual"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("admin:hcp.voiceJenny")).not.toBeInTheDocument();
+    expect(screen.queryByText("admin:hcp.voiceDalia")).not.toBeInTheDocument();
+  });
+
+  it("keeps a selected voice visible even when it does not match the active language", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        language="es-ES"
+        voice="en-US-JennyNeural"
+      />,
+    );
+    await userEvent.click(screen.getAllByRole("combobox")[1]!); // voice select
+    // Jenny is the current selection (shown in the trigger) and also
+    // appended as a fallback dropdown option -- assert via the option role.
+    expect(
+      screen.getByRole("option", { name: "admin:hcp.voiceJenny" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not duplicate the selected voice when it already matches the active language", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        language="es-ES"
+        voice="es-ES-ElviraNeural"
+      />,
+    );
+    await userEvent.click(screen.getAllByRole("combobox")[1]!); // voice select
+    // The trigger's SelectValue also shows the selected label, so scope this
+    // assertion to dropdown options only -- there must be exactly one.
+    expect(screen.getAllByRole("option", { name: "admin:hcp.voiceElvira" })).toHaveLength(1);
+  });
+
   /* ── onReset ───────────────────────────────────────────────────────── */
 
   it("does not render a Reset footer button when onReset is omitted", () => {

@@ -5,6 +5,7 @@ import {
   RECOGNITION_LANGUAGES,
   CDN_BASE,
   createDefaultVlInstanceForm,
+  voiceOptionsForLanguage,
 } from "../voice-constants";
 
 describe("voice-constants", () => {
@@ -22,6 +23,29 @@ describe("voice-constants", () => {
     expect(values).toContain("zh-CN-XiaoxiaoNeural");
   });
 
+  it("VOICE_NAME_OPTIONS contains the six new Spanish voices across all three variants", () => {
+    const values = VOICE_NAME_OPTIONS.map((o) => o.value);
+    expect(values).toContain("es-ES-ElviraNeural");
+    expect(values).toContain("es-ES-AlvaroNeural");
+    expect(values).toContain("es-MX-DaliaNeural");
+    expect(values).toContain("es-MX-JorgeNeural");
+    expect(values).toContain("es-US-PalomaNeural");
+    expect(values).toContain("es-US-AlonsoNeural");
+  });
+
+  it("every option has a locale field", () => {
+    for (const opt of VOICE_NAME_OPTIONS) {
+      expect(opt.locale).toBeTruthy();
+    }
+  });
+
+  it("zh-CN-XiaoxiaoMultilingualNeural is flagged multilingual, others are not", () => {
+    const multilingual = VOICE_NAME_OPTIONS.filter(
+      (opt) => "multilingual" in opt && opt.multilingual,
+    ).map((opt) => opt.value);
+    expect(multilingual).toEqual(["zh-CN-XiaoxiaoMultilingualNeural"]);
+  });
+
   it("TURN_DETECTION_TYPES has entries with value and labelKey", () => {
     expect(TURN_DETECTION_TYPES.length).toBeGreaterThan(0);
     for (const opt of TURN_DETECTION_TYPES) {
@@ -36,11 +60,15 @@ describe("voice-constants", () => {
     expect(values).toContain("semantic_vad");
   });
 
-  it("RECOGNITION_LANGUAGES includes auto and common languages", () => {
+  it("RECOGNITION_LANGUAGES includes auto, zh-CN, en-US, and all three Spanish variants", () => {
     const values = RECOGNITION_LANGUAGES.map((l) => l.value);
-    expect(values).toContain("auto");
-    expect(values).toContain("zh-CN");
-    expect(values).toContain("en-US");
+    expect(values).toEqual(["auto", "zh-CN", "en-US", "es-ES", "es-MX", "es-US"]);
+  });
+
+  it("RECOGNITION_LANGUAGES no longer includes ja-JP or ko-KR", () => {
+    const values = RECOGNITION_LANGUAGES.map((l) => l.value);
+    expect(values).not.toContain("ja-JP");
+    expect(values).not.toContain("ko-KR");
   });
 
   it("RECOGNITION_LANGUAGES has entries with value and labelKey", () => {
@@ -54,6 +82,43 @@ describe("voice-constants", () => {
   it("CDN_BASE is a valid Azure URL string", () => {
     expect(CDN_BASE).toContain("https://");
     expect(CDN_BASE).toContain("azure");
+  });
+});
+
+describe("voiceOptionsForLanguage", () => {
+  it("returns only es-ES voices plus multilingual voices for es-ES", () => {
+    const values = voiceOptionsForLanguage("es-ES").map((o) => o.value);
+    expect(values).toEqual([
+      "zh-CN-XiaoxiaoMultilingualNeural",
+      "es-ES-ElviraNeural",
+      "es-ES-AlvaroNeural",
+    ]);
+  });
+
+  it("returns only es-MX voices plus multilingual voices for es-MX", () => {
+    const values = voiceOptionsForLanguage("es-MX").map((o) => o.value);
+    expect(values).toEqual([
+      "zh-CN-XiaoxiaoMultilingualNeural",
+      "es-MX-DaliaNeural",
+      "es-MX-JorgeNeural",
+    ]);
+  });
+
+  it("returns only en-US voices plus multilingual voices for en-US", () => {
+    const values = voiceOptionsForLanguage("en-US").map((o) => o.value);
+    expect(values).toContain("en-US-AvaNeural");
+    expect(values).toContain("en-US-JennyNeural");
+    expect(values).toContain("zh-CN-XiaoxiaoMultilingualNeural");
+    expect(values).not.toContain("zh-CN-XiaoxiaoNeural");
+    expect(values).not.toContain("es-ES-ElviraNeural");
+  });
+
+  it("returns all options for auto", () => {
+    expect(voiceOptionsForLanguage("auto")).toEqual(VOICE_NAME_OPTIONS);
+  });
+
+  it("returns all options for an unrecognized locale", () => {
+    expect(voiceOptionsForLanguage("fr-FR")).toEqual(VOICE_NAME_OPTIONS);
   });
 });
 
