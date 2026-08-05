@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 
 // ---- Mocks ----
 
@@ -65,6 +65,10 @@ function TestWrapper({
   avatarCharacter = "lisa",
   avatarStyle = "casual",
   avatarEnabled = true,
+  interimResponseEnabled = false,
+  interimResponseType = "llm",
+  interimResponseThresholdMs = 500,
+  proactiveEngagement = false,
 }: {
   instanceId?: string | null;
   isNew?: boolean;
@@ -72,6 +76,10 @@ function TestWrapper({
   avatarCharacter?: string;
   avatarStyle?: string;
   avatarEnabled?: boolean;
+  interimResponseEnabled?: boolean;
+  interimResponseType?: "llm" | "static";
+  interimResponseThresholdMs?: number;
+  proactiveEngagement?: boolean;
 }) {
   const form = useForm<HcpFormValues>({
     defaultValues: {
@@ -96,6 +104,10 @@ function TestWrapper({
       avatar_style: avatarStyle,
       avatar_enabled: avatarEnabled,
       agent_instructions_override: "",
+      interim_response_enabled: interimResponseEnabled,
+      interim_response_type: interimResponseType,
+      interim_response_threshold_ms: interimResponseThresholdMs,
+      proactive_engagement: proactiveEngagement,
     },
   });
 
@@ -248,6 +260,88 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
       capturedConfigPanelProps = null;
       render(<TestWrapper instanceId={null} isNew={false} />);
       expect(capturedConfigPanelProps!.disabledNote).toBeUndefined();
+    });
+
+    // persona-hcp-foundry-alignment Increment F: interim response +
+    // proactive engagement wiring through to ConfigurationPanel.
+    it("passes the form's interim response and proactive engagement fields to ConfigurationPanel", () => {
+      render(
+        <TestWrapper
+          instanceId={null}
+          interimResponseEnabled={true}
+          interimResponseType="static"
+          interimResponseThresholdMs={800}
+          proactiveEngagement={true}
+        />,
+      );
+      expect(capturedConfigPanelProps).toBeTruthy();
+      expect(capturedConfigPanelProps!.interimResponseEnabled).toBe(true);
+      expect(capturedConfigPanelProps!.interimResponseType).toBe("static");
+      expect(capturedConfigPanelProps!.interimResponseThresholdMs).toBe(800);
+      expect(capturedConfigPanelProps!.proactiveEngagement).toBe(true);
+      expect(typeof capturedConfigPanelProps!.onInterimResponseEnabledChange).toBe(
+        "function",
+      );
+      expect(typeof capturedConfigPanelProps!.onInterimResponseTypeChange).toBe(
+        "function",
+      );
+      expect(
+        typeof capturedConfigPanelProps!.onInterimResponseThresholdMsChange,
+      ).toBe("function");
+      expect(typeof capturedConfigPanelProps!.onProactiveEngagementChange).toBe(
+        "function",
+      );
+    });
+
+    it("updates the form when ConfigurationPanel's interim response callbacks fire", () => {
+      let formRef: ReturnType<typeof useForm<HcpFormValues>> | undefined;
+      function Wrapper() {
+        formRef = useForm<HcpFormValues>({
+          defaultValues: {
+            name: "Test HCP",
+            specialty: "Oncology",
+            hospital: "",
+            title: "",
+            personality_type: "friendly",
+            emotional_state: 30,
+            communication_style: 50,
+            expertise_areas: [],
+            prescribing_habits: "",
+            concerns: "",
+            objections: [],
+            probe_topics: [],
+            difficulty: "medium",
+            voice_live_instance_id: null,
+            voice_live_model: "gpt-4o",
+            voice_name: "en-US-AvaNeural",
+            recognition_language: "auto",
+            avatar_character: "lisa",
+            avatar_style: "casual",
+            avatar_enabled: true,
+            agent_instructions_override: "",
+            interim_response_enabled: false,
+            interim_response_type: "llm",
+            interim_response_threshold_ms: 500,
+            proactive_engagement: false,
+          },
+        });
+        return (
+          <FormProvider {...formRef}>
+            <VoiceAvatarTab form={formRef} isNew={false} />
+          </FormProvider>
+        );
+      }
+      render(<Wrapper />);
+      act(() => {
+        (capturedConfigPanelProps!.onInterimResponseEnabledChange as (v: boolean) => void)(
+          true,
+        );
+        (capturedConfigPanelProps!.onProactiveEngagementChange as (v: boolean) => void)(
+          true,
+        );
+      });
+      expect(formRef!.getValues("interim_response_enabled")).toBe(true);
+      expect(formRef!.getValues("proactive_engagement")).toBe(true);
     });
   });
 });

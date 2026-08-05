@@ -38,6 +38,14 @@ class AvatarPersona(Base, TimestampMixin):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Interim response + proactive engagement (persona-hcp-foundry-alignment
+    # Increment F) -- Foundry-portal Configuration panel parity, mirrors
+    # HcpProfile's columns of the same name.
+    proactive_engagement: Mapped[bool] = mapped_column(Boolean, default=False)
+    interim_response_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    interim_response_type: Mapped[str] = mapped_column(String(20), default="llm")
+    interim_response_threshold_ms: Mapped[int] = mapped_column(default=500)
+
     # AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A) --
     # mirrors HcpProfile.agent_id/agent_version/agent_sync_status/agent_sync_error
     # (backend/app/models/hcp_profile.py) so personas can be synced to real

@@ -51,6 +51,14 @@ class HcpProfile(Base, TimestampMixin):
     avatar_style: Mapped[str] = mapped_column(String(100), default="casual")
     avatar_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    # Interim response + proactive engagement (persona-hcp-foundry-alignment
+    # Increment F) -- Foundry-portal Configuration panel parity, Speech
+    # output > Advanced settings.
+    proactive_engagement: Mapped[bool] = mapped_column(Boolean, default=False)
+    interim_response_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    interim_response_type: Mapped[str] = mapped_column(String(20), default="llm")
+    interim_response_threshold_ms: Mapped[int] = mapped_column(default=500)
+
     # Voice Live Instance FK — retained for legacy/display purposes only. No longer
     # read by resolve_voice_config(); the columns above are now the sole source of truth.
     voice_live_instance_id: Mapped[str | None] = mapped_column(

@@ -120,6 +120,10 @@ const MOCK_PROFILE: HcpProfile = {
   avatar_character: "lisa",
   avatar_style: "casual",
   avatar_enabled: true,
+  proactive_engagement: false,
+  interim_response_enabled: false,
+  interim_response_type: "llm",
+  interim_response_threshold_ms: 500,
   agent_instructions_override: "",
   knowledge_config_count: 0,
 };
@@ -409,6 +413,39 @@ describe("HcpProfileEditorPage", () => {
           onSuccess: expect.any(Function),
           onError: expect.any(Function),
         }),
+      );
+    });
+  });
+
+  // persona-hcp-foundry-alignment Increment F: interim response + proactive
+  // engagement default to disabled/llm/500ms on create and flow through to
+  // the save payload untouched.
+  it("includes default interim response and proactive engagement fields in the create payload", async () => {
+    renderEditor("/admin/hcp-profiles/new");
+
+    const nameInput = screen.getByRole("textbox", { name: /name/i });
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Dr. Test");
+
+    const specialtyTrigger = screen.getByText("admin:hcp.selectSpecialty").closest("button")!;
+    fireEvent.click(specialtyTrigger);
+    fireEvent.click(await screen.findByText("Oncology"));
+
+    await userEvent.click(screen.getByText("admin:hcp.tabVoiceAvatar"));
+    await userEvent.click(screen.getByTestId("set-vl-instance"));
+
+    const saveBtn = screen.getAllByText("admin:hcp.save")[0]!.closest("button")!;
+    await userEvent.click(saveBtn);
+
+    await vi.waitFor(() => {
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          proactive_engagement: false,
+          interim_response_enabled: false,
+          interim_response_type: "llm",
+          interim_response_threshold_ms: 500,
+        }),
+        expect.anything(),
       );
     });
   });

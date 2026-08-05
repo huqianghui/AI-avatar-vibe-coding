@@ -2,11 +2,32 @@
 status: awaiting_human_verify
 trigger: "Investigate issue: persona-hcp-foundry-alignment — Avatar Persona admin page still not aligned with HCP profile page and Azure AI Foundry portal design. Three gaps: (1) Foundry-portal voice-mode layout parity (gear Configure button opening right-side Configuration panel) on BOTH HCP and Persona pages; (2) Persona editor missing Foundry features HCP has (Knowledge/Foundry IQ); (3) Persona must be a real Foundry agent, synced like HCP (Agent Synced card, Agent ID, version, Force re-sync, View in Azure Portal)."
 created: 2026-08-04T00:00:00Z
-updated: 2026-08-05T11:25:00Z
+updated: 2026-08-05T14:15:00Z
 ---
 
 ## Current Focus
 <!-- OVERWRITE on each update - reflects NOW -->
+
+hypothesis: Increment F (Interim response + Proactive engagement parity) CONFIRMED root cause
+found via E2E: HCP-side round-trip silently dropped both new fields on GET/PUT responses. Cause
+was a router-local duplicate response schema `HcpProfileOut` in app/api/hcp_profiles.py (separate
+from, and drifted out of sync with, app/schemas/hcp_profile.py's HcpProfileResponse) that was
+missing the 4 new columns entirely -- FastAPI's response_model filtering silently stripped them
+from every HCP GET/POST/PUT response body, so the frontend form's `profile.interim_response_enabled
+?? false` reset to the false/llm/500 defaults on every reload even though the PUT itself persisted
+correctly to the DB. Personas were unaffected (avatar_personas.py imports AvatarPersonaOut directly
+from app/schemas/avatar_persona.py, no local duplicate). Fixed by adding the 4 fields to the local
+HcpProfileOut class. test: added a new Playwright test to hcp-editor-voice-tab.spec.ts (toggle
+interim response ON + static type + 750ms threshold, toggle proactive engagement ON, save, PUT
+200, re-navigate, re-open Configuration panel, assert both switches still checked and threshold
+still 750) -- this is what surfaced the bug (failed before the hcp_profiles.py fix, on the
+`toBeChecked()` assertion after reload). expecting: after the HcpProfileOut fix, GET
+/hcp-profiles/{id} includes proactive_engagement/interim_response_* with the persisted values, and
+the new E2E test passes on rerun. next_action: rerun the new E2E test alone to confirm the fix,
+then rerun the full hcp-editor-voice-tab + admin-avatar-personas Playwright suite, then full
+backend pytest, then commit.
+
+---
 
 hypothesis: Increment E CONFIRMED and FIXED (new bug found post-D): agents synced to Azure AI
 Foundry showed "Voice mode" OFF because build_voice_live_metadata emitted camelCase keys (an

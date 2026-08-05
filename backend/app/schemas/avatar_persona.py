@@ -1,8 +1,9 @@
 """AvatarPersona request/response schemas (Phase 36, PERSONA-01/02)."""
 
 import json
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AvatarPersonaCreate(BaseModel):
@@ -16,6 +17,13 @@ class AvatarPersonaCreate(BaseModel):
     prompt_fragment: str = ""
     enabled: bool = True
     is_default: bool = False
+
+    # Interim response + proactive engagement (persona-hcp-foundry-alignment
+    # Increment F) -- mirrors HcpProfileCreate's fields of the same name.
+    proactive_engagement: bool = False
+    interim_response_enabled: bool = False
+    interim_response_type: Literal["llm", "static"] = "llm"
+    interim_response_threshold_ms: int = Field(default=500, ge=0)
 
 
 class AvatarPersonaUpdate(BaseModel):
@@ -34,6 +42,12 @@ class AvatarPersonaUpdate(BaseModel):
     enabled: bool | None = None
     is_default: bool | None = None
     new_default_persona_id: str | None = None
+
+    # Interim response + proactive engagement (Increment F)
+    proactive_engagement: bool | None = None
+    interim_response_enabled: bool | None = None
+    interim_response_type: Literal["llm", "static"] | None = None
+    interim_response_threshold_ms: int | None = Field(default=None, ge=0)
 
 
 class AvatarPersonaOut(BaseModel):
@@ -54,6 +68,12 @@ class AvatarPersonaOut(BaseModel):
     agent_version: str = ""
     agent_sync_status: str = "none"
     agent_sync_error: str = ""
+
+    # Interim response + proactive engagement (Increment F)
+    proactive_engagement: bool = False
+    interim_response_enabled: bool = False
+    interim_response_type: str = "llm"
+    interim_response_threshold_ms: int = 500
 
     created_at: str
     updated_at: str

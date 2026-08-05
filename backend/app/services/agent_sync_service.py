@@ -224,6 +224,29 @@ def build_voice_live_metadata(profile: object) -> dict[str, str] | None:
     # Proactive engagement — always present
     session["proactive_engagement"] = vc.get("proactive_engagement", False)
 
+    # Interim response (Foundry-portal "Interim response" toggle + type +
+    # response-threshold-ms) — explicit null when disabled, matching the
+    # noise/echo null-when-off convention above. Key/shape confirmed against
+    # the official `azure-ai-voicelive` SDK models
+    # (InterimResponseConfigType / InterimResponseConfigBase in
+    # azure/ai/voicelive/models/_models.py + _enums.py, installed in
+    # backend/.venv): top-level session key `interim_response`, discriminated
+    # by `type` in {"llm_interim_response", "static_interim_response"}, with
+    # `latency_threshold_ms` (not `threshold_ms`) for the latency trigger.
+    session["interim_response"] = (
+        {
+            "type": (
+                "llm_interim_response"
+                if vc.get("interim_response_type", "llm") == "llm"
+                else "static_interim_response"
+            ),
+            "triggers": ["latency"],
+            "latency_threshold_ms": vc.get("interim_response_threshold_ms", 500),
+        }
+        if vc.get("interim_response_enabled", False)
+        else None
+    )
+
     # Wrap in {"session": {...}} to match the official Voice Live agent format
     config = {"session": session}
     config_json = json.dumps(config, separators=(",", ":"))

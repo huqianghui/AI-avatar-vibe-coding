@@ -72,6 +72,10 @@ async def test_update_instance_triggers_resync():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     # Instance returned by get_instance has hcp_profiles.
     # Use _make_vl_instance_mock so resolve_voice_config can read voice attributes
@@ -130,6 +134,10 @@ async def test_assign_triggers_resync():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_profile
@@ -548,6 +556,10 @@ def test_resolve_voice_config_with_inline_fields():
             "avatar_style",
             "avatar_enabled",
             "recognition_language",
+            "proactive_engagement",
+            "interim_response_enabled",
+            "interim_response_type",
+            "interim_response_threshold_ms",
         ]
     )
     mock_profile.id = "hcp-resolve"
@@ -557,6 +569,10 @@ def test_resolve_voice_config_with_inline_fields():
     mock_profile.avatar_style = "front_facing"
     mock_profile.avatar_enabled = False
     mock_profile.recognition_language = "zh-CN"
+    mock_profile.proactive_engagement = True
+    mock_profile.interim_response_enabled = True
+    mock_profile.interim_response_type = "static"
+    mock_profile.interim_response_threshold_ms = 750
 
     result = resolve_voice_config(mock_profile)
 
@@ -567,6 +583,10 @@ def test_resolve_voice_config_with_inline_fields():
     assert result["avatar_enabled"] is False
     assert result["recognition_language"] == "zh-CN"
     assert result["voice_live_enabled"] is True
+    assert result["proactive_engagement"] is True
+    assert result["interim_response_enabled"] is True
+    assert result["interim_response_type"] == "static"
+    assert result["interim_response_threshold_ms"] == 750
 
 
 def test_resolve_voice_config_inline_defaults():
@@ -583,6 +603,10 @@ def test_resolve_voice_config_inline_defaults():
             "avatar_style",
             "avatar_enabled",
             "recognition_language",
+            "proactive_engagement",
+            "interim_response_enabled",
+            "interim_response_type",
+            "interim_response_threshold_ms",
         ]
     )
     mock_profile.id = "hcp-inline"
@@ -592,6 +616,14 @@ def test_resolve_voice_config_inline_defaults():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = None
+    mock_profile.interim_response_threshold_ms = None
 
     result = resolve_voice_config(mock_profile)
 
@@ -603,6 +635,10 @@ def test_resolve_voice_config_inline_defaults():
     assert result["model_instruction"] == ""
     assert result["response_temperature"] == 0.8  # default
     assert result["custom_lexicon_enabled"] is False  # default
+    assert result["proactive_engagement"] is False
+    assert result["interim_response_enabled"] is False
+    assert result["interim_response_type"] == "llm"  # falls back to column default
+    assert result["interim_response_threshold_ms"] == 500  # falls back to column default
 
 
 def test_resolve_voice_config_for_persona_prefers_zh_cn_locale():

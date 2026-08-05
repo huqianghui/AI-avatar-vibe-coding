@@ -265,6 +265,102 @@ test.describe("HCP Editor: Voice & Avatar Tab", () => {
     }
   });
 
+  // persona-hcp-foundry-alignment Increment F: the Configuration panel's
+  // "Advanced settings" collapsible now exposes Interim response (toggle +
+  // type + response-threshold-ms) and Proactive engagement (toggle),
+  // matching Azure AI Foundry's Voice mode Configuration panel.
+  test("admin can toggle interim response and proactive engagement, and they persist after reload (Increment F)", async ({
+    page,
+  }) => {
+    test.setTimeout(60000);
+    const editUrl = page.url();
+
+    const voiceTab = page.getByRole("tab", { name: /voice.*avatar/i });
+    await voiceTab.click();
+    await page.waitForTimeout(500);
+
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const panel = page.getByTestId("configuration-panel");
+    await expect(panel).toBeVisible();
+
+    // Expand the "Advanced settings" collapsible to reveal the controls.
+    await panel.getByText(/advanced settings/i).click();
+    await page.waitForTimeout(200);
+
+    // (1) Turn Interim response ON, pick the "Static messages" type, and
+    // set a custom response-threshold-ms value.
+    const interimSwitch = panel.getByTestId("interim-response-switch");
+    await expect(interimSwitch).toBeVisible();
+    if (!(await interimSwitch.isChecked())) {
+      await interimSwitch.click();
+      await page.waitForTimeout(200);
+    }
+    await expect(interimSwitch).toBeChecked();
+
+    const interimTypeSelect = panel.getByTestId("interim-response-type-select");
+    await interimTypeSelect.click();
+    await page.getByRole("option", { name: /static messages/i }).click();
+    await page.waitForTimeout(200);
+
+    const thresholdInput = panel.getByTestId("interim-response-threshold-input");
+    await thresholdInput.fill("750");
+    await page.waitForTimeout(200);
+
+    // (2) Turn Proactive engagement ON.
+    const proactiveSwitch = panel.getByTestId("proactive-engagement-switch");
+    await expect(proactiveSwitch).toBeVisible();
+    if (!(await proactiveSwitch.isChecked())) {
+      await proactiveSwitch.click();
+      await page.waitForTimeout(200);
+    }
+    await expect(proactiveSwitch).toBeChecked();
+
+    // (3) Close the panel, save, and wait for the PUT to resolve 200.
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+    const saveButton = page.getByRole("button", { name: /save/i }).first();
+    const [putResponse] = await Promise.all([
+      page.waitForResponse(
+        (resp) =>
+          /\/api\/v1\/hcp-profiles\/[^/?]+$/.test(resp.url()) &&
+          resp.request().method() === "PUT",
+      ),
+      saveButton.click(),
+    ]);
+    expect(putResponse.status()).toBe(200);
+    await page.waitForTimeout(500);
+
+    // (4) Re-navigate to the editor and re-open the panel; assert the
+    // toggled values persisted.
+    await page.goto(editUrl);
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .waitFor({ state: "hidden", timeout: 10000 })
+      .catch(() => {});
+    await page.waitForSelector("[role='tab']", { timeout: 10000 });
+    await page.getByRole("tab", { name: /voice.*avatar/i }).click();
+    await page.waitForTimeout(500);
+
+    await page.getByRole("button", { name: /configure/i }).click();
+    await page.waitForTimeout(300);
+    const reopenedPanel = page.getByTestId("configuration-panel");
+    await expect(reopenedPanel).toBeVisible();
+
+    await reopenedPanel.getByText(/advanced settings/i).click();
+    await page.waitForTimeout(200);
+
+    await expect(
+      reopenedPanel.getByTestId("interim-response-switch"),
+    ).toBeChecked();
+    await expect(
+      reopenedPanel.getByTestId("interim-response-threshold-input"),
+    ).toHaveValue("750");
+    await expect(
+      reopenedPanel.getByTestId("proactive-engagement-switch"),
+    ).toBeChecked();
+  });
+
   test("Instructions section with Regenerate button is visible", async ({
     page,
   }) => {

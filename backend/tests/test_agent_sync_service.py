@@ -447,6 +447,10 @@ async def test_sync_agent_for_profile_creates_when_no_agent_id():
     mock_profile.echo_cancellation = False
     mock_profile.eou_detection = False
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
     mock_profile.to_prompt_dict.return_value = {
         "name": "Dr. New",
         "specialty": "Oncology",
@@ -513,6 +517,10 @@ async def test_sync_agent_for_profile_updates_when_agent_id_exists():
     mock_profile.echo_cancellation = False
     mock_profile.eou_detection = False
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
     mock_profile.to_prompt_dict.return_value = {
         "name": "Dr. Existing",
         "specialty": "Cardiology",
@@ -582,6 +590,10 @@ async def test_sync_agent_for_profile_no_master_config():
     mock_profile.echo_cancellation = False
     mock_profile.eou_detection = False
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
     mock_profile.to_prompt_dict.return_value = {"name": "Dr. Default", "specialty": "GP"}
 
     with (
@@ -722,6 +734,10 @@ async def test_three_profiles_sync_to_agents():
         mock_profile.echo_cancellation = False
         mock_profile.eou_detection = False
         mock_profile.recognition_language = "auto"
+        mock_profile.proactive_engagement = False
+        mock_profile.interim_response_enabled = False
+        mock_profile.interim_response_type = "llm"
+        mock_profile.interim_response_threshold_ms = 500
         mock_profile.to_prompt_dict.return_value = profile_data["prompt_data"]
 
         with (
@@ -780,6 +796,10 @@ async def test_three_profiles_mixed_sync_scenarios():
         mock.echo_cancellation = False
         mock.eou_detection = False
         mock.recognition_language = "auto"
+        mock.proactive_engagement = False
+        mock.interim_response_enabled = False
+        mock.interim_response_type = "llm"
+        mock.interim_response_threshold_ms = 500
 
     # Profile 1: new (no agent_id)
     p1 = MagicMock()
@@ -1619,6 +1639,10 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     mock_profile.avatar_style = "formal"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "zh-CN"
+    mock_profile.proactive_engagement = True
+    mock_profile.interim_response_enabled = True
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 750
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1658,8 +1682,17 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     assert session["avatar"]["style"] == "formal"
     assert session["avatar"]["customized"] is False
 
-    # proactive_engagement hardcoded True -- always present
+    # proactive_engagement sourced from the profile's own column (Increment F)
     assert session["proactive_engagement"] is True
+
+    # Interim response (Increment F) -- present when enabled, official SDK shape
+    # confirmed against azure-ai-voicelive's InterimResponseConfigType/
+    # InterimResponseConfigBase models: top-level `interim_response` key,
+    # `type` in {"llm_interim_response","static_interim_response"}, and
+    # `latency_threshold_ms` (not `threshold_ms`).
+    assert session["interim_response"]["type"] == "llm_interim_response"
+    assert session["interim_response"]["triggers"] == ["latency"]
+    assert session["interim_response"]["latency_threshold_ms"] == 750
 
 
 def test_build_voice_live_metadata_chunks_oversized_config():
@@ -1692,6 +1725,10 @@ def test_build_voice_live_metadata_chunks_oversized_config():
     mock_profile.avatar_style = "casual-sitting"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "zh-CN"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1767,6 +1804,45 @@ def test_build_voice_live_metadata_dispatches_to_persona_config():
     # (build_voice_live_metadata only emits it when avatar_enabled is truthy).
     assert session["avatar"]["character"] == "lisa"
     assert session["avatar"]["style"] == "casual"
+    # New columns default to falsy on an unflushed ORM instance -- proactive
+    # engagement off, interim response explicit null (Increment F)
+    assert session["proactive_engagement"] is False
+    assert session["interim_response"] is None
+
+
+def test_build_voice_live_metadata_persona_interim_response_and_proactive_engagement():
+    """Persona dispatch (resolve_voice_config_for_persona) surfaces the
+    persona's own proactive_engagement/interim_response_* columns, matching
+    the HCP dispatch path (persona-hcp-foundry-alignment Increment F)."""
+    import json
+
+    from app.models.avatar_persona import AvatarPersona
+    from app.services.agent_sync_service import build_voice_live_metadata
+
+    persona = AvatarPersona(
+        name="Lisa",
+        character="lisa",
+        style="casual",
+        voice_map=json.dumps({"zh-CN": "zh-CN-XiaoxiaoMultilingualNeural"}),
+        greeting_map="{}",
+        prompt_fragment="",
+        enabled=True,
+        is_default=False,
+        proactive_engagement=True,
+        interim_response_enabled=True,
+        interim_response_type="static",
+        interim_response_threshold_ms=1200,
+    )
+
+    result = build_voice_live_metadata(persona)
+    assert result is not None
+    from app.services.agent_sync_service import VOICE_LIVE_CONFIG_KEY
+
+    config_json = result[VOICE_LIVE_CONFIG_KEY]
+    session = json.loads(config_json)["session"]
+    assert session["proactive_engagement"] is True
+    assert session["interim_response"]["type"] == "static_interim_response"
+    assert session["interim_response"]["latency_threshold_ms"] == 1200
 
 
 def test_build_cleared_voice_metadata_returns_disabled_state():
@@ -1800,6 +1876,10 @@ def test_build_voice_live_metadata_never_returns_none_since_vmode01():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1835,6 +1915,10 @@ async def test_sync_agent_for_profile_stores_agent_version():
     mock_profile.echo_cancellation = False
     mock_profile.eou_detection = False
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
     mock_profile.to_prompt_dict.return_value = {"name": "Dr. Version", "specialty": "GP"}
 
     with (
@@ -2502,6 +2586,10 @@ def test_build_voice_live_metadata_turn_detection_hardcoded_server_vad():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -2537,6 +2625,10 @@ def test_build_voice_live_metadata_voice_type_hardcoded_azure_standard():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -2566,6 +2658,10 @@ def test_build_voice_live_metadata_custom_lexicon_disabled():
     mock_profile.avatar_style = "casual"
     mock_profile.avatar_enabled = True
     mock_profile.recognition_language = "auto"
+    mock_profile.proactive_engagement = False
+    mock_profile.interim_response_enabled = False
+    mock_profile.interim_response_type = "llm"
+    mock_profile.interim_response_threshold_ms = 500
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None

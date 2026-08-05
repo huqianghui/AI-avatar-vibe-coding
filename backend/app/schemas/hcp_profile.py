@@ -38,6 +38,12 @@ class HcpProfileCreate(BaseModel):
     avatar_style: str = "casual"
     avatar_enabled: bool = True
 
+    # Interim response + proactive engagement (Increment F)
+    proactive_engagement: bool = False
+    interim_response_enabled: bool = False
+    interim_response_type: Literal["llm", "static"] = "llm"
+    interim_response_threshold_ms: int = Field(default=500, ge=0)
+
     # Voice Live Instance reference -- optional (VMODE-01 reverses D-13; a VL instance
     # is no longer mandatory since HcpProfile now carries its own direct config). If
     # provided, must be non-empty.
@@ -74,6 +80,12 @@ class HcpProfileUpdate(BaseModel):
     avatar_character: str | None = None
     avatar_style: str | None = None
     avatar_enabled: bool | None = None
+
+    # Interim response + proactive engagement (Increment F)
+    proactive_engagement: bool | None = None
+    interim_response_enabled: bool | None = None
+    interim_response_type: Literal["llm", "static"] | None = None
+    interim_response_threshold_ms: int | None = Field(default=None, ge=0)
 
     # Voice Live Instance reference. Optional at the type level so partial updates can
     # omit it and leave the existing value untouched. VMODE-01 reverses D-13: this
@@ -114,6 +126,12 @@ class HcpProfileResponse(BaseModel):
     avatar_character: str = "lisa"
     avatar_style: str = "casual"
     avatar_enabled: bool = True
+
+    # Interim response + proactive engagement (Increment F)
+    proactive_engagement: bool = False
+    interim_response_enabled: bool = False
+    interim_response_type: str = "llm"
+    interim_response_threshold_ms: int = 500
 
     # Voice Live Instance reference -- retained for legacy/display purposes only.
     voice_live_instance_id: str | None = None

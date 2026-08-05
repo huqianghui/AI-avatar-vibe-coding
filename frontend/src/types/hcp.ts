@@ -34,6 +34,12 @@ export interface HcpProfile {
   avatar_character: string;
   avatar_style: string;
   avatar_enabled: boolean;
+  // Interim response + proactive engagement (persona-hcp-foundry-alignment
+  // Increment F)
+  proactive_engagement: boolean;
+  interim_response_enabled: boolean;
+  interim_response_type: "llm" | "static";
+  interim_response_threshold_ms: number;
   // Agent override (D-02)
   agent_instructions_override: string;
   // Knowledge Base config count (Phase 17)
@@ -73,6 +79,10 @@ export interface HcpProfileCreate {
   avatar_character?: string;
   avatar_style?: string;
   avatar_enabled?: boolean;
+  proactive_engagement?: boolean;
+  interim_response_enabled?: boolean;
+  interim_response_type?: "llm" | "static";
+  interim_response_threshold_ms?: number;
   agent_instructions_override?: string;
 }
 

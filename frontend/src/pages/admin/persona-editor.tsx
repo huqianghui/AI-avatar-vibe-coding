@@ -47,6 +47,13 @@ interface PersonaEditorFormState {
   prompt_fragment: string;
   enabled: boolean;
   is_default: boolean;
+  // Interim response + proactive engagement (persona-hcp-foundry-alignment
+  // Increment F) -- Foundry-portal Configuration panel > Speech output >
+  // Advanced settings.
+  proactiveEngagement: boolean;
+  interimResponseEnabled: boolean;
+  interimResponseType: "llm" | "static";
+  interimResponseThresholdMs: number;
 }
 
 function createDefaultPersonaForm(): PersonaEditorFormState {
@@ -59,6 +66,10 @@ function createDefaultPersonaForm(): PersonaEditorFormState {
     prompt_fragment: "",
     enabled: true,
     is_default: false,
+    proactiveEngagement: false,
+    interimResponseEnabled: false,
+    interimResponseType: "llm",
+    interimResponseThresholdMs: 500,
   };
 }
 
@@ -108,6 +119,10 @@ export default function PersonaEditorPage() {
         prompt_fragment: persona.prompt_fragment,
         enabled: persona.enabled,
         is_default: persona.is_default,
+        proactiveEngagement: persona.proactive_engagement,
+        interimResponseEnabled: persona.interim_response_enabled,
+        interimResponseType: persona.interim_response_type,
+        interimResponseThresholdMs: persona.interim_response_threshold_ms,
       });
     }
   }, [persona]);
@@ -154,6 +169,10 @@ export default function PersonaEditorPage() {
         prompt_fragment: persona.prompt_fragment,
         enabled: persona.enabled,
         is_default: persona.is_default,
+        proactiveEngagement: persona.proactive_engagement,
+        interimResponseEnabled: persona.interim_response_enabled,
+        interimResponseType: persona.interim_response_type,
+        interimResponseThresholdMs: persona.interim_response_threshold_ms,
       });
     } else {
       setForm(createDefaultPersonaForm());
@@ -207,6 +226,10 @@ export default function PersonaEditorPage() {
       prompt_fragment: form.prompt_fragment,
       enabled: form.enabled,
       is_default: form.is_default,
+      proactive_engagement: form.proactiveEngagement,
+      interim_response_enabled: form.interimResponseEnabled,
+      interim_response_type: form.interimResponseType,
+      interim_response_threshold_ms: form.interimResponseThresholdMs,
     };
 
     if (isEdit && id) {
@@ -535,6 +558,16 @@ export default function PersonaEditorPage() {
           updateField("character", c);
           updateField("style", s);
         }}
+        interimResponseEnabled={form.interimResponseEnabled}
+        onInterimResponseEnabledChange={(v) => updateField("interimResponseEnabled", v)}
+        interimResponseType={form.interimResponseType}
+        onInterimResponseTypeChange={(v) => updateField("interimResponseType", v)}
+        interimResponseThresholdMs={form.interimResponseThresholdMs}
+        onInterimResponseThresholdMsChange={(v) =>
+          updateField("interimResponseThresholdMs", v)
+        }
+        proactiveEngagement={form.proactiveEngagement}
+        onProactiveEngagementChange={(v) => updateField("proactiveEngagement", v)}
       />
     </div>
   );

@@ -15,6 +15,12 @@ export interface AvatarPersona {
   agent_version: string;
   agent_sync_status: "none" | "pending" | "synced" | "failed";
   agent_sync_error: string;
+  // Interim response + proactive engagement (persona-hcp-foundry-alignment
+  // Increment F)
+  proactive_engagement: boolean;
+  interim_response_enabled: boolean;
+  interim_response_type: "llm" | "static";
+  interim_response_threshold_ms: number;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +34,10 @@ export interface AvatarPersonaCreate {
   prompt_fragment?: string;
   enabled?: boolean;
   is_default?: boolean;
+  proactive_engagement?: boolean;
+  interim_response_enabled?: boolean;
+  interim_response_type?: "llm" | "static";
+  interim_response_threshold_ms?: number;
 }
 
 export interface AvatarPersonaUpdate {
@@ -40,6 +50,10 @@ export interface AvatarPersonaUpdate {
   enabled?: boolean;
   is_default?: boolean;
   new_default_persona_id?: string;
+  proactive_engagement?: boolean;
+  interim_response_enabled?: boolean;
+  interim_response_type?: "llm" | "static";
+  interim_response_threshold_ms?: number;
 }
 
 export const avatarPersonasApi = {

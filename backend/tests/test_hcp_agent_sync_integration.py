@@ -389,9 +389,11 @@ async def test_create_profile_sync_failure(mock_sync, aclient, db_session):
 
 
 def _set_inline_voice_fields(profile, **overrides):
-    """Set the 6 inline voice-mode columns resolve_voice_config() reads directly
-    (VMODE-01, 2026-08-04 rescope) on a MagicMock HcpProfile, so json.dumps() in
-    build_voice_live_metadata() doesn't choke on unset MagicMock auto-attrs."""
+    """Set the inline voice-mode columns resolve_voice_config() reads directly
+    (VMODE-01, 2026-08-04 rescope; extended in persona-hcp-foundry-alignment
+    Increment F with proactive_engagement/interim_response_* columns) on a
+    MagicMock HcpProfile, so json.dumps() in build_voice_live_metadata() doesn't
+    choke on unset MagicMock auto-attrs."""
     defaults = {
         "voice_live_model": "gpt-4o",
         "voice_name": "en-US-AvaNeural",
@@ -399,6 +401,10 @@ def _set_inline_voice_fields(profile, **overrides):
         "avatar_style": "casual",
         "avatar_enabled": True,
         "recognition_language": "auto",
+        "proactive_engagement": False,
+        "interim_response_enabled": False,
+        "interim_response_type": "llm",
+        "interim_response_threshold_ms": 500,
     }
     defaults.update(overrides)
     for k, v in defaults.items():

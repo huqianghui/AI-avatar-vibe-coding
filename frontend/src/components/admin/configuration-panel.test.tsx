@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // ---- Mocks ----
@@ -336,5 +336,174 @@ describe("ConfigurationPanel", () => {
     expect(resetBtn).toBeInTheDocument();
     await userEvent.click(resetBtn);
     expect(onReset).toHaveBeenCalled();
+  });
+
+  /* ── Advanced settings: interim response + proactive engagement
+   * (persona-hcp-foundry-alignment Increment F) ──────────────────────── */
+
+  it("does not render the Advanced settings section when neither interim response nor proactive engagement props are provided", () => {
+    render(<ConfigurationPanel {...baseProps()} />);
+    expect(
+      screen.queryByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the Advanced settings toggle when interim response props are provided", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={false}
+        onInterimResponseEnabledChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the Advanced settings toggle when proactive engagement props are provided", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        proactiveEngagement={false}
+        onProactiveEngagementChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps Advanced settings collapsed by default, hiding the interim response and proactive engagement switches", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={false}
+        onInterimResponseEnabledChange={vi.fn()}
+        proactiveEngagement={false}
+        onProactiveEngagementChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByText("admin:voiceLive.playgroundSection.interimResponse"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("admin:voiceLive.playgroundSection.proactiveEngagement"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("expands Advanced settings on click, revealing the interim response and proactive engagement switches", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={false}
+        onInterimResponseEnabledChange={vi.fn()}
+        proactiveEngagement={false}
+        onProactiveEngagementChange={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.interimResponse"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.proactiveEngagement"),
+    ).toBeInTheDocument();
+  });
+
+  it("does not render the interim response type/threshold fields when interim response is disabled", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={false}
+        onInterimResponseEnabledChange={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    expect(
+      screen.queryByText("admin:voiceLive.playgroundSection.interimResponseType"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("admin:voiceLive.playgroundSection.interimResponseThreshold"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the interim response type/threshold fields when interim response is enabled", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={true}
+        onInterimResponseEnabledChange={vi.fn()}
+        interimResponseType="llm"
+        onInterimResponseTypeChange={vi.fn()}
+        interimResponseThresholdMs={500}
+        onInterimResponseThresholdMsChange={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.interimResponseType"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.interimResponseThreshold"),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("500")).toBeInTheDocument();
+  });
+
+  it("calls onInterimResponseEnabledChange when the interim response switch is toggled", async () => {
+    const onInterimResponseEnabledChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={false}
+        onInterimResponseEnabledChange={onInterimResponseEnabledChange}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    await userEvent.click(screen.getByRole("switch"));
+    expect(onInterimResponseEnabledChange).toHaveBeenCalledWith(true);
+  });
+
+  it("calls onInterimResponseThresholdMsChange when the threshold input changes", async () => {
+    const onInterimResponseThresholdMsChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        interimResponseEnabled={true}
+        onInterimResponseEnabledChange={vi.fn()}
+        interimResponseThresholdMs={500}
+        onInterimResponseThresholdMsChange={onInterimResponseThresholdMsChange}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    const input = screen.getByDisplayValue("500");
+    fireEvent.change(input, { target: { value: "800" } });
+    expect(onInterimResponseThresholdMsChange).toHaveBeenCalledWith(800);
+  });
+
+  it("calls onProactiveEngagementChange when the proactive engagement switch is toggled", async () => {
+    const onProactiveEngagementChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        proactiveEngagement={false}
+        onProactiveEngagementChange={onProactiveEngagementChange}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    await userEvent.click(screen.getByRole("switch"));
+    expect(onProactiveEngagementChange).toHaveBeenCalledWith(true);
   });
 });

@@ -137,6 +137,10 @@ const MOCK_PERSONA: AvatarPersona = {
   agent_version: "2",
   agent_sync_status: "synced",
   agent_sync_error: "",
+  proactive_engagement: false,
+  interim_response_enabled: false,
+  interim_response_type: "llm",
+  interim_response_threshold_ms: 500,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
@@ -355,6 +359,52 @@ describe("PersonaEditorPage", () => {
     expect(mockCreateMutate).toHaveBeenCalledWith(
       expect.objectContaining({ name: "New Persona", character: "lisa", style: "casual-sitting" }),
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
+  });
+
+  // persona-hcp-foundry-alignment Increment F: interim response + proactive
+  // engagement default to disabled/llm/500ms on create and flow through to
+  // the save payload untouched.
+  it("includes default interim response and proactive engagement fields in the create payload", async () => {
+    renderEditor("/admin/avatar-personas/new");
+
+    const nameInput = screen.getByPlaceholderText("personas.namePlaceholder");
+    await userEvent.type(nameInput, "New Persona");
+    await userEvent.click(screen.getByText("personas.save").closest("button")!);
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        proactive_engagement: false,
+        interim_response_enabled: false,
+        interim_response_type: "llm",
+        interim_response_threshold_ms: 500,
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("toggles proactive engagement via the Configuration panel's Advanced settings and includes it in the save payload", async () => {
+    renderEditor("/admin/avatar-personas/new");
+
+    const nameInput = screen.getByPlaceholderText("personas.namePlaceholder");
+    await userEvent.type(nameInput, "New Persona");
+
+    await openConfigPanel();
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.proactiveEngagement")
+        .closest("div")!
+        .querySelector('[role="switch"]')!,
+    );
+    await userEvent.keyboard("{Escape}"); // close the Sheet before clicking Save
+
+    await userEvent.click(screen.getByText("personas.save").closest("button")!);
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ proactive_engagement: true }),
+      expect.anything(),
     );
   });
 

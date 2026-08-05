@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -83,6 +86,25 @@ export interface ConfigurationPanelProps {
   avatarStyle: string;
   onAvatarSelect: (characterId: string, style: string) => void;
 
+  /**
+   * Interim response (Foundry-portal Speech output > Advanced settings):
+   * a filler response played while the LLM generates its real answer.
+   * Omit both this and `onInterimResponseEnabledChange` to hide the whole
+   * Advanced settings > Interim response block (there is no caller that
+   * currently omits it, but the pattern is kept consistent with the rest
+   * of this component).
+   */
+  interimResponseEnabled?: boolean;
+  onInterimResponseEnabledChange?: (value: boolean) => void;
+  interimResponseType?: "llm" | "static";
+  onInterimResponseTypeChange?: (value: "llm" | "static") => void;
+  interimResponseThresholdMs?: number;
+  onInterimResponseThresholdMsChange?: (value: number) => void;
+
+  /** Proactive engagement (Foundry-portal Speech output > Advanced settings). */
+  proactiveEngagement?: boolean;
+  onProactiveEngagementChange?: (value: boolean) => void;
+
   /** Note shown near the top of the panel (e.g. "Save profile first to test"). */
   disabledNote?: string;
 
@@ -122,15 +144,29 @@ export function ConfigurationPanel({
   avatarCharacter,
   avatarStyle,
   onAvatarSelect,
+  interimResponseEnabled,
+  onInterimResponseEnabledChange,
+  interimResponseType,
+  onInterimResponseTypeChange,
+  interimResponseThresholdMs,
+  onInterimResponseThresholdMsChange,
+  proactiveEngagement,
+  onProactiveEngagementChange,
   disabledNote,
   onReset,
 }: ConfigurationPanelProps) {
   const { t } = useTranslation(["admin", "common"]);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const showRecognitionModel =
     recognitionModel !== undefined && onRecognitionModelChange !== undefined;
   const showAvatarToggle = avatarEnabled !== undefined && onAvatarEnabledChange !== undefined;
   const showGreeting = greeting !== undefined && onGreetingChange !== undefined;
+  const showInterimResponse =
+    interimResponseEnabled !== undefined && onInterimResponseEnabledChange !== undefined;
+  const showProactiveEngagement =
+    proactiveEngagement !== undefined && onProactiveEngagementChange !== undefined;
+  const showAdvancedSettings = showInterimResponse || showProactiveEngagement;
 
   // Filter the speech-output voice list to the active recognition language
   // (plus multilingual voices). If the currently-selected voice isn't in that
@@ -253,6 +289,110 @@ export function ConfigurationPanel({
             )}
 
             {speechOutputExtra}
+
+            {showAdvancedSettings && (
+              <div className="space-y-3 pt-1">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  onClick={() => setAdvancedOpen((prev) => !prev)}
+                  aria-expanded={advancedOpen}
+                >
+                  {advancedOpen ? (
+                    <ChevronDown className="size-3.5" />
+                  ) : (
+                    <ChevronRight className="size-3.5" />
+                  )}
+                  {t("admin:voiceLive.playgroundSection.advancedSettings")}
+                </button>
+
+                {advancedOpen && (
+                  <div className="space-y-4 pl-1">
+                    {showInterimResponse && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">
+                            {t("admin:voiceLive.playgroundSection.interimResponse")}
+                          </Label>
+                          <Switch
+                            data-testid="interim-response-switch"
+                            checked={interimResponseEnabled}
+                            onCheckedChange={onInterimResponseEnabledChange}
+                          />
+                        </div>
+                        {interimResponseEnabled && (
+                          <div className="space-y-2 pl-1">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">
+                                {t("admin:voiceLive.playgroundSection.interimResponseType")}
+                              </Label>
+                              <Select
+                                value={interimResponseType ?? "llm"}
+                                onValueChange={(v) =>
+                                  onInterimResponseTypeChange?.(v as "llm" | "static")
+                                }
+                              >
+                                <SelectTrigger
+                                  data-testid="interim-response-type-select"
+                                  className="h-8 text-xs"
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="llm">
+                                    {t(
+                                      "admin:voiceLive.playgroundSection.interimResponseTypeLlm",
+                                    )}
+                                  </SelectItem>
+                                  <SelectItem value="static">
+                                    {t(
+                                      "admin:voiceLive.playgroundSection.interimResponseTypeStatic",
+                                    )}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">
+                                {t("admin:voiceLive.playgroundSection.interimResponseThreshold")}
+                              </Label>
+                              <Input
+                                data-testid="interim-response-threshold-input"
+                                type="number"
+                                min={0}
+                                step={100}
+                                className="h-8 text-xs"
+                                value={interimResponseThresholdMs ?? 500}
+                                onChange={(e) =>
+                                  onInterimResponseThresholdMsChange?.(
+                                    Number(e.target.value) || 0,
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {showInterimResponse && showProactiveEngagement && <Separator />}
+
+                    {showProactiveEngagement && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.proactiveEngagement")}
+                        </Label>
+                        <Switch
+                          data-testid="proactive-engagement-switch"
+                          checked={proactiveEngagement}
+                          onCheckedChange={onProactiveEngagementChange}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Avatar */}

@@ -86,6 +86,13 @@ export const hcpSchema = z.object({
   avatar_style: z.string().default("casual"),
   avatar_enabled: z.boolean().default(true),
   agent_instructions_override: z.string().default(""),
+  // Interim response + proactive engagement (persona-hcp-foundry-alignment
+  // Increment F) -- Foundry-portal Configuration panel > Speech output >
+  // Advanced settings.
+  proactive_engagement: z.boolean().default(false),
+  interim_response_enabled: z.boolean().default(false),
+  interim_response_type: z.enum(["llm", "static"]).default("llm"),
+  interim_response_threshold_ms: z.number().default(500),
 });
 
 export type HcpFormValues = z.infer<typeof hcpSchema>;
@@ -133,6 +140,10 @@ export default function HcpProfileEditorPage() {
       avatar_style: "casual",
       avatar_enabled: true,
       agent_instructions_override: "",
+      proactive_engagement: false,
+      interim_response_enabled: false,
+      interim_response_type: "llm",
+      interim_response_threshold_ms: 500,
     },
   });
 
@@ -161,6 +172,11 @@ export default function HcpProfileEditorPage() {
         avatar_enabled: profile.avatar_enabled ?? true,
         agent_instructions_override:
           profile.agent_instructions_override ?? "",
+        proactive_engagement: profile.proactive_engagement ?? false,
+        interim_response_enabled: profile.interim_response_enabled ?? false,
+        interim_response_type: profile.interim_response_type ?? "llm",
+        interim_response_threshold_ms:
+          profile.interim_response_threshold_ms ?? 500,
       });
     }
   }, [profile, form]);

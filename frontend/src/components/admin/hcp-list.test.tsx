@@ -49,6 +49,10 @@ const mockProfiles: HcpProfile[] = [
     avatar_character: "lisa",
     avatar_style: "casual",
     avatar_enabled: true,
+    proactive_engagement: false,
+    interim_response_enabled: false,
+    interim_response_type: "llm",
+    interim_response_threshold_ms: 500,
   },
   {
     id: "2",
@@ -83,6 +87,10 @@ const mockProfiles: HcpProfile[] = [
     avatar_character: "lisa",
     avatar_style: "casual",
     avatar_enabled: true,
+    proactive_engagement: false,
+    interim_response_enabled: false,
+    interim_response_type: "llm",
+    interim_response_threshold_ms: 500,
   },
 ];
 

@@ -566,6 +566,10 @@ describe("VoiceLiveManagementPage", () => {
       eou_detection: false,
       recognition_language: "auto",
       avatar_enabled: true,
+      proactive_engagement: false,
+      interim_response_enabled: false,
+      interim_response_type: "llm" as const,
+      interim_response_threshold_ms: 500,
       agent_instructions_override: "",
       knowledge_config_count: 0,
     };
@@ -630,6 +634,10 @@ describe("VoiceLiveManagementPage", () => {
       eou_detection: false,
       recognition_language: "auto",
       avatar_enabled: true,
+      proactive_engagement: false,
+      interim_response_enabled: false,
+      interim_response_type: "llm" as const,
+      interim_response_threshold_ms: 500,
       agent_instructions_override: "",
       knowledge_config_count: 0,
     };

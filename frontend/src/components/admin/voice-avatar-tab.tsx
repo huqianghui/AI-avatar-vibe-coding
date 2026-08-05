@@ -45,6 +45,14 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
   // always returns a valid config regardless of VL instance linkage (38-01).
   const voiceModeEnabled = true;
 
+  // Interim response + proactive engagement (persona-hcp-foundry-alignment
+  // Increment F) -- Foundry-portal Configuration panel > Speech output >
+  // Advanced settings.
+  const proactiveEngagement = form.watch("proactive_engagement");
+  const interimResponseEnabled = form.watch("interim_response_enabled");
+  const interimResponseType = form.watch("interim_response_type");
+  const interimResponseThresholdMs = form.watch("interim_response_threshold_ms");
+
   // systemPrompt: use override if set, otherwise use auto-generated instructions
   const overridePrompt = form.watch("agent_instructions_override");
   const systemPrompt = (overridePrompt && overridePrompt.trim()) ? overridePrompt : autoInstructions;
@@ -113,6 +121,22 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
           form.setValue("avatar_style", style, { shouldDirty: true });
         }}
         disabledNote={isNew ? t("admin:hcp.playgroundDisabledNew") : undefined}
+        interimResponseEnabled={interimResponseEnabled}
+        onInterimResponseEnabledChange={(v) =>
+          form.setValue("interim_response_enabled", v, { shouldDirty: true })
+        }
+        interimResponseType={interimResponseType}
+        onInterimResponseTypeChange={(v) =>
+          form.setValue("interim_response_type", v, { shouldDirty: true })
+        }
+        interimResponseThresholdMs={interimResponseThresholdMs}
+        onInterimResponseThresholdMsChange={(v) =>
+          form.setValue("interim_response_threshold_ms", v, { shouldDirty: true })
+        }
+        proactiveEngagement={proactiveEngagement}
+        onProactiveEngagementChange={(v) =>
+          form.setValue("proactive_engagement", v, { shouldDirty: true })
+        }
       />
     </div>
   );

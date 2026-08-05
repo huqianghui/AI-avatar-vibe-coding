@@ -56,6 +56,17 @@ class HcpProfileOut(BaseModel):
     avatar_style: str = "casual"
     avatar_enabled: bool = True
 
+    # Interim response + proactive engagement (persona-hcp-foundry-alignment
+    # Increment F) -- Foundry-portal Configuration panel > Speech output >
+    # Advanced settings. Without these, saved values never round-trip back
+    # to the frontend form (silently dropped by this router-local response
+    # model, which duplicates but had drifted from app/schemas/hcp_profile.py's
+    # HcpProfileResponse).
+    proactive_engagement: bool = False
+    interim_response_enabled: bool = False
+    interim_response_type: str = "llm"
+    interim_response_threshold_ms: int = 500
+
     agent_instructions_override: str = ""
 
     # Knowledge Base config count (Phase 17)
