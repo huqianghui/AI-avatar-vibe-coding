@@ -570,6 +570,10 @@ describe("VoiceLiveManagementPage", () => {
       interim_response_enabled: false,
       interim_response_type: "llm" as const,
       interim_response_threshold_ms: 500,
+      speech_recognition_model: "azure-speech",
+      phrase_list: "",
+      playback_speed: 1.0,
+      custom_lexicon_url: "",
       agent_instructions_override: "",
       knowledge_config_count: 0,
     };
@@ -638,6 +642,10 @@ describe("VoiceLiveManagementPage", () => {
       interim_response_enabled: false,
       interim_response_type: "llm" as const,
       interim_response_threshold_ms: 500,
+      speech_recognition_model: "azure-speech",
+      phrase_list: "",
+      playback_speed: 1.0,
+      custom_lexicon_url: "",
       agent_instructions_override: "",
       knowledge_config_count: 0,
     };

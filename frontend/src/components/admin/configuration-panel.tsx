@@ -29,6 +29,7 @@ import {
   LOCALE_LABEL_KEY,
   VOICE_NAME_OPTIONS,
   voiceOptionsForLanguage,
+  SPEECH_RECOGNITION_MODEL_OPTIONS,
 } from "@/lib/voice-constants";
 
 export interface ConfigurationPanelProps {
@@ -47,6 +48,16 @@ export interface ConfigurationPanelProps {
   recognitionModel?: string;
   onRecognitionModelChange?: (value: string) => void;
 
+  /**
+   * Speech recognition (transcription) model -- Foundry Voice Live
+   * `session.input_audio_transcription.model` (persona-hcp-foundry-
+   * alignment Increment G). Distinct from `recognitionModel` above, which
+   * is the LLM "Model deployment" select. Omit both this and
+   * `onSpeechRecognitionModelChange` when there is nothing to persist to.
+   */
+  speechRecognitionModel?: string;
+  onSpeechRecognitionModelChange?: (value: string) => void;
+
   /** Recognition language for the active speech-input context. */
   language: string;
   onLanguageChange: (value: string) => void;
@@ -55,8 +66,25 @@ export interface ConfigurationPanelProps {
    * true where the backend field genuinely supports an "auto" sentinel
    * value (HCP's `recognition_language`); personas pick one concrete
    * locale at a time and have no such concept.
+   *
+   * @deprecated superseded by the `autoDetectLanguage` Switch below
+   * (persona-hcp-foundry-alignment Increment G); kept for backward
+   * compatibility with existing test coverage.
    */
   showAutoDetectOption?: boolean;
+
+  /**
+   * Language auto-detect toggle (persona-hcp-foundry-alignment Increment
+   * G): a Switch rendered above the language select. When true, the
+   * concrete language select below is hidden (language is detected at
+   * runtime instead of chosen). HCP maps this to its existing
+   * `recognition_language` "auto" sentinel; personas back it with a real
+   * `auto_detect_language` column. Omit both this and
+   * `onAutoDetectLanguageChange` to always show the concrete language
+   * select (current behavior).
+   */
+  autoDetectLanguage?: boolean;
+  onAutoDetectLanguageChange?: (value: boolean) => void;
 
   /** Speech output voice for the active language. */
   voice: string;
@@ -105,6 +133,34 @@ export interface ConfigurationPanelProps {
   proactiveEngagement?: boolean;
   onProactiveEngagementChange?: (value: boolean) => void;
 
+  /**
+   * Speech input > Advanced settings (persona-hcp-foundry-alignment
+   * Increment G): end-of-utterance detection, noise suppression, echo
+   * cancellation, and a newline-separated phrase list. Each field is
+   * independently gated -- omit a value/callback pair to hide just that
+   * field, or omit all four to hide the whole collapsible.
+   */
+  eouDetection?: boolean;
+  onEouDetectionChange?: (value: boolean) => void;
+  noiseSuppression?: boolean;
+  onNoiseSuppressionChange?: (value: boolean) => void;
+  echoCancellation?: boolean;
+  onEchoCancellationChange?: (value: boolean) => void;
+  phraseList?: string;
+  onPhraseListChange?: (value: string) => void;
+
+  /**
+   * Speech output > Advanced settings extensions (persona-hcp-foundry-
+   * alignment Increment G): voice temperature, playback speed, and a
+   * custom lexicon URL. Independently gated like the fields above.
+   */
+  voiceTemperature?: number;
+  onVoiceTemperatureChange?: (value: number) => void;
+  playbackSpeed?: number;
+  onPlaybackSpeedChange?: (value: number) => void;
+  customLexiconUrl?: string;
+  onCustomLexiconUrlChange?: (value: string) => void;
+
   /** Note shown near the top of the panel (e.g. "Save profile first to test"). */
   disabledNote?: string;
 
@@ -130,9 +186,13 @@ export function ConfigurationPanel({
   title,
   recognitionModel,
   onRecognitionModelChange,
+  speechRecognitionModel,
+  onSpeechRecognitionModelChange,
   language,
   onLanguageChange,
   showAutoDetectOption,
+  autoDetectLanguage,
+  onAutoDetectLanguageChange,
   voice,
   onVoiceChange,
   voiceDefaultOption,
@@ -152,21 +212,54 @@ export function ConfigurationPanel({
   onInterimResponseThresholdMsChange,
   proactiveEngagement,
   onProactiveEngagementChange,
+  eouDetection,
+  onEouDetectionChange,
+  noiseSuppression,
+  onNoiseSuppressionChange,
+  echoCancellation,
+  onEchoCancellationChange,
+  phraseList,
+  onPhraseListChange,
+  voiceTemperature,
+  onVoiceTemperatureChange,
+  playbackSpeed,
+  onPlaybackSpeedChange,
+  customLexiconUrl,
+  onCustomLexiconUrlChange,
   disabledNote,
   onReset,
 }: ConfigurationPanelProps) {
   const { t } = useTranslation(["admin", "common"]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [inputAdvancedOpen, setInputAdvancedOpen] = useState(false);
 
   const showRecognitionModel =
     recognitionModel !== undefined && onRecognitionModelChange !== undefined;
+  const showSpeechRecognitionModel =
+    speechRecognitionModel !== undefined && onSpeechRecognitionModelChange !== undefined;
+  const showAutoDetectToggle =
+    autoDetectLanguage !== undefined && onAutoDetectLanguageChange !== undefined;
   const showAvatarToggle = avatarEnabled !== undefined && onAvatarEnabledChange !== undefined;
   const showGreeting = greeting !== undefined && onGreetingChange !== undefined;
   const showInterimResponse =
     interimResponseEnabled !== undefined && onInterimResponseEnabledChange !== undefined;
   const showProactiveEngagement =
     proactiveEngagement !== undefined && onProactiveEngagementChange !== undefined;
-  const showAdvancedSettings = showInterimResponse || showProactiveEngagement;
+  const showEouDetection = eouDetection !== undefined && onEouDetectionChange !== undefined;
+  const showNoiseSuppression =
+    noiseSuppression !== undefined && onNoiseSuppressionChange !== undefined;
+  const showEchoCancellation =
+    echoCancellation !== undefined && onEchoCancellationChange !== undefined;
+  const showPhraseList = phraseList !== undefined && onPhraseListChange !== undefined;
+  const showSpeechInputAdvanced =
+    showEouDetection || showNoiseSuppression || showEchoCancellation || showPhraseList;
+  const showVoiceTemperature =
+    voiceTemperature !== undefined && onVoiceTemperatureChange !== undefined;
+  const showPlaybackSpeed = playbackSpeed !== undefined && onPlaybackSpeedChange !== undefined;
+  const showCustomLexiconUrl =
+    customLexiconUrl !== undefined && onCustomLexiconUrlChange !== undefined;
+  const showOutputExtras = showVoiceTemperature || showPlaybackSpeed || showCustomLexiconUrl;
+  const showAdvancedSettings = showInterimResponse || showProactiveEngagement || showOutputExtras;
 
   // Filter the speech-output voice list to the active recognition language
   // (plus multilingual voices). If the currently-selected voice isn't in that
@@ -214,26 +307,144 @@ export function ConfigurationPanel({
                 />
               </div>
             )}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">
-                {t("admin:hcp.recognitionLanguage")}
-              </Label>
-              <Select value={language} onValueChange={onLanguageChange}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {showAutoDetectOption && (
-                    <SelectItem value="auto">{t("admin:hcp.autoDetect")}</SelectItem>
+            {showSpeechRecognitionModel && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  {t("admin:hcp.speechRecognitionModel")}
+                </Label>
+                <Select
+                  value={speechRecognitionModel}
+                  onValueChange={onSpeechRecognitionModelChange}
+                >
+                  <SelectTrigger
+                    data-testid="speech-recognition-model-select"
+                    className="h-8 text-xs"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SPEECH_RECOGNITION_MODEL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {t(`admin:hcp.${opt.labelKey}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {showAutoDetectToggle && (
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">
+                  {t("admin:voiceLive.playgroundSection.autoDetectLanguage")}
+                </Label>
+                <Switch
+                  data-testid="auto-detect-language-switch"
+                  checked={autoDetectLanguage}
+                  onCheckedChange={onAutoDetectLanguageChange}
+                />
+              </div>
+            )}
+            {!autoDetectLanguage && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  {t("admin:hcp.recognitionLanguage")}
+                </Label>
+                <Select value={language} onValueChange={onLanguageChange}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {showAutoDetectOption && (
+                      <SelectItem value="auto">{t("admin:hcp.autoDetect")}</SelectItem>
+                    )}
+                    {SUPPORTED_VOICE_LOCALES.map((locale) => (
+                      <SelectItem key={locale} value={locale}>
+                        {LOCALE_FLAGS[locale]} {t(`common:lang.${LOCALE_LABEL_KEY[locale]}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {showSpeechInputAdvanced && (
+              <div className="space-y-3 pt-1">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  onClick={() => setInputAdvancedOpen((prev) => !prev)}
+                  aria-expanded={inputAdvancedOpen}
+                >
+                  {inputAdvancedOpen ? (
+                    <ChevronDown className="size-3.5" />
+                  ) : (
+                    <ChevronRight className="size-3.5" />
                   )}
-                  {SUPPORTED_VOICE_LOCALES.map((locale) => (
-                    <SelectItem key={locale} value={locale}>
-                      {LOCALE_FLAGS[locale]} {t(`common:lang.${LOCALE_LABEL_KEY[locale]}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  {t("admin:voiceLive.playgroundSection.advancedSettings")}
+                </button>
+
+                {inputAdvancedOpen && (
+                  <div className="space-y-3 pl-1">
+                    {showEouDetection && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.eouDetection")}
+                        </Label>
+                        <Switch
+                          data-testid="eou-detection-switch"
+                          checked={eouDetection}
+                          onCheckedChange={onEouDetectionChange}
+                        />
+                      </div>
+                    )}
+                    {showNoiseSuppression && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.noiseSuppression")}
+                        </Label>
+                        <Switch
+                          data-testid="noise-suppression-switch"
+                          checked={noiseSuppression}
+                          onCheckedChange={onNoiseSuppressionChange}
+                        />
+                      </div>
+                    )}
+                    {showEchoCancellation && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.echoCancellation")}
+                        </Label>
+                        <Switch
+                          data-testid="echo-cancellation-switch"
+                          checked={echoCancellation}
+                          onCheckedChange={onEchoCancellationChange}
+                        />
+                      </div>
+                    )}
+                    {showPhraseList && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.phraseList")}
+                        </Label>
+                        <Textarea
+                          data-testid="phrase-list-textarea"
+                          rows={3}
+                          className="text-xs resize-none"
+                          value={phraseList}
+                          onChange={(e) => onPhraseListChange!(e.target.value)}
+                          placeholder={t(
+                            "admin:voiceLive.playgroundSection.phraseListPlaceholder",
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t("admin:voiceLive.playgroundSection.phraseListHelper")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Speech output */}
@@ -386,6 +597,66 @@ export function ConfigurationPanel({
                           data-testid="proactive-engagement-switch"
                           checked={proactiveEngagement}
                           onCheckedChange={onProactiveEngagementChange}
+                        />
+                      </div>
+                    )}
+
+                    {(showInterimResponse || showProactiveEngagement) && showOutputExtras && (
+                      <Separator />
+                    )}
+
+                    {showVoiceTemperature && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.voiceTemperature")}
+                        </Label>
+                        <Input
+                          data-testid="voice-temperature-input"
+                          type="number"
+                          min={0}
+                          max={1}
+                          step={0.1}
+                          className="h-8 text-xs"
+                          value={voiceTemperature ?? 0.9}
+                          onChange={(e) =>
+                            onVoiceTemperatureChange?.(Number(e.target.value) || 0)
+                          }
+                        />
+                      </div>
+                    )}
+
+                    {showPlaybackSpeed && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.playbackSpeed")}
+                        </Label>
+                        <Input
+                          data-testid="playback-speed-input"
+                          type="number"
+                          min={0.5}
+                          max={2}
+                          step={0.05}
+                          className="h-8 text-xs"
+                          value={playbackSpeed ?? 1.0}
+                          onChange={(e) => onPlaybackSpeedChange?.(Number(e.target.value) || 0)}
+                        />
+                      </div>
+                    )}
+
+                    {showCustomLexiconUrl && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">
+                          {t("admin:voiceLive.playgroundSection.customLexiconUrl")}
+                        </Label>
+                        <Input
+                          data-testid="custom-lexicon-url-input"
+                          type="text"
+                          className="h-8 text-xs"
+                          value={customLexiconUrl ?? ""}
+                          onChange={(e) => onCustomLexiconUrlChange?.(e.target.value)}
+                          placeholder={t(
+                            "admin:voiceLive.playgroundSection.customLexiconUrlPlaceholder",
+                          )}
                         />
                       </div>
                     )}

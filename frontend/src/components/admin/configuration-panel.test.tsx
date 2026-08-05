@@ -506,4 +506,282 @@ describe("ConfigurationPanel", () => {
     await userEvent.click(screen.getByRole("switch"));
     expect(onProactiveEngagementChange).toHaveBeenCalledWith(true);
   });
+
+  /* ── speechRecognitionModel (transcription model, Increment G) ───────── */
+
+  it("does not render the speech recognition model field by default", () => {
+    render(<ConfigurationPanel {...baseProps()} />);
+    expect(
+      screen.queryByTestId("speech-recognition-model-select"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the speech recognition model field when provided", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        speechRecognitionModel="azure-speech"
+        onSpeechRecognitionModelChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByTestId("speech-recognition-model-select"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("admin:hcp.speechRecognitionModel")).toBeInTheDocument();
+  });
+
+  it("calls onSpeechRecognitionModelChange when a new option is selected", async () => {
+    const onSpeechRecognitionModelChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        speechRecognitionModel="azure-speech"
+        onSpeechRecognitionModelChange={onSpeechRecognitionModelChange}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("speech-recognition-model-select"));
+    await userEvent.click(screen.getByText("admin:hcp.speechRecognitionModelWhisper1"));
+    expect(onSpeechRecognitionModelChange).toHaveBeenCalledWith("whisper-1");
+  });
+
+  /* ── autoDetectLanguage toggle (Increment G) ──────────────────────────── */
+
+  it("does not render the auto-detect-language switch by default", () => {
+    render(<ConfigurationPanel {...baseProps()} />);
+    expect(screen.queryByTestId("auto-detect-language-switch")).not.toBeInTheDocument();
+  });
+
+  it("renders the auto-detect-language switch when provided", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        autoDetectLanguage={false}
+        onAutoDetectLanguageChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("auto-detect-language-switch")).toBeInTheDocument();
+  });
+
+  it("calls onAutoDetectLanguageChange when the switch is toggled", async () => {
+    const onAutoDetectLanguageChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        autoDetectLanguage={false}
+        onAutoDetectLanguageChange={onAutoDetectLanguageChange}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("auto-detect-language-switch"));
+    expect(onAutoDetectLanguageChange).toHaveBeenCalledWith(true);
+  });
+
+  it("hides the concrete language select when autoDetectLanguage is true", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        autoDetectLanguage={true}
+        onAutoDetectLanguageChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("admin:hcp.recognitionLanguage")).not.toBeInTheDocument();
+  });
+
+  it("shows the concrete language select when autoDetectLanguage is false", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        autoDetectLanguage={false}
+        onAutoDetectLanguageChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("admin:hcp.recognitionLanguage")).toBeInTheDocument();
+  });
+
+  /* ── Speech input Advanced settings: EOU/noise/echo/phraseList
+   * (persona-hcp-foundry-alignment Increment G) ───────────────────────── */
+
+  it("does not render the speech-input Advanced settings toggle when no field props are provided", () => {
+    render(<ConfigurationPanel {...baseProps()} />);
+    // Only the speech-output Advanced settings toggle would exist if any
+    // of those props were set -- here none are, so there should be no
+    // "Advanced settings" text at all.
+    expect(
+      screen.queryByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the speech-input Advanced settings toggle when eouDetection is provided", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        eouDetection={false}
+        onEouDetectionChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps speech-input Advanced settings collapsed by default", () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        eouDetection={false}
+        onEouDetectionChange={vi.fn()}
+        noiseSuppression={false}
+        onNoiseSuppressionChange={vi.fn()}
+        echoCancellation={false}
+        onEchoCancellationChange={vi.fn()}
+        phraseList=""
+        onPhraseListChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("eou-detection-switch")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("noise-suppression-switch")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("echo-cancellation-switch")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("phrase-list-textarea")).not.toBeInTheDocument();
+  });
+
+  it("expands speech-input Advanced settings on click, revealing all four fields", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        eouDetection={false}
+        onEouDetectionChange={vi.fn()}
+        noiseSuppression={false}
+        onNoiseSuppressionChange={vi.fn()}
+        echoCancellation={false}
+        onEchoCancellationChange={vi.fn()}
+        phraseList=""
+        onPhraseListChange={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    expect(screen.getByTestId("eou-detection-switch")).toBeInTheDocument();
+    expect(screen.getByTestId("noise-suppression-switch")).toBeInTheDocument();
+    expect(screen.getByTestId("echo-cancellation-switch")).toBeInTheDocument();
+    expect(screen.getByTestId("phrase-list-textarea")).toBeInTheDocument();
+  });
+
+  it("calls onEouDetectionChange, onNoiseSuppressionChange, and onEchoCancellationChange when their switches are toggled", async () => {
+    const onEouDetectionChange = vi.fn();
+    const onNoiseSuppressionChange = vi.fn();
+    const onEchoCancellationChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        eouDetection={false}
+        onEouDetectionChange={onEouDetectionChange}
+        noiseSuppression={false}
+        onNoiseSuppressionChange={onNoiseSuppressionChange}
+        echoCancellation={false}
+        onEchoCancellationChange={onEchoCancellationChange}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    await userEvent.click(screen.getByTestId("eou-detection-switch"));
+    await userEvent.click(screen.getByTestId("noise-suppression-switch"));
+    await userEvent.click(screen.getByTestId("echo-cancellation-switch"));
+    expect(onEouDetectionChange).toHaveBeenCalledWith(true);
+    expect(onNoiseSuppressionChange).toHaveBeenCalledWith(true);
+    expect(onEchoCancellationChange).toHaveBeenCalledWith(true);
+  });
+
+  it("calls onPhraseListChange when the phrase list textarea changes", async () => {
+    const onPhraseListChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        phraseList=""
+        onPhraseListChange={onPhraseListChange}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    const textarea = screen.getByTestId("phrase-list-textarea");
+    await userEvent.type(textarea, "a");
+    expect(onPhraseListChange).toHaveBeenCalled();
+  });
+
+  /* ── Speech output Advanced settings extensions: voiceTemperature,
+   * playbackSpeed, customLexiconUrl (Increment G) ─────────────────────── */
+
+  it("does not render voiceTemperature/playbackSpeed/customLexiconUrl inputs by default", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        proactiveEngagement={false}
+        onProactiveEngagementChange={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    expect(screen.queryByTestId("voice-temperature-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("playback-speed-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("custom-lexicon-url-input")).not.toBeInTheDocument();
+  });
+
+  it("renders voiceTemperature/playbackSpeed/customLexiconUrl inputs when provided", async () => {
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        voiceTemperature={0.9}
+        onVoiceTemperatureChange={vi.fn()}
+        playbackSpeed={1.0}
+        onPlaybackSpeedChange={vi.fn()}
+        customLexiconUrl=""
+        onCustomLexiconUrlChange={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    expect(screen.getByTestId("voice-temperature-input")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("0.9")).toBeInTheDocument();
+    expect(screen.getByTestId("playback-speed-input")).toBeInTheDocument();
+    expect(screen.getByTestId("custom-lexicon-url-input")).toBeInTheDocument();
+  });
+
+  it("calls onVoiceTemperatureChange, onPlaybackSpeedChange, and onCustomLexiconUrlChange when their inputs change", async () => {
+    const onVoiceTemperatureChange = vi.fn();
+    const onPlaybackSpeedChange = vi.fn();
+    const onCustomLexiconUrlChange = vi.fn();
+    render(
+      <ConfigurationPanel
+        {...baseProps()}
+        voiceTemperature={0.9}
+        onVoiceTemperatureChange={onVoiceTemperatureChange}
+        playbackSpeed={1.0}
+        onPlaybackSpeedChange={onPlaybackSpeedChange}
+        customLexiconUrl=""
+        onCustomLexiconUrlChange={onCustomLexiconUrlChange}
+      />,
+    );
+    await userEvent.click(
+      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+    );
+    fireEvent.change(screen.getByTestId("voice-temperature-input"), {
+      target: { value: "0.5" },
+    });
+    expect(onVoiceTemperatureChange).toHaveBeenCalledWith(0.5);
+
+    fireEvent.change(screen.getByTestId("playback-speed-input"), {
+      target: { value: "1.5" },
+    });
+    expect(onPlaybackSpeedChange).toHaveBeenCalledWith(1.5);
+
+    fireEvent.change(screen.getByTestId("custom-lexicon-url-input"), {
+      target: { value: "https://example.com/lexicon.xml" },
+    });
+    expect(onCustomLexiconUrlChange).toHaveBeenCalledWith(
+      "https://example.com/lexicon.xml",
+    );
+  });
 });

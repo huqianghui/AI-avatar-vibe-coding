@@ -275,31 +275,37 @@ def resolve_voice_config(profile: HcpProfile) -> dict:
         "resolve_voice_config: hcp=%s source=inline HcpProfile columns (VMODE-01)",
         profile.id,
     )
+    recognition_language = profile.recognition_language or "auto"
+    custom_lexicon_url = profile.custom_lexicon_url or ""
     return {
         "voice_live_enabled": True,
         "voice_live_model": profile.voice_live_model or "gpt-4o",
         "voice_name": profile.voice_name or "en-US-AvaNeural",
         "voice_type": "azure-standard",
-        "voice_temperature": 0.9,
+        "voice_temperature": (
+            profile.voice_temperature if profile.voice_temperature is not None else 0.9
+        ),
         "voice_custom": False,
         "avatar_character": profile.avatar_character or "lisa",
         "avatar_style": profile.avatar_style or "casual",
         "avatar_customized": False,
         "turn_detection_type": "server_vad",
-        "noise_suppression": False,
-        "echo_cancellation": False,
-        "eou_detection": False,
-        "recognition_language": profile.recognition_language or "auto",
+        "noise_suppression": bool(profile.noise_suppression),
+        "echo_cancellation": bool(profile.echo_cancellation),
+        "eou_detection": bool(profile.eou_detection),
+        "speech_recognition_model": profile.speech_recognition_model or "azure-speech",
+        "phrase_list": profile.phrase_list or "",
+        "recognition_language": recognition_language,
         "model_instruction": "",
         "response_temperature": 0.8,
         "proactive_engagement": bool(profile.proactive_engagement),
         "interim_response_enabled": bool(profile.interim_response_enabled),
         "interim_response_type": profile.interim_response_type or "llm",
         "interim_response_threshold_ms": profile.interim_response_threshold_ms or 500,
-        "auto_detect_language": True,
-        "playback_speed": 1.0,
-        "custom_lexicon_enabled": False,
-        "custom_lexicon_url": "",
+        "auto_detect_language": recognition_language == "auto",
+        "playback_speed": (profile.playback_speed if profile.playback_speed is not None else 1.0),
+        "custom_lexicon_enabled": bool(custom_lexicon_url),
+        "custom_lexicon_url": custom_lexicon_url,
         "avatar_enabled": bool(profile.avatar_enabled),
     }
 
@@ -341,20 +347,26 @@ def resolve_voice_config_for_persona(persona: object) -> dict:
         locale,
         voice_name,
     )
+    custom_lexicon_url = getattr(persona, "custom_lexicon_url", None) or ""
+    voice_temperature = getattr(persona, "voice_temperature", None)
+    playback_speed = getattr(persona, "playback_speed", None)
     return {
         "voice_live_enabled": True,
         "voice_live_model": "gpt-4o",
         "voice_name": voice_name,
         "voice_type": "azure-standard",
-        "voice_temperature": 0.9,
+        "voice_temperature": voice_temperature if voice_temperature is not None else 0.9,
         "voice_custom": False,
         "avatar_character": persona.character or "lisa",
         "avatar_style": persona.style or "casual",
         "avatar_customized": False,
         "turn_detection_type": "server_vad",
-        "noise_suppression": False,
-        "echo_cancellation": False,
-        "eou_detection": False,
+        "noise_suppression": bool(getattr(persona, "noise_suppression", False)),
+        "echo_cancellation": bool(getattr(persona, "echo_cancellation", False)),
+        "eou_detection": bool(getattr(persona, "eou_detection", False)),
+        "speech_recognition_model": getattr(persona, "speech_recognition_model", None)
+        or "azure-speech",
+        "phrase_list": getattr(persona, "phrase_list", None) or "",
         "recognition_language": locale,
         "model_instruction": "",
         "response_temperature": 0.8,
@@ -363,9 +375,9 @@ def resolve_voice_config_for_persona(persona: object) -> dict:
         "interim_response_type": getattr(persona, "interim_response_type", None) or "llm",
         "interim_response_threshold_ms": getattr(persona, "interim_response_threshold_ms", None)
         or 500,
-        "auto_detect_language": False,
-        "playback_speed": 1.0,
-        "custom_lexicon_enabled": False,
-        "custom_lexicon_url": "",
+        "auto_detect_language": bool(getattr(persona, "auto_detect_language", False)),
+        "playback_speed": playback_speed if playback_speed is not None else 1.0,
+        "custom_lexicon_enabled": bool(custom_lexicon_url),
+        "custom_lexicon_url": custom_lexicon_url,
         "avatar_enabled": True,
     }

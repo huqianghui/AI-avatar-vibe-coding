@@ -141,6 +141,15 @@ const MOCK_PERSONA: AvatarPersona = {
   interim_response_enabled: false,
   interim_response_type: "llm",
   interim_response_threshold_ms: 500,
+  speech_recognition_model: "azure-speech",
+  auto_detect_language: false,
+  eou_detection: false,
+  noise_suppression: false,
+  echo_cancellation: false,
+  phrase_list: "",
+  voice_temperature: 0.9,
+  playback_speed: 1.0,
+  custom_lexicon_url: "",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
@@ -390,8 +399,12 @@ describe("PersonaEditorPage", () => {
     await userEvent.type(nameInput, "New Persona");
 
     await openConfigPanel();
+    // persona-hcp-foundry-alignment Increment G: the Configuration panel now
+    // has two independent "Advanced settings" collapsibles (Speech input and
+    // Speech output) sharing the same label -- proactiveEngagement lives in
+    // the Speech output one, which renders second.
     await userEvent.click(
-      screen.getByText("admin:voiceLive.playgroundSection.advancedSettings"),
+      screen.getAllByText("admin:voiceLive.playgroundSection.advancedSettings")[1]!,
     );
     await userEvent.click(
       screen.getByText("admin:voiceLive.playgroundSection.proactiveEngagement")

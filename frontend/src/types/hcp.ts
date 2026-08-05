@@ -40,6 +40,17 @@ export interface HcpProfile {
   interim_response_enabled: boolean;
   interim_response_type: "llm" | "static";
   interim_response_threshold_ms: number;
+  // Foundry Configuration panel parity (persona-hcp-foundry-alignment
+  // Increment G): speech recognition (transcription) model, speech input
+  // Advanced settings, speech output Advanced settings extensions.
+  speech_recognition_model: string;
+  eou_detection: boolean;
+  noise_suppression: boolean;
+  echo_cancellation: boolean;
+  phrase_list: string;
+  voice_temperature: number;
+  playback_speed: number;
+  custom_lexicon_url: string;
   // Agent override (D-02)
   agent_instructions_override: string;
   // Knowledge Base config count (Phase 17)
@@ -83,6 +94,14 @@ export interface HcpProfileCreate {
   interim_response_enabled?: boolean;
   interim_response_type?: "llm" | "static";
   interim_response_threshold_ms?: number;
+  speech_recognition_model?: string;
+  eou_detection?: boolean;
+  noise_suppression?: boolean;
+  echo_cancellation?: boolean;
+  phrase_list?: string;
+  voice_temperature?: number;
+  playback_speed?: number;
+  custom_lexicon_url?: string;
   agent_instructions_override?: string;
 }
 

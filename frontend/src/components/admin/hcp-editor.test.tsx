@@ -47,6 +47,14 @@ const mockProfile: HcpProfile = {
   interim_response_enabled: false,
   interim_response_type: "llm",
   interim_response_threshold_ms: 500,
+  speech_recognition_model: "azure-speech",
+  eou_detection: false,
+  noise_suppression: false,
+  echo_cancellation: false,
+  phrase_list: "",
+  voice_temperature: 0.9,
+  playback_speed: 1.0,
+  custom_lexicon_url: "",
 };
 
 describe("HcpEditor", () => {

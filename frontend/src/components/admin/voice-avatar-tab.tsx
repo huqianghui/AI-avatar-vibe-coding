@@ -53,6 +53,18 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
   const interimResponseType = form.watch("interim_response_type");
   const interimResponseThresholdMs = form.watch("interim_response_threshold_ms");
 
+  // Foundry Configuration panel parity (persona-hcp-foundry-alignment
+  // Increment G): speech recognition (transcription) model, speech input
+  // Advanced settings, speech output Advanced settings extensions.
+  const speechRecognitionModel = form.watch("speech_recognition_model");
+  const eouDetection = form.watch("eou_detection");
+  const noiseSuppression = form.watch("noise_suppression");
+  const echoCancellation = form.watch("echo_cancellation");
+  const phraseList = form.watch("phrase_list");
+  const voiceTemperature = form.watch("voice_temperature");
+  const playbackSpeed = form.watch("playback_speed");
+  const customLexiconUrl = form.watch("custom_lexicon_url");
+
   // systemPrompt: use override if set, otherwise use auto-generated instructions
   const overridePrompt = form.watch("agent_instructions_override");
   const systemPrompt = (overridePrompt && overridePrompt.trim()) ? overridePrompt : autoInstructions;
@@ -103,11 +115,22 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
         onRecognitionModelChange={(v) =>
           form.setValue("voice_live_model", v, { shouldDirty: true })
         }
+        speechRecognitionModel={speechRecognitionModel}
+        onSpeechRecognitionModelChange={(v) =>
+          form.setValue("speech_recognition_model", v, { shouldDirty: true })
+        }
         language={recognitionLanguage}
         onLanguageChange={(v) =>
           form.setValue("recognition_language", v, { shouldDirty: true })
         }
-        showAutoDetectOption
+        autoDetectLanguage={recognitionLanguage === "auto"}
+        onAutoDetectLanguageChange={(v) =>
+          form.setValue(
+            "recognition_language",
+            v ? "auto" : "en-US",
+            { shouldDirty: true },
+          )
+        }
         voice={voiceName}
         onVoiceChange={(v) => form.setValue("voice_name", v, { shouldDirty: true })}
         avatarEnabled={avatarEnabled}
@@ -137,6 +160,34 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
         onProactiveEngagementChange={(v) =>
           form.setValue("proactive_engagement", v, { shouldDirty: true })
         }
+        eouDetection={eouDetection}
+        onEouDetectionChange={(v) =>
+          form.setValue("eou_detection", v, { shouldDirty: true })
+        }
+        noiseSuppression={noiseSuppression}
+        onNoiseSuppressionChange={(v) =>
+          form.setValue("noise_suppression", v, { shouldDirty: true })
+        }
+        echoCancellation={echoCancellation}
+        onEchoCancellationChange={(v) =>
+          form.setValue("echo_cancellation", v, { shouldDirty: true })
+        }
+        phraseList={phraseList}
+        onPhraseListChange={(v) =>
+          form.setValue("phrase_list", v, { shouldDirty: true })
+        }
+        voiceTemperature={voiceTemperature}
+        onVoiceTemperatureChange={(v) =>
+          form.setValue("voice_temperature", v, { shouldDirty: true })
+        }
+        playbackSpeed={playbackSpeed}
+        onPlaybackSpeedChange={(v) =>
+          form.setValue("playback_speed", v, { shouldDirty: true })
+        }
+        customLexiconUrl={customLexiconUrl}
+        onCustomLexiconUrlChange={(v) =>
+          form.setValue("custom_lexicon_url", v, { shouldDirty: true })
+        }
         onReset={() => {
           // Foundry-portal parity: the Configuration panel's footer Reset
           // restores voice-mode fields to their last-saved values (form
@@ -163,6 +214,18 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
             d?.interim_response_threshold_ms ?? 500,
             opts,
           );
+          form.setValue(
+            "speech_recognition_model",
+            d?.speech_recognition_model ?? "azure-speech",
+            opts,
+          );
+          form.setValue("eou_detection", d?.eou_detection ?? false, opts);
+          form.setValue("noise_suppression", d?.noise_suppression ?? false, opts);
+          form.setValue("echo_cancellation", d?.echo_cancellation ?? false, opts);
+          form.setValue("phrase_list", d?.phrase_list ?? "", opts);
+          form.setValue("voice_temperature", d?.voice_temperature ?? 0.9, opts);
+          form.setValue("playback_speed", d?.playback_speed ?? 1.0, opts);
+          form.setValue("custom_lexicon_url", d?.custom_lexicon_url ?? "", opts);
         }}
       />
     </div>

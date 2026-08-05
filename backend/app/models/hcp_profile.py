@@ -59,6 +59,21 @@ class HcpProfile(Base, TimestampMixin):
     interim_response_type: Mapped[str] = mapped_column(String(20), default="llm")
     interim_response_threshold_ms: Mapped[int] = mapped_column(default=500)
 
+    # Speech recognition model + Speech input/output Advanced settings
+    # (persona-hcp-foundry-alignment Increment G) -- Foundry-portal
+    # Configuration panel parity. speech_recognition_model is the
+    # *transcription* model (distinct from voice_live_model, the LLM
+    # deployment). auto_detect_language is NOT duplicated here: HCP already
+    # has the "auto" sentinel on recognition_language.
+    speech_recognition_model: Mapped[str] = mapped_column(String(50), default="azure-speech")
+    eou_detection: Mapped[bool] = mapped_column(Boolean, default=False)
+    noise_suppression: Mapped[bool] = mapped_column(Boolean, default=False)
+    echo_cancellation: Mapped[bool] = mapped_column(Boolean, default=False)
+    phrase_list: Mapped[str] = mapped_column(Text, default="")  # newline-separated phrases
+    voice_temperature: Mapped[float] = mapped_column(default=0.9)
+    playback_speed: Mapped[float] = mapped_column(default=1.0)
+    custom_lexicon_url: Mapped[str] = mapped_column(String(500), default="")
+
     # Voice Live Instance FK — retained for legacy/display purposes only. No longer
     # read by resolve_voice_config(); the columns above are now the sole source of truth.
     voice_live_instance_id: Mapped[str | None] = mapped_column(

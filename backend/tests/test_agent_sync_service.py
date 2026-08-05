@@ -451,6 +451,10 @@ async def test_sync_agent_for_profile_creates_when_no_agent_id():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
     mock_profile.to_prompt_dict.return_value = {
         "name": "Dr. New",
         "specialty": "Oncology",
@@ -521,6 +525,10 @@ async def test_sync_agent_for_profile_updates_when_agent_id_exists():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
     mock_profile.to_prompt_dict.return_value = {
         "name": "Dr. Existing",
         "specialty": "Cardiology",
@@ -594,6 +602,10 @@ async def test_sync_agent_for_profile_no_master_config():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
     mock_profile.to_prompt_dict.return_value = {"name": "Dr. Default", "specialty": "GP"}
 
     with (
@@ -738,6 +750,10 @@ async def test_three_profiles_sync_to_agents():
         mock_profile.interim_response_enabled = False
         mock_profile.interim_response_type = "llm"
         mock_profile.interim_response_threshold_ms = 500
+        mock_profile.speech_recognition_model = "azure-speech"
+        mock_profile.phrase_list = ""
+        mock_profile.playback_speed = 1.0
+        mock_profile.custom_lexicon_url = ""
         mock_profile.to_prompt_dict.return_value = profile_data["prompt_data"]
 
         with (
@@ -800,6 +816,10 @@ async def test_three_profiles_mixed_sync_scenarios():
         mock.interim_response_enabled = False
         mock.interim_response_type = "llm"
         mock.interim_response_threshold_ms = 500
+        mock.speech_recognition_model = "azure-speech"
+        mock.phrase_list = ""
+        mock.playback_speed = 1.0
+        mock.custom_lexicon_url = ""
 
     # Profile 1: new (no agent_id)
     p1 = MagicMock()
@@ -1643,14 +1663,27 @@ def test_build_voice_live_metadata_uses_resolve_voice_config():
     mock_profile.interim_response_enabled = True
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 750
+    mock_profile.eou_detection = False
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.voice_temperature = 0.9
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
     assert result[VOICE_LIVE_ENABLED_KEY] == "true"
 
-    # No chunking needed for this profile -- base key holds full JSON
-    config_json = result[VOICE_LIVE_CONFIG_KEY]
-    assert VOICE_LIVE_CONFIG_KEY + ".1" not in result
+    # Increment G added several always-present fields (transcription model,
+    # voice temperature/rate, explicit noise/echo nulls), so this profile's
+    # config now commonly exceeds 512 chars and gets chunked -- reassemble
+    # across all chunk keys rather than assuming the base key holds it all.
+    chunk_keys = [VOICE_LIVE_CONFIG_KEY] + [
+        k for k in result if k.startswith(VOICE_LIVE_CONFIG_KEY + ".")
+    ]
+    config_json = "".join(result[k] for k in sorted(chunk_keys, key=_chunk_sort_key))
     config = json.loads(config_json)
 
     # Official format: config wrapped in {"session": {...}} with snake_case keys
@@ -1729,6 +1762,13 @@ def test_build_voice_live_metadata_chunks_oversized_config():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.voice_temperature = 0.9
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1880,6 +1920,11 @@ def test_build_voice_live_metadata_never_returns_none_since_vmode01():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.voice_temperature = 0.9
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
@@ -1919,6 +1964,10 @@ async def test_sync_agent_for_profile_stores_agent_version():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
     mock_profile.to_prompt_dict.return_value = {"name": "Dr. Version", "specialty": "GP"}
 
     with (
@@ -2590,11 +2639,25 @@ def test_build_voice_live_metadata_turn_detection_hardcoded_server_vad():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.eou_detection = False
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.voice_temperature = 0.9
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
 
-    config = json.loads(result[VOICE_LIVE_CONFIG_KEY])
+    # Increment G's always-present fields push this config past 512 chars,
+    # so it may be chunked -- reassemble across all chunk keys.
+    chunk_keys = [VOICE_LIVE_CONFIG_KEY] + [
+        k for k in result if k.startswith(VOICE_LIVE_CONFIG_KEY + ".")
+    ]
+    config_json = "".join(result[k] for k in sorted(chunk_keys, key=_chunk_sort_key))
+    config = json.loads(config_json)
 
     # Official format: config["session"]["turn_detection"] (snake_case)
     session = config["session"]
@@ -2629,10 +2692,24 @@ def test_build_voice_live_metadata_voice_type_hardcoded_azure_standard():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.voice_temperature = 0.9
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
-    config = json.loads(result[VOICE_LIVE_CONFIG_KEY])
+
+    # Increment G's always-present fields push this config past 512 chars,
+    # so it may be chunked -- reassemble across all chunk keys.
+    chunk_keys = [VOICE_LIVE_CONFIG_KEY] + [
+        k for k in result if k.startswith(VOICE_LIVE_CONFIG_KEY + ".")
+    ]
+    config_json = "".join(result[k] for k in sorted(chunk_keys, key=_chunk_sort_key))
+    config = json.loads(config_json)
 
     # Official format: config["session"]["voice"] (snake_case)
     session = config["session"]
@@ -2662,10 +2739,24 @@ def test_build_voice_live_metadata_custom_lexicon_disabled():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.voice_temperature = 0.9
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.phrase_list = ""
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     result = build_voice_live_metadata(mock_profile)
     assert result is not None
-    config = json.loads(result[VOICE_LIVE_CONFIG_KEY])
+
+    # Increment G's always-present fields push this config past 512 chars,
+    # so it may be chunked -- reassemble across all chunk keys.
+    chunk_keys = [VOICE_LIVE_CONFIG_KEY] + [
+        k for k in result if k.startswith(VOICE_LIVE_CONFIG_KEY + ".")
+    ]
+    config_json = "".join(result[k] for k in sorted(chunk_keys, key=_chunk_sort_key))
+    config = json.loads(config_json)
 
     assert "custom_lexicon" not in config
 

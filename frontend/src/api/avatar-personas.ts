@@ -21,6 +21,20 @@ export interface AvatarPersona {
   interim_response_enabled: boolean;
   interim_response_type: "llm" | "static";
   interim_response_threshold_ms: number;
+  // Foundry Configuration panel parity (persona-hcp-foundry-alignment
+  // Increment G): speech recognition (transcription) model, speech input
+  // Advanced settings, speech output Advanced settings extensions, and
+  // persona-only auto-detect-language (HCP reuses recognition_language's
+  // "auto" sentinel; personas have no such field so get a real column).
+  speech_recognition_model: string;
+  eou_detection: boolean;
+  noise_suppression: boolean;
+  echo_cancellation: boolean;
+  phrase_list: string;
+  voice_temperature: number;
+  playback_speed: number;
+  custom_lexicon_url: string;
+  auto_detect_language: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +52,15 @@ export interface AvatarPersonaCreate {
   interim_response_enabled?: boolean;
   interim_response_type?: "llm" | "static";
   interim_response_threshold_ms?: number;
+  speech_recognition_model?: string;
+  eou_detection?: boolean;
+  noise_suppression?: boolean;
+  echo_cancellation?: boolean;
+  phrase_list?: string;
+  voice_temperature?: number;
+  playback_speed?: number;
+  custom_lexicon_url?: string;
+  auto_detect_language?: boolean;
 }
 
 export interface AvatarPersonaUpdate {
@@ -54,6 +77,15 @@ export interface AvatarPersonaUpdate {
   interim_response_enabled?: boolean;
   interim_response_type?: "llm" | "static";
   interim_response_threshold_ms?: number;
+  speech_recognition_model?: string;
+  eou_detection?: boolean;
+  noise_suppression?: boolean;
+  echo_cancellation?: boolean;
+  phrase_list?: string;
+  voice_temperature?: number;
+  playback_speed?: number;
+  custom_lexicon_url?: string;
+  auto_detect_language?: boolean;
 }
 
 export const avatarPersonasApi = {

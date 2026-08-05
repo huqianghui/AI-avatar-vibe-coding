@@ -173,23 +173,40 @@ def build_voice_live_metadata(profile: object) -> dict[str, str] | None:
     voice: dict = {
         "name": voice_name,
         "type": vc.get("voice_type", "azure-standard"),
-        "temperature": vc.get("voice_temperature", 0.8),
+        "temperature": vc.get("voice_temperature", 0.9),
         "rate": str(vc.get("playback_speed", 1.0)),
     }
     if ":DragonHDLatestNeural" in voice_name or "HD" in voice_name:
         voice["is_hd_voice"] = True
+    # Custom lexicon URL (persona-hcp-foundry-alignment Increment G) --
+    # confirmed on AzureStandardVoice by the installed azure-ai-voicelive
+    # SDK. Only included when non-empty.
+    custom_lexicon_url = vc.get("custom_lexicon_url", "")
+    if custom_lexicon_url:
+        voice["custom_lexicon_url"] = custom_lexicon_url
     session["voice"] = voice
 
     # Input audio transcription — always present; language is "auto-detect"
-    # when the profile's recognition language is unset/auto.
+    # when the profile's recognition language is unset/auto (HCP), or the
+    # persona's auto_detect_language toggle is on (Increment G). ``model``
+    # is the dedicated *transcription* model from the profile's real
+    # speech_recognition_model column -- distinct from voice_live_model (the
+    # LLM deployment). ``phrase_list`` (newline-separated in storage) is
+    # included as a string array only when non-empty.
     recognition_lang = vc.get("recognition_language", "auto")
     transcription_lang = (
-        "auto-detect" if recognition_lang in ("auto", "auto-detect") else recognition_lang
+        "auto-detect"
+        if vc.get("auto_detect_language", False) or recognition_lang in ("auto", "auto-detect")
+        else recognition_lang
     )
-    session["input_audio_transcription"] = {
-        "model": "azure-speech",
+    transcription: dict = {
+        "model": vc.get("speech_recognition_model", "azure-speech"),
         "language": transcription_lang,
     }
+    phrase_list = [line.strip() for line in vc.get("phrase_list", "").splitlines() if line.strip()]
+    if phrase_list:
+        transcription["phrase_list"] = phrase_list
+    session["input_audio_transcription"] = transcription
 
     # Turn detection — always present; end_of_utterance_detection included
     # only when enabled (there is no meaningful "off" sub-object for it).

@@ -46,6 +46,21 @@ class AvatarPersona(Base, TimestampMixin):
     interim_response_type: Mapped[str] = mapped_column(String(20), default="llm")
     interim_response_threshold_ms: Mapped[int] = mapped_column(default=500)
 
+    # Speech recognition model + Speech input/output Advanced settings
+    # (persona-hcp-foundry-alignment Increment G) -- mirrors HcpProfile's
+    # columns of the same name. auto_detect_language is persona-only: the
+    # per-locale voice_map has no HCP-style "auto" sentinel, so personas need
+    # a real boolean column instead.
+    speech_recognition_model: Mapped[str] = mapped_column(String(50), default="azure-speech")
+    eou_detection: Mapped[bool] = mapped_column(Boolean, default=False)
+    noise_suppression: Mapped[bool] = mapped_column(Boolean, default=False)
+    echo_cancellation: Mapped[bool] = mapped_column(Boolean, default=False)
+    phrase_list: Mapped[str] = mapped_column(Text, default="")  # newline-separated phrases
+    voice_temperature: Mapped[float] = mapped_column(default=0.9)
+    playback_speed: Mapped[float] = mapped_column(default=1.0)
+    custom_lexicon_url: Mapped[str] = mapped_column(String(500), default="")
+    auto_detect_language: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # AI Foundry Agent sync fields (persona-hcp-foundry-alignment Increment A) --
     # mirrors HcpProfile.agent_id/agent_version/agent_sync_status/agent_sync_error
     # (backend/app/models/hcp_profile.py) so personas can be synced to real

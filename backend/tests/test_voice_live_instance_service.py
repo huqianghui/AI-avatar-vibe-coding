@@ -76,6 +76,16 @@ async def test_update_instance_triggers_resync():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    # Increment G: speech recognition model + speech input/output advanced settings
+    # -- must be real values, not MagicMock, for json.dumps() to succeed.
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.eou_detection = False
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.phrase_list = ""
+    mock_profile.voice_temperature = 0.9
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     # Instance returned by get_instance has hcp_profiles.
     # Use _make_vl_instance_mock so resolve_voice_config can read voice attributes
@@ -138,6 +148,16 @@ async def test_assign_triggers_resync():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = "llm"
     mock_profile.interim_response_threshold_ms = 500
+    # Increment G: speech recognition model + speech input/output advanced settings
+    # -- must be real values, not MagicMock, for json.dumps() to succeed.
+    mock_profile.speech_recognition_model = "azure-speech"
+    mock_profile.eou_detection = False
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.phrase_list = ""
+    mock_profile.voice_temperature = 0.9
+    mock_profile.playback_speed = 1.0
+    mock_profile.custom_lexicon_url = ""
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_profile
@@ -560,6 +580,14 @@ def test_resolve_voice_config_with_inline_fields():
             "interim_response_enabled",
             "interim_response_type",
             "interim_response_threshold_ms",
+            "speech_recognition_model",
+            "eou_detection",
+            "noise_suppression",
+            "echo_cancellation",
+            "phrase_list",
+            "voice_temperature",
+            "playback_speed",
+            "custom_lexicon_url",
         ]
     )
     mock_profile.id = "hcp-resolve"
@@ -573,6 +601,14 @@ def test_resolve_voice_config_with_inline_fields():
     mock_profile.interim_response_enabled = True
     mock_profile.interim_response_type = "static"
     mock_profile.interim_response_threshold_ms = 750
+    mock_profile.speech_recognition_model = "whisper-1"
+    mock_profile.eou_detection = True
+    mock_profile.noise_suppression = True
+    mock_profile.echo_cancellation = True
+    mock_profile.phrase_list = "drug name\nAvatarPersona"
+    mock_profile.voice_temperature = 0.5
+    mock_profile.playback_speed = 1.25
+    mock_profile.custom_lexicon_url = "https://example.com/lexicon.xml"
 
     result = resolve_voice_config(mock_profile)
 
@@ -587,6 +623,15 @@ def test_resolve_voice_config_with_inline_fields():
     assert result["interim_response_enabled"] is True
     assert result["interim_response_type"] == "static"
     assert result["interim_response_threshold_ms"] == 750
+    assert result["speech_recognition_model"] == "whisper-1"
+    assert result["eou_detection"] is True
+    assert result["noise_suppression"] is True
+    assert result["echo_cancellation"] is True
+    assert result["phrase_list"] == "drug name\nAvatarPersona"
+    assert result["voice_temperature"] == 0.5
+    assert result["playback_speed"] == 1.25
+    assert result["custom_lexicon_url"] == "https://example.com/lexicon.xml"
+    assert result["custom_lexicon_enabled"] is True
 
 
 def test_resolve_voice_config_inline_defaults():
@@ -607,6 +652,14 @@ def test_resolve_voice_config_inline_defaults():
             "interim_response_enabled",
             "interim_response_type",
             "interim_response_threshold_ms",
+            "speech_recognition_model",
+            "eou_detection",
+            "noise_suppression",
+            "echo_cancellation",
+            "phrase_list",
+            "voice_temperature",
+            "playback_speed",
+            "custom_lexicon_url",
         ]
     )
     mock_profile.id = "hcp-inline"
@@ -624,6 +677,14 @@ def test_resolve_voice_config_inline_defaults():
     mock_profile.interim_response_enabled = False
     mock_profile.interim_response_type = None
     mock_profile.interim_response_threshold_ms = None
+    mock_profile.speech_recognition_model = None
+    mock_profile.eou_detection = False
+    mock_profile.noise_suppression = False
+    mock_profile.echo_cancellation = False
+    mock_profile.phrase_list = None
+    mock_profile.voice_temperature = None
+    mock_profile.playback_speed = None
+    mock_profile.custom_lexicon_url = None
 
     result = resolve_voice_config(mock_profile)
 
@@ -639,6 +700,14 @@ def test_resolve_voice_config_inline_defaults():
     assert result["interim_response_enabled"] is False
     assert result["interim_response_type"] == "llm"  # falls back to column default
     assert result["interim_response_threshold_ms"] == 500  # falls back to column default
+    assert result["speech_recognition_model"] == "azure-speech"  # falls back to column default
+    assert result["eou_detection"] is False
+    assert result["noise_suppression"] is False
+    assert result["echo_cancellation"] is False
+    assert result["phrase_list"] == ""  # falls back to column default
+    assert result["voice_temperature"] == 0.9  # falls back to column default
+    assert result["playback_speed"] == 1.0  # falls back to column default
+    assert result["custom_lexicon_url"] == ""  # falls back to column default
 
 
 def test_resolve_voice_config_for_persona_prefers_zh_cn_locale():

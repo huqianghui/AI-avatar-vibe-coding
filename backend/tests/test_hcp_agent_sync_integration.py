@@ -405,6 +405,14 @@ def _set_inline_voice_fields(profile, **overrides):
         "interim_response_enabled": False,
         "interim_response_type": "llm",
         "interim_response_threshold_ms": 500,
+        "speech_recognition_model": "azure-speech",
+        "eou_detection": False,
+        "noise_suppression": False,
+        "echo_cancellation": False,
+        "phrase_list": "",
+        "voice_temperature": 0.9,
+        "playback_speed": 1.0,
+        "custom_lexicon_url": "",
     }
     defaults.update(overrides)
     for k, v in defaults.items():

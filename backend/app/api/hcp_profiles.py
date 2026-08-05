@@ -67,6 +67,20 @@ class HcpProfileOut(BaseModel):
     interim_response_type: str = "llm"
     interim_response_threshold_ms: int = 500
 
+    # Speech recognition model + Speech input/output Advanced settings
+    # (persona-hcp-foundry-alignment Increment G). Same trap as Increment F:
+    # this router-local response model duplicates but drifts from
+    # app/schemas/hcp_profile.py's HcpProfileResponse -- missing fields here
+    # are silently stripped from every GET/POST/PUT response.
+    speech_recognition_model: str = "azure-speech"
+    eou_detection: bool = False
+    noise_suppression: bool = False
+    echo_cancellation: bool = False
+    phrase_list: str = ""
+    voice_temperature: float = 0.9
+    playback_speed: float = 1.0
+    custom_lexicon_url: str = ""
+
     agent_instructions_override: str = ""
 
     # Knowledge Base config count (Phase 17)

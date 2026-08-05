@@ -54,6 +54,18 @@ interface PersonaEditorFormState {
   interimResponseEnabled: boolean;
   interimResponseType: "llm" | "static";
   interimResponseThresholdMs: number;
+  // Foundry Configuration panel parity (persona-hcp-foundry-alignment
+  // Increment G): speech recognition (transcription) model, speech input
+  // Advanced settings, speech output Advanced settings extensions.
+  speechRecognitionModel: string;
+  autoDetectLanguage: boolean;
+  eouDetection: boolean;
+  noiseSuppression: boolean;
+  echoCancellation: boolean;
+  phraseList: string;
+  voiceTemperature: number;
+  playbackSpeed: number;
+  customLexiconUrl: string;
 }
 
 function createDefaultPersonaForm(): PersonaEditorFormState {
@@ -70,6 +82,15 @@ function createDefaultPersonaForm(): PersonaEditorFormState {
     interimResponseEnabled: false,
     interimResponseType: "llm",
     interimResponseThresholdMs: 500,
+    speechRecognitionModel: "azure-speech",
+    autoDetectLanguage: false,
+    eouDetection: false,
+    noiseSuppression: false,
+    echoCancellation: false,
+    phraseList: "",
+    voiceTemperature: 0.9,
+    playbackSpeed: 1.0,
+    customLexiconUrl: "",
   };
 }
 
@@ -123,6 +144,15 @@ export default function PersonaEditorPage() {
         interimResponseEnabled: persona.interim_response_enabled,
         interimResponseType: persona.interim_response_type,
         interimResponseThresholdMs: persona.interim_response_threshold_ms,
+        speechRecognitionModel: persona.speech_recognition_model ?? "azure-speech",
+        autoDetectLanguage: persona.auto_detect_language ?? false,
+        eouDetection: persona.eou_detection ?? false,
+        noiseSuppression: persona.noise_suppression ?? false,
+        echoCancellation: persona.echo_cancellation ?? false,
+        phraseList: persona.phrase_list ?? "",
+        voiceTemperature: persona.voice_temperature ?? 0.9,
+        playbackSpeed: persona.playback_speed ?? 1.0,
+        customLexiconUrl: persona.custom_lexicon_url ?? "",
       });
     }
   }, [persona]);
@@ -173,6 +203,15 @@ export default function PersonaEditorPage() {
         interimResponseEnabled: persona.interim_response_enabled,
         interimResponseType: persona.interim_response_type,
         interimResponseThresholdMs: persona.interim_response_threshold_ms,
+        speechRecognitionModel: persona.speech_recognition_model ?? "azure-speech",
+        autoDetectLanguage: persona.auto_detect_language ?? false,
+        eouDetection: persona.eou_detection ?? false,
+        noiseSuppression: persona.noise_suppression ?? false,
+        echoCancellation: persona.echo_cancellation ?? false,
+        phraseList: persona.phrase_list ?? "",
+        voiceTemperature: persona.voice_temperature ?? 0.9,
+        playbackSpeed: persona.playback_speed ?? 1.0,
+        customLexiconUrl: persona.custom_lexicon_url ?? "",
       });
     } else {
       setForm(createDefaultPersonaForm());
@@ -230,6 +269,15 @@ export default function PersonaEditorPage() {
       interim_response_enabled: form.interimResponseEnabled,
       interim_response_type: form.interimResponseType,
       interim_response_threshold_ms: form.interimResponseThresholdMs,
+      speech_recognition_model: form.speechRecognitionModel,
+      auto_detect_language: form.autoDetectLanguage,
+      eou_detection: form.eouDetection,
+      noise_suppression: form.noiseSuppression,
+      echo_cancellation: form.echoCancellation,
+      phrase_list: form.phraseList,
+      voice_temperature: form.voiceTemperature,
+      playback_speed: form.playbackSpeed,
+      custom_lexicon_url: form.customLexiconUrl,
     };
 
     if (isEdit && id) {
@@ -520,10 +568,14 @@ export default function PersonaEditorPage() {
       <ConfigurationPanel
         open={configPanelOpen}
         onOpenChange={setConfigPanelOpen}
+        speechRecognitionModel={form.speechRecognitionModel}
+        onSpeechRecognitionModelChange={(v) => updateField("speechRecognitionModel", v)}
         language={activeLocale}
         onLanguageChange={(v) =>
           setActiveLocale(v as (typeof SUPPORTED_VOICE_LOCALES)[number])
         }
+        autoDetectLanguage={form.autoDetectLanguage}
+        onAutoDetectLanguageChange={(v) => updateField("autoDetectLanguage", v)}
         voice={form.voiceMap[activeLocale] ?? USE_DEFAULT_VOICE}
         onVoiceChange={(v) => setVoiceForLocale(activeLocale, v)}
         voiceDefaultOption={{
@@ -568,6 +620,20 @@ export default function PersonaEditorPage() {
         }
         proactiveEngagement={form.proactiveEngagement}
         onProactiveEngagementChange={(v) => updateField("proactiveEngagement", v)}
+        eouDetection={form.eouDetection}
+        onEouDetectionChange={(v) => updateField("eouDetection", v)}
+        noiseSuppression={form.noiseSuppression}
+        onNoiseSuppressionChange={(v) => updateField("noiseSuppression", v)}
+        echoCancellation={form.echoCancellation}
+        onEchoCancellationChange={(v) => updateField("echoCancellation", v)}
+        phraseList={form.phraseList}
+        onPhraseListChange={(v) => updateField("phraseList", v)}
+        voiceTemperature={form.voiceTemperature}
+        onVoiceTemperatureChange={(v) => updateField("voiceTemperature", v)}
+        playbackSpeed={form.playbackSpeed}
+        onPlaybackSpeedChange={(v) => updateField("playbackSpeed", v)}
+        customLexiconUrl={form.customLexiconUrl}
+        onCustomLexiconUrlChange={(v) => updateField("customLexiconUrl", v)}
       />
     </div>
   );

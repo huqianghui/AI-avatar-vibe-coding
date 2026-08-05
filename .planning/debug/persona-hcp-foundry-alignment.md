@@ -2,11 +2,32 @@
 status: awaiting_human_verify
 trigger: "Investigate issue: persona-hcp-foundry-alignment — Avatar Persona admin page still not aligned with HCP profile page and Azure AI Foundry portal design. Three gaps: (1) Foundry-portal voice-mode layout parity (gear Configure button opening right-side Configuration panel) on BOTH HCP and Persona pages; (2) Persona editor missing Foundry features HCP has (Knowledge/Foundry IQ); (3) Persona must be a real Foundry agent, synced like HCP (Agent Synced card, Agent ID, version, Force re-sync, View in Azure Portal)."
 created: 2026-08-04T00:00:00Z
-updated: 2026-08-05T14:15:00Z
+updated: 2026-08-05T16:25:00Z
 ---
 
 ## Current Focus
 <!-- OVERWRITE on each update - reflects NOW -->
+
+hypothesis: Increment G (4 Foundry Configuration-panel parity gaps: speech recognition/
+transcription model, language auto-detect toggle, Speech input Advanced settings, Speech output
+Advanced settings extensions) APPLIED, frontend-only (backend was already 100% complete from a
+prior session). Fully wired into ConfigurationPanel + both callers (voice-avatar-tab.tsx for HCP,
+persona-editor.tsx for Persona), plus hcp-profile-editor.tsx's zod schema/defaults/reset. Fixed 9
+pre-existing test files whose mock HcpProfile/AvatarPersona literals became type-incomplete after
+the new required interface fields; fixed 1 real behavioral test regression (voice-avatar-tab.test.tsx
+asserting the now-removed showAutoDetectOption prop) and 1 test-selector ambiguity regression
+(persona-editor.test.tsx's single "Advanced settings" getByText became ambiguous once the panel
+gained a second, identically-labeled collapsible); fixed 1 i18n locale-parity regression (4 new
+speechRecognitionModel option labels were byte-identical to en-US in all 3 es-* locales, and the
+15-entry untranslated-whitelist cap was already full, so translated them with a "(transcripción)"
+qualifier instead of whitelisting). Added 30 new tests to configuration-panel.test.tsx covering all
+9 new prop pairs. test: full gate run (tsc -b, build, vitest, targeted configuration-panel suite).
+expecting: zero new regressions beyond the 1 pre-existing unrelated login.test.tsx failure (already
+documented in Evidence 2026-08-04T22:30:00Z, reconfirmed untouched this session).
+next_action: awaiting human browser verification of the 4 new Configuration-panel fields on both
+HCP and Persona editors before archiving this session to resolved/.
+
+---
 
 hypothesis: Increment F (Interim response + Proactive engagement parity) CONFIRMED root cause
 found via E2E: HCP-side round-trip silently dropped both new fields on GET/PUT responses. Cause
@@ -309,6 +330,44 @@ started: Longstanding. Phase 38 (2026-08-04) explicitly deferred the Foundry-age
   `ruff format --check` on all touched files (including the newly-fixed test file) clean. A second
   full-suite background run was started to get a clean final gate count before committing.
 
+- timestamp: 2026-08-05T16:25:00Z
+  checked: Increment G test/build/i18n gates after applying the 4 Foundry Configuration-panel
+  parity features (speech recognition/transcription model select, language auto-detect toggle,
+  Speech input Advanced settings [EOU/noise/echo/phrase list], Speech output Advanced settings
+  extensions [voice temperature/playback speed/custom lexicon URL]) to `configuration-panel.tsx`
+  and both callers (`voice-avatar-tab.tsx`, `persona-editor.tsx`) in a prior session segment.
+  found: (1) 9 pre-existing test files had type-incomplete `HcpProfile`/`AvatarPersona` mock
+  literals once the new fields became required interface members — fixed by inserting the missing
+  fields (`speech_recognition_model`, `eou_detection`, `noise_suppression`, `echo_cancellation`,
+  `phrase_list`, `voice_temperature`, `playback_speed`, `custom_lexicon_url`, plus
+  `auto_detect_language` for the 3 AvatarPersona-typed files) at each genuine `: HcpProfile`/
+  `: AvatarPersona`-typed literal (carefully distinguishing these from `expect.objectContaining(...)`
+  partial matchers and unrelated payload objects, which do NOT type-check against the full
+  interface and needed no changes). `npx tsc -b` and `npm run build` both clean after all 9 fixes.
+  (2) The full vitest suite (run only after the targeted `configuration-panel.test.tsx` run passed
+  55/55) surfaced 3 additional real regressions the targeted run missed: a stale
+  `voice-avatar-tab.test.tsx` assertion on the removed `showAutoDetectOption` prop (should assert
+  the new `autoDetectLanguage`/`onAutoDetectLanguageChange` props instead); an ambiguous
+  `persona-editor.test.tsx` `getByText("...advancedSettings")` selector, now matching TWO elements
+  because `ConfigurationPanel` gained a second, identically-labeled "Advanced settings" collapsible
+  (Speech input's `inputAdvancedOpen` alongside Speech output's pre-existing `advancedOpen`) —
+  fixed via `getAllByText(...)[1]` targeting the second-rendered (Speech output) one, where
+  `proactiveEngagement` lives; and an i18n `locale-parity.test.ts` failure because the 4 new
+  `speechRecognitionModel*` option labels were byte-identical between en-US and all 3 es-* locales,
+  while `untranslated-whitelist.ts` was already at its hard-capped 15 entries (enforced by a
+  separate guardrail test) so whitelisting was not available — fixed by translating the 4 labels
+  with an appended `" (transcripción)"` qualifier, following the established
+  `azureConfig.services.openai`-style precedent for brand/product names needing a translated
+  descriptor rather than a byte-identical or whitelisted string.
+  implication: All fixes were pre-existing-test/i18n-guardrail regressions caused by the new
+  required fields and new UI structure, not defects in the Increment G feature implementation
+  itself. After the 3 fixes, full vitest re-run: 221 files passed / 1 failed (2783/2784 tests),
+  the sole failure being the already-documented pre-existing unrelated `login.test.tsx` flake
+  (confirmed untouched via `git status --porcelain` on `login.tsx`/`login.test.tsx`). Added 30 new
+  tests to `configuration-panel.test.tsx` (55/55 total) covering all 9 new prop pairs: hidden-by-
+  default, rendered-when-provided, callback-wiring for each, the two new collapsible-expand
+  behaviors, and the auto-detect-hides-language-select UX behavior.
+
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->
 
@@ -413,6 +472,34 @@ fix: |
       `has_voice_config = hasattr(profile, "voice_live_model")` gate; `build_voice_live_metadata`
       is now called unconditionally for every profile (HCP or persona) since the dispatch lives
       inside the function itself.
+
+  Increment G (frontend, 4 Foundry Configuration-panel parity gaps) — APPLIED. Backend was already
+    100% complete from a prior session segment (migration k44a_add_speech_recognition_advanced_config
+    added 8 columns to both hcp_profiles/avatar_personas; a separate migration added
+    auto_detect_language to avatar_personas only — zero backend files touched this segment,
+    confirmed via grep). Frontend work:
+    - `configuration-panel.tsx` gained 9 new optional prop pairs, each gated by the established
+      `showX = x !== undefined && onXChange !== undefined` presence pattern: `speechRecognitionModel`/
+      `onSpeechRecognitionModelChange` (Select: azure-speech/whisper-1/gpt-4o-transcribe/
+      gpt-4o-mini-transcribe/gpt-4o-transcribe-diarize/mai-transcribe-1); `autoDetectLanguage`/
+      `onAutoDetectLanguageChange` (Switch replacing/supplementing the old `showAutoDetectOption`
+      boolean-presence prop — hides the concrete language Select when true); `eouDetection`/
+      `onEouDetectionChange`, `noiseSuppression`/`onNoiseSuppressionChange`, `echoCancellation`/
+      `onEchoCancellationChange`, `phraseList`/`onPhraseListChange` (all inside a new, independent
+      Speech-input "Advanced settings" collapsible, `inputAdvancedOpen` state — separate from the
+      pre-existing Speech-output "Advanced settings" collapsible, `advancedOpen` state, which now
+      also gained `voiceTemperature`/`onVoiceTemperatureChange`, `playbackSpeed`/
+      `onPlaybackSpeedChange`, `customLexiconUrl`/`onCustomLexiconUrlChange`).
+    - Wired into both callers (`voice-avatar-tab.tsx` for HCP, `persona-editor.tsx` for Persona)
+      and into `hcp-profile-editor.tsx`'s zod schema/defaults/reset for the 8 HCP-side fields.
+    - This segment's work (test/i18n fixup, no feature-logic changes): fixed 9 pre-existing test
+      files with type-incomplete mock literals (see Evidence 2026-08-05T16:25:00Z for the full
+      list and rationale); fixed 1 stale-assertion regression in `voice-avatar-tab.test.tsx`; fixed
+      1 selector-ambiguity regression in `persona-editor.test.tsx`; fixed 1 i18n locale-parity
+      regression across `es-ES`/`es-MX`/`es-US` `admin.json` (translated 4 `speechRecognitionModel*`
+      labels with a `" (transcripción)"` qualifier instead of whitelisting, since the
+      untranslated-whitelist was already at its hard 15-entry cap); added 30 new tests to
+      `configuration-panel.test.tsx` covering all 9 new prop pairs.
 verification: |
   Increment A: ruff check + ruff format --check clean on all 8 changed/added files. Targeted
   pytest run (115 tests) covering every touched module plus the full pre-existing HCP agent-sync
@@ -464,6 +551,15 @@ verification: |
   network flakiness, not a regression. Combined regression run of every directly-touched-domain
   test file (`test_hcp_agent_sync_integration.py` + `test_agent_sync_service.py` +
   `test_voice_live_instance_service.py` + `test_avatar_persona_service.py`): 212/212 passed.
+  Increment G: backend already verified complete in the prior session segment (no backend gate
+  re-run this segment — zero backend files touched, confirmed via grep). Frontend: `npx tsc -b`
+  clean (zero errors after fixing all 9 type-incomplete test-mock files); `npm run build` succeeds
+  (only pre-existing "chunks larger than 500kB" advisory warnings, unrelated). Targeted
+  `npx vitest run src/components/admin/configuration-panel.test.tsx`: 55/55 passed (25 pre-existing
+  + 30 new). Full `npx vitest run`: 221 files passed / 1 failed (2783/2784 tests) — the 1 failure
+  is the pre-existing, already-documented, unrelated `login.test.tsx` navigate-target-mismatch
+  flake (confirmed via `git status --porcelain` showing zero modifications to `login.tsx`/
+  `login.test.tsx` this session).
 files_changed:
   - backend/app/models/avatar_persona.py
   - backend/alembic/versions/h41a_add_persona_agent_sync_fields.py
@@ -508,3 +604,33 @@ files_changed:
   - backend/tests/test_voice_live_instance_service.py (Increment E: new persona-resolver tests)
   - backend/tests/test_hcp_agent_sync_integration.py (Increment E: fixed 6 stale camelCase-format
     assertions to match the new snake_case/explicit-null format)
+  - backend/alembic/versions/k44a_add_speech_recognition_advanced_config.py (Increment G, prior
+    segment: 8 new columns on hcp_profiles/avatar_personas)
+  - frontend/src/components/admin/configuration-panel.tsx (Increment G: 9 new prop pairs)
+  - frontend/src/components/admin/configuration-panel.test.tsx (Increment G: 30 new tests)
+  - frontend/src/components/admin/voice-avatar-tab.tsx (Increment G: wired new props; this segment
+    fixed a stale showAutoDetectOption assertion in its test)
+  - frontend/src/components/admin/voice-avatar-tab.test.tsx (Increment G: fixed stale
+    showAutoDetectOption assertion)
+  - frontend/src/pages/admin/persona-editor.tsx (Increment G: wired new props)
+  - frontend/src/pages/admin/persona-editor.test.tsx (Increment G: fixed MOCK_PERSONA type
+    completeness + ambiguous Advanced-settings getByText selector)
+  - frontend/src/pages/admin/hcp-profile-editor.tsx (Increment G: zod schema/defaults/reset
+    extension for the 8 new HCP-side fields)
+  - frontend/src/components/admin/agent-status-section.test.tsx (Increment G: type-completeness fix)
+  - frontend/src/components/admin/hcp-editor.test.tsx (Increment G: type-completeness fix)
+  - frontend/src/components/admin/hcp-list.test.tsx (Increment G: type-completeness fix, 2 occurrences)
+  - frontend/src/components/admin/hcp-table.test.tsx (Increment G: type-completeness fix)
+  - frontend/src/pages/admin/hcp-profile-editor.test.tsx (Increment G: type-completeness fix)
+  - frontend/src/pages/admin/vl-instance-editor.test.tsx (Increment G: type-completeness fix)
+  - frontend/src/components/admin/persona-agent-status-section.test.tsx (Increment G:
+    type-completeness fix)
+  - frontend/src/hooks/use-avatar-personas.test.ts (Increment G: type-completeness fix)
+  - frontend/src/pages/admin/voice-live-management.test.tsx (Increment G, prior segment:
+    type-completeness fix)
+  - frontend/public/locales/es-ES/admin.json (Increment G: translated 4 speechRecognitionModel*
+    labels)
+  - frontend/public/locales/es-MX/admin.json (Increment G: translated 4 speechRecognitionModel*
+    labels)
+  - frontend/public/locales/es-US/admin.json (Increment G: translated 4 speechRecognitionModel*
+    labels)

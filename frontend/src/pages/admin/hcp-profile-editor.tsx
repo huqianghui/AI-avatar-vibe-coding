@@ -93,6 +93,17 @@ export const hcpSchema = z.object({
   interim_response_enabled: z.boolean().default(false),
   interim_response_type: z.enum(["llm", "static"]).default("llm"),
   interim_response_threshold_ms: z.number().default(500),
+  // Foundry Configuration panel parity (persona-hcp-foundry-alignment
+  // Increment G): speech recognition (transcription) model, speech input
+  // Advanced settings, speech output Advanced settings extensions.
+  speech_recognition_model: z.string().default("azure-speech"),
+  eou_detection: z.boolean().default(false),
+  noise_suppression: z.boolean().default(false),
+  echo_cancellation: z.boolean().default(false),
+  phrase_list: z.string().default(""),
+  voice_temperature: z.number().default(0.9),
+  playback_speed: z.number().default(1.0),
+  custom_lexicon_url: z.string().default(""),
 });
 
 export type HcpFormValues = z.infer<typeof hcpSchema>;
@@ -144,6 +155,14 @@ export default function HcpProfileEditorPage() {
       interim_response_enabled: false,
       interim_response_type: "llm",
       interim_response_threshold_ms: 500,
+      speech_recognition_model: "azure-speech",
+      eou_detection: false,
+      noise_suppression: false,
+      echo_cancellation: false,
+      phrase_list: "",
+      voice_temperature: 0.9,
+      playback_speed: 1.0,
+      custom_lexicon_url: "",
     },
   });
 
@@ -177,6 +196,15 @@ export default function HcpProfileEditorPage() {
         interim_response_type: profile.interim_response_type ?? "llm",
         interim_response_threshold_ms:
           profile.interim_response_threshold_ms ?? 500,
+        speech_recognition_model:
+          profile.speech_recognition_model ?? "azure-speech",
+        eou_detection: profile.eou_detection ?? false,
+        noise_suppression: profile.noise_suppression ?? false,
+        echo_cancellation: profile.echo_cancellation ?? false,
+        phrase_list: profile.phrase_list ?? "",
+        voice_temperature: profile.voice_temperature ?? 0.9,
+        playback_speed: profile.playback_speed ?? 1.0,
+        custom_lexicon_url: profile.custom_lexicon_url ?? "",
       });
     }
   }, [profile, form]);

@@ -44,6 +44,17 @@ class HcpProfileCreate(BaseModel):
     interim_response_type: Literal["llm", "static"] = "llm"
     interim_response_threshold_ms: int = Field(default=500, ge=0)
 
+    # Speech recognition model + Speech input/output Advanced settings
+    # (Increment G)
+    speech_recognition_model: str = "azure-speech"
+    eou_detection: bool = False
+    noise_suppression: bool = False
+    echo_cancellation: bool = False
+    phrase_list: str = ""
+    voice_temperature: float = Field(default=0.9, ge=0, le=1)
+    playback_speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    custom_lexicon_url: str = ""
+
     # Voice Live Instance reference -- optional (VMODE-01 reverses D-13; a VL instance
     # is no longer mandatory since HcpProfile now carries its own direct config). If
     # provided, must be non-empty.
@@ -86,6 +97,17 @@ class HcpProfileUpdate(BaseModel):
     interim_response_enabled: bool | None = None
     interim_response_type: Literal["llm", "static"] | None = None
     interim_response_threshold_ms: int | None = Field(default=None, ge=0)
+
+    # Speech recognition model + Speech input/output Advanced settings
+    # (Increment G) -- all optional, partial-update semantics.
+    speech_recognition_model: str | None = None
+    eou_detection: bool | None = None
+    noise_suppression: bool | None = None
+    echo_cancellation: bool | None = None
+    phrase_list: str | None = None
+    voice_temperature: float | None = Field(default=None, ge=0, le=1)
+    playback_speed: float | None = Field(default=None, ge=0.5, le=2.0)
+    custom_lexicon_url: str | None = None
 
     # Voice Live Instance reference. Optional at the type level so partial updates can
     # omit it and leave the existing value untouched. VMODE-01 reverses D-13: this
@@ -132,6 +154,17 @@ class HcpProfileResponse(BaseModel):
     interim_response_enabled: bool = False
     interim_response_type: str = "llm"
     interim_response_threshold_ms: int = 500
+
+    # Speech recognition model + Speech input/output Advanced settings
+    # (Increment G)
+    speech_recognition_model: str = "azure-speech"
+    eou_detection: bool = False
+    noise_suppression: bool = False
+    echo_cancellation: bool = False
+    phrase_list: str = ""
+    voice_temperature: float = 0.9
+    playback_speed: float = 1.0
+    custom_lexicon_url: str = ""
 
     # Voice Live Instance reference -- retained for legacy/display purposes only.
     voice_live_instance_id: str | None = None

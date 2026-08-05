@@ -64,10 +64,13 @@ def _make_mock_hcp_profile():
     VMODE-01 (2026-08-04 rescope): resolve_voice_config() sources
     voice_live_model/voice_name/avatar_character/avatar_style/avatar_enabled/
     recognition_language directly from HcpProfile's own inline columns (not
-    from profile.voice_live_instance, which is now vestigial). The remaining
-    keys (voice_temperature, turn_detection_type, noise_suppression, etc.)
-    are hardcoded fixed values in resolve_voice_config -- not scoped to the
-    UI for this phase -- so this fixture no longer varies them.
+    from profile.voice_live_instance, which is now vestigial).
+
+    persona-hcp-foundry-alignment Increments F/G: the advanced speech
+    input/output settings (voice_temperature, noise_suppression, phrase_list,
+    interim response, etc.) are now per-HCP columns too, so the mock must set
+    them explicitly at their model defaults -- MagicMock auto-attributes
+    coerce to 1.0/True and would leak wrong values into the resolved config.
     """
     profile = MagicMock()
     profile.agent_id = "asst_test123"
@@ -80,6 +83,22 @@ def _make_mock_hcp_profile():
     profile.avatar_style = "business"
     profile.avatar_enabled = True
     profile.recognition_language = "zh-CN"
+
+    # Increment F: interim response + proactive engagement columns
+    profile.proactive_engagement = False
+    profile.interim_response_enabled = False
+    profile.interim_response_type = "llm"
+    profile.interim_response_threshold_ms = 500
+
+    # Increment G: speech recognition + advanced speech input/output columns
+    profile.speech_recognition_model = "azure-speech"
+    profile.eou_detection = False
+    profile.noise_suppression = False
+    profile.echo_cancellation = False
+    profile.phrase_list = ""
+    profile.voice_temperature = 0.9
+    profile.playback_speed = 1.0
+    profile.custom_lexicon_url = ""
 
     profile.voice_live_instance_id = None
     profile.voice_live_instance = None
@@ -137,7 +156,8 @@ class TestPerHcpTokenBroker:
         assert result.avatar_character == "harry"
         assert result.avatar_style == "business"
         assert result.recognition_language == "zh-CN"
-        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        # Increment G: advanced fields are per-HCP columns; the mock sets
+        # them at their model defaults. turn_detection_type stays hardcoded.
         assert result.voice_temperature == 0.9
         assert result.turn_detection_type == "server_vad"
         assert result.noise_suppression is False
@@ -397,7 +417,8 @@ class TestVoiceLiveAPIWithHcpProfileId:
         assert data["voice_name"] == "zh-CN-YunxiNeural"
         assert data["avatar_character"] == "harry"
         assert data["avatar_style"] == "business"
-        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        # Increment G: advanced fields are per-HCP columns; the mock sets
+        # them at their model defaults. turn_detection_type stays hardcoded.
         assert data["voice_temperature"] == 0.9
         assert data["turn_detection_type"] == "server_vad"
         assert data["noise_suppression"] is False
@@ -560,7 +581,8 @@ class TestPerHcpTokenBrokerRealData:
         assert result.avatar_character == "harry"
         assert result.avatar_style == "business"
         assert result.recognition_language == "zh-CN"
-        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        # Increment G: advanced fields are per-HCP columns; the mock sets
+        # them at their model defaults. turn_detection_type stays hardcoded.
         assert result.voice_temperature == 0.9
         assert result.turn_detection_type == "server_vad"
         assert result.noise_suppression is False
@@ -712,7 +734,8 @@ class TestVoiceLiveAPIWithHcpProfileIdRealData:
         assert data["avatar_character"] == "harry"
         assert data["avatar_style"] == "business"
         assert data["recognition_language"] == "zh-CN"
-        # Fields outside VMODE-01's UI scope are hardcoded, not per-HCP.
+        # Increment G: advanced fields are per-HCP columns; the mock sets
+        # them at their model defaults. turn_detection_type stays hardcoded.
         assert data["voice_temperature"] == 0.9
         assert data["turn_detection_type"] == "server_vad"
         assert data["noise_suppression"] is False

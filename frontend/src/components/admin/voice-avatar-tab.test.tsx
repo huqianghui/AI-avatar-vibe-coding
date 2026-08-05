@@ -239,7 +239,10 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
       expect(capturedConfigPanelProps!.avatarEnabled).toBe(true);
       expect(capturedConfigPanelProps!.avatarCharacter).toBe("lisa");
       expect(capturedConfigPanelProps!.avatarStyle).toBe("casual");
-      expect(capturedConfigPanelProps!.showAutoDetectOption).toBe(true);
+      expect(capturedConfigPanelProps!.autoDetectLanguage).toBe(true);
+      expect(typeof capturedConfigPanelProps!.onAutoDetectLanguageChange).toBe(
+        "function",
+      );
       expect(typeof capturedConfigPanelProps!.onRecognitionModelChange).toBe(
         "function",
       );

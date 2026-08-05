@@ -49,6 +49,25 @@ export const TURN_DETECTION_TYPES = [
   { value: "azure_semantic_vad_multilingual", labelKey: "turnAzureSemanticVadMultilingual" },
 ] as const;
 
+/* ── Speech Recognition (Transcription) Models ───────────────────────── */
+
+/**
+ * Foundry Voice Live `session.input_audio_transcription.model` options --
+ * distinct from the LLM "Model deployment" select (persona-hcp-foundry-
+ * alignment Increment G).
+ */
+export const SPEECH_RECOGNITION_MODEL_OPTIONS = [
+  { value: "azure-speech", labelKey: "speechRecognitionModelAzureSpeech" },
+  { value: "whisper-1", labelKey: "speechRecognitionModelWhisper1" },
+  { value: "gpt-4o-transcribe", labelKey: "speechRecognitionModelGpt4oTranscribe" },
+  { value: "gpt-4o-mini-transcribe", labelKey: "speechRecognitionModelGpt4oMiniTranscribe" },
+  {
+    value: "gpt-4o-transcribe-diarize",
+    labelKey: "speechRecognitionModelGpt4oTranscribeDiarize",
+  },
+  { value: "mai-transcribe-1", labelKey: "speechRecognitionModelMaiTranscribe1" },
+] as const;
+
 /* ── Recognition Languages ───────────────────────────────────────────── */
 
 export const RECOGNITION_LANGUAGES = [
