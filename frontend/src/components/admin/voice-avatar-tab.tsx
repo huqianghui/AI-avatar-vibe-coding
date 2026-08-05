@@ -137,6 +137,33 @@ export function VoiceAvatarTab({ form, profile, isNew }: VoiceAvatarTabProps) {
         onProactiveEngagementChange={(v) =>
           form.setValue("proactive_engagement", v, { shouldDirty: true })
         }
+        onReset={() => {
+          // Foundry-portal parity: the Configuration panel's footer Reset
+          // restores voice-mode fields to their last-saved values (form
+          // defaults are re-seeded from the profile on load). resetField()
+          // can't be used here: these fields are never register()ed (they
+          // drive custom components via watch/setValue), so it is a no-op.
+          const d = form.formState.defaultValues;
+          const opts = { shouldDirty: true } as const;
+          form.setValue("voice_live_model", d?.voice_live_model ?? "gpt-4o", opts);
+          form.setValue("voice_name", d?.voice_name ?? "en-US-AvaNeural", opts);
+          form.setValue("recognition_language", d?.recognition_language ?? "auto", opts);
+          form.setValue("avatar_character", d?.avatar_character ?? "lisa", opts);
+          form.setValue("avatar_style", d?.avatar_style ?? "casual", opts);
+          form.setValue("avatar_enabled", d?.avatar_enabled ?? true, opts);
+          form.setValue("proactive_engagement", d?.proactive_engagement ?? false, opts);
+          form.setValue(
+            "interim_response_enabled",
+            d?.interim_response_enabled ?? false,
+            opts,
+          );
+          form.setValue("interim_response_type", d?.interim_response_type ?? "llm", opts);
+          form.setValue(
+            "interim_response_threshold_ms",
+            d?.interim_response_threshold_ms ?? 500,
+            opts,
+          );
+        }}
       />
     </div>
   );

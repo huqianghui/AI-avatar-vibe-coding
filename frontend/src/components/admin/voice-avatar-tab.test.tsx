@@ -343,5 +343,65 @@ describe("VoiceAvatarTab (two-panel layout)", () => {
       expect(formRef!.getValues("interim_response_enabled")).toBe(true);
       expect(formRef!.getValues("proactive_engagement")).toBe(true);
     });
+
+    // Foundry-portal parity: the panel's footer Reset restores voice-mode
+    // fields to their last-saved (form default) values.
+    it("passes an onReset that restores voice-mode fields to form defaults", () => {
+      let formRef: ReturnType<typeof useForm<HcpFormValues>> | undefined;
+      function Wrapper() {
+        formRef = useForm<HcpFormValues>({
+          defaultValues: {
+            name: "Test HCP",
+            specialty: "Oncology",
+            hospital: "",
+            title: "",
+            personality_type: "friendly",
+            emotional_state: 30,
+            communication_style: 50,
+            expertise_areas: [],
+            prescribing_habits: "",
+            concerns: "",
+            objections: [],
+            probe_topics: [],
+            difficulty: "medium",
+            voice_live_instance_id: null,
+            voice_live_model: "gpt-4o",
+            voice_name: "en-US-AvaNeural",
+            recognition_language: "auto",
+            avatar_character: "lisa",
+            avatar_style: "casual",
+            avatar_enabled: true,
+            agent_instructions_override: "",
+            interim_response_enabled: false,
+            interim_response_type: "llm",
+            interim_response_threshold_ms: 500,
+            proactive_engagement: false,
+          },
+        });
+        return (
+          <FormProvider {...formRef}>
+            <VoiceAvatarTab form={formRef} isNew={false} />
+          </FormProvider>
+        );
+      }
+      render(<Wrapper />);
+      expect(typeof capturedConfigPanelProps!.onReset).toBe("function");
+
+      act(() => {
+        formRef!.setValue("voice_name", "es-ES-ElviraNeural", { shouldDirty: true });
+        formRef!.setValue("interim_response_enabled", true, { shouldDirty: true });
+        formRef!.setValue("interim_response_threshold_ms", 900, { shouldDirty: true });
+        formRef!.setValue("proactive_engagement", true, { shouldDirty: true });
+      });
+      act(() => {
+        (capturedConfigPanelProps!.onReset as () => void)();
+      });
+      expect(formRef!.getValues("voice_name")).toBe("en-US-AvaNeural");
+      expect(formRef!.getValues("interim_response_enabled")).toBe(false);
+      expect(formRef!.getValues("interim_response_threshold_ms")).toBe(500);
+      expect(formRef!.getValues("proactive_engagement")).toBe(false);
+      // Non-voice fields are untouched.
+      expect(formRef!.getValues("name")).toBe("Test HCP");
+    });
   });
 });
