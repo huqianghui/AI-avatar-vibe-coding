@@ -1,12 +1,10 @@
 # Stack Research
 
-**Domain:** Avatar MVP additions (anonymous Foundry IQ grounded Q&A + citations, CRM-Excel personalization, es-ES i18n, avatar-first UI) on top of the existing AI Avatar Platform
-**Researched:** 2026-07-31
-**Confidence:** MEDIUM-HIGH (citation architecture verified against Microsoft Learn docs updated 2026-07-21/24; index-schema availability of document URLs is an open question — see Gaps)
+**Domain:** Fluent UI v9 (Fluent 2) adapter-mode migration on top of existing React 18 + Vite 6 + Tailwind v4 stack
+**Researched:** 2026-08-06
+**Confidence:** HIGH (versions/peer-deps/exports verified directly against npm registry tarballs and TypeScript declaration files; Griffel injection-order mechanics verified against `@griffel/core` and `@griffel/react` source code, not just docs)
 
-> **Note:** This replaces the earlier (2026-03-24) version of this file, which researched the *original* v1.0 stack (Azure OpenAI Realtime, Speech Avatar, Content Understanding, etc.) before implementation. Those decisions are now **existing, validated capabilities** — see `.planning/PROJECT.md` — and are intentionally out of scope here per the milestone brief. This file is a **delta stack** for the four v2.0 Avatar MVP requirements only.
-
-The headline finding: **almost none of the four new capabilities need a new heavy dependency.** The real work is new *usage* of libraries already in `pyproject.toml`/`package.json`, plus one small, well-justified new dependency (`slowapi`) and one architectural pivot for how citations are obtained.
+> **Note:** This replaces the prior (2026-07-31) version of this file, which researched the v2.0 Avatar MVP delta stack (citations, CRM-Excel, es-ES i18n). Those decisions are now shipped/validated — see `.planning/PROJECT.md` — and are out of scope here. This file is the stack research for the **v3.0 Fluent UI v9 migration** milestone only (Phase 39 infrastructure).
 
 ## Recommended Stack
 
@@ -14,105 +12,194 @@ The headline finding: **almost none of the four new capabilities need a new heav
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Azure AI Search **Knowledge Retrieval `retrieve` action** (REST, `api-version=2026-05-01-preview`) | n/a (REST endpoint, not a package) | Anonymous mode: get a grounded answer **and** a structured `references[]` array (docKey, sourceData, activitySource) in one call | This is the only Foundry IQ code path that returns machine-parseable citations. The `knowledge_base_retrieve` **MCP tool** used by the existing Agent+KB integration does **not** return a `references`/`activity` envelope — confirmed in MS Learn "Query Knowledge Base via API or MCP" (updated 2026-07-24): *"Unlike the retrieve action, the current MCP response doesn't return separate `activity` or `references` arrays, and it doesn't populate `resource` entries."* Anything built on the Agent+MCP path for the anonymous flow would have to scrape citations out of free-form LLM prose — unreliable and un-auditable, violating the "traceable knowledge source per response" requirement and the "source separation" UI requirement in CLAUDE.md. |
-| `httpx` (existing dep, `>=0.27.0`) | current | HTTP client to call the `retrieve` REST endpoint directly | Already the exact pattern used in `backend/app/services/knowledge_base_service.py::_get_knowledgebases` / `_search_auth_headers` for listing KBs. Reuse the same auth helper (API key first, Entra ID bearer fallback) instead of introducing a second HTTP client or a new preview SDK. |
-| `openpyxl` (existing dep, `>=3.1.0`, currently pinned `3.1.2`, latest `3.1.5`) | keep `>=3.1.0` (optionally bump to `>=3.1.2`) | **Read** the CRM Excel mapping table (user_id → profile/preference columns) into a DB table | Already a backend dependency, but today it is only used for **writing** exports (`export_service.py`). No new library needed — just a new read-path service. `openpyxl` handles `.xlsx` row/column iteration fine for a lookup table; no streaming/large-file concerns at POC scale (one mapping sheet, not a training-material corpus). |
-| `fastapi.security.OAuth2PasswordBearer(auto_error=False)` (built into existing FastAPI dep) | current | New `get_current_user_optional` dependency so one endpoint serves both anonymous and logged-in avatar sessions | No new package. Mirrors `get_current_user` in `backend/app/dependencies.py` but returns `None` instead of raising 401 when no/invalid token is present; the route then branches: no user → anonymous Foundry IQ retrieve path; user present → personalized CRM+preference path. |
-| `slowapi` (new dep, `0.1.10`, released 2026-06-13) | `>=0.1.10` | Rate limiting for the newly-public, unauthenticated Q&A endpoint | This is the one genuinely new capability gap: every other endpoint in this codebase sits behind `get_current_user`. An anonymous endpoint with no auth gate is a direct cost/abuse vector (each call burns Azure AI Search + Azure OpenAI tokens). `slowapi` is a thin Starlette/FastAPI middleware wrapping the `limits` library — small, actively maintained (last release 2026-06-13), integrates as a single dependency + decorator, no infra changes required for the POC. |
-| `i18next` / `react-i18next` (existing deps, `25.10.5` / `16.6.2`) | no version change needed | Add `es-ES` as a third supported language | Both libraries already handle arbitrary BCP-47 locale codes (including Spanish plural rules) out of the box — this is a **config + content** change, not a library upgrade. Add `"es-ES"` to `supportedLngs` in `frontend/src/i18n/index.ts` and create `frontend/public/locales/es-ES/*.json` mirroring the existing 14 namespaces under `en-US`/`zh-CN`. |
+| `@fluentui/react-components` | `9.74.4` (npm `latest` as of 2026-08-06, published 2026-07-15) | Fluent 2 component library — single umbrella package that re-exports ~50 sub-packages (`react-button`, `react-dialog`, `react-select`, `react-provider`, `react-theme`, etc.) plus `@griffel/react` styling APIs (`makeStyles`, `mergeClasses`, `FluentProvider`, `RendererProvider`, `createDOMRenderer`) | This is the only package you need to `npm install` for components — it is a facade over the individually-versioned Fluent v9 packages (accordion 9.12.1, dialog 9.18.2, provider 9.22.18, theme 9.2.1, etc.), so you get one version to track instead of ~50. Verified via `npm view @fluentui/react-components dependencies` — it depends on `@griffel/react": "^1.5.32"` internally (installed transitively; do not add separately unless you need lower-level Griffel APIs — see Supporting Libraries). |
+| `@fluentui/react-icons` | `2.0.334` (published 2026-07-24) | Fluent System Icons, one named export per icon (e.g. `ArrowRight24Regular`) | Verified peer dep is `react: >=16.8.0 <20.0.0` (React 18 fully supported). Package itself depends on `@griffel/react: ^1.6.1` (slightly newer range than react-components' internal Griffel — both ranges are satisfied by npm's dedupe within `^1.x`, confirmed no conflict since Griffel 1.x has no breaking changes across 1.5–1.7). `sideEffects` is scoped to only `**/headless/fonts/styles.css` and `**/headless/styles.css` — icon SVG/JSX modules themselves are pure, so named icon imports tree-shake cleanly. |
+| `@griffel/react` (transitive, do not pin) | `^1.5.32`–`^1.7.6` range (do not confuse with `@griffel/core@1.21.3` — separate, independently-versioned package) | CSS-in-JS engine Fluent v9 is built on (atomic CSS, `makeStyles`, DOM style injection) | You do NOT install this directly. It ships as a `dependencies` entry (not `peerDependencies`) of both `@fluentui/react-components` and `@fluentui/react-icons`, confirmed via tarball inspection — npm installs and dedupes it automatically. `sideEffects: false`. Only reach for `@griffel/react` directly if you need `RendererProvider`/`createDOMRenderer` for style-order control (see Griffel/Tailwind section below) — but even that doesn't require a separate install, since `@fluentui/react-components` re-exports both. |
+
+**Peer dependency confirmation (verified via `npm view @fluentui/react-components peerDependencies`):**
+```
+"@types/react": ">=16.14.0 <20.0.0"
+"@types/react-dom": ">=16.9.0 <20.0.0"
+"react": ">=16.14.0 <20.0.0"
+"react-dom": ">=16.14.0 <20.0.0"
+```
+Your current `react@^18.3.0`, `react-dom@^18.3.0`, `@types/react@^18.3.0`, `@types/react-dom@^18.3.0` all satisfy these ranges — **no React upgrade needed, React 19 is explicitly NOT required** (v9 supports up to but excluding 20).
 
 ### Supporting Libraries
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| `limits` (transitive dep of `slowapi`) | pulled automatically | In-memory (or Redis-backed) rate-limit storage | Default in-memory storage is fine for a single-replica POC container. If Azure Container Apps scales the backend to >1 replica, switch `limits`' storage backend to Redis (Azure Cache for Redis) so rate limits are shared across replicas — otherwise each replica gets its own independent quota. |
-| `azure-ai-projects` (existing dep, `>=2.3.0`) | unchanged | Personalized-mode chat still goes through the existing Foundry Agent (`agent_chat_service.py` / `agent_sync_service.py`) so CRM-derived preferences can be injected via the existing prompt-registry/system-prompt mechanism | Only for the **logged-in** path. Anonymous mode should bypass the Agent layer entirely (see Core Technologies) to get reliable citations and avoid per-session agent-sync overhead for users who were never going to be tied to an HCP profile anyway. |
-| `crypto.randomUUID()` (native browser API, no package) | n/a | Generate a client-side anonymous session id, stored in `localStorage`, sent as a header to correlate multi-turn anonymous conversation without a JWT | Supported in all evergreen desktop/mobile browsers and the Teams Tab WebView2 host required by this project's responsiveness constraint — no `uuid` npm package needed. |
-| Existing lightweight store pattern (`frontend/src/stores/auth-store.ts`) | n/a | Add a sibling `guest-session-store.ts` for anonymous session id + language, using the same custom store pattern already in the repo | Keeps state management consistent — this repo deliberately has **no Redux/Zustand**; don't introduce one just for a session id. |
-| `react-markdown` + `rehype-raw` (existing deps) | unchanged | Render the digital human's answer text | Already used for AI response rendering; reuse as-is for the avatar's text bubble. Citations must render as a **separate** component (plain list of `{title, url}` links), never interpolated into the markdown body — this is a UI composition rule, not a new dependency. |
+| `@fluentui/react-theme` (transitive, not installed directly) | `9.2.1` | Provides `createLightTheme`, `createDarkTheme`, `BrandVariants`, `webLightTheme`, `webDarkTheme`, `teamsLightTheme`, `teamsDarkTheme`, `Theme`, `PartialTheme` types | Fully re-exported by `@fluentui/react-components` (confirmed: `export { createLightTheme }`, `export { createDarkTheme }`, `export { BrandVariants }`, `export { webLightTheme }`, `export { webDarkTheme }` all present in `@fluentui/react-components/dist/index.d.ts`). Import everything from `@fluentui/react-components` directly — do not add `@fluentui/react-theme` as a separate dependency, it adds no value and creates a second version to track. |
+| `@fluentui/tokens` (transitive) | `1.0.0-alpha.23` | Low-level design token primitives that `react-theme`'s `createLightTheme`/`createDarkTheme` are built on | Never import directly for this milestone — `createLightTheme`/`BrandVariants` from `@fluentui/react-components` is the correct entry point for generating your 10 pre-generated themes. |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| `pytest` + `pytest-asyncio` (existing) | Unit tests for the new retrieve-call service, XLSX-mapping importer, optional-auth dependency, rate limiter | No config changes; keep the existing `--cov-fail-under` gate honest — these are net-new modules so they should each carry their own tests to avoid dragging the global coverage number down. |
-| `Playwright` (existing) | E2E: anonymous chat flow with visible citation links; logged-in personalized flow; language switch including `es-ES` | Add scenarios under `frontend/e2e/`; reuse `i18n-switching.spec.ts` as the template for the new locale, and reuse the existing avatar/voice E2E scaffolding (`avatar-view.tsx`/`voice-session.tsx`) for the "clean UI" layout regression check (only avatar + source links visible, coach nav hidden). |
+| No new dev tool required | Fluent v9 ships fully-typed `.d.ts` files and works with the existing `tsc -b` gate | Confirmed `types` field points to `./dist/index.d.ts` in both `react-components` and `react-icons` package.json. No `@types/*` shim packages needed. |
+| Vite `optimizeDeps.include` (config change, not a package) | Pre-bundle Fluent's CJS/ESM dual-package graph in dev to avoid the "hundreds of small ESM module requests" cold-start slowdown | See Vite Config section below — this is a config edit to `vite.config.ts`, not an npm install. |
+| `rollup-plugin-visualizer` (optional, one-off) | Bundle-size before/after comparison for the migration plan's Phase D commit note | Only add temporarily for the one analysis commit, then remove — not a permanent devDependency. |
 
 ## Installation
 
 ```bash
-# Backend — only one net-new package
-cd backend
-pip install "slowapi>=0.1.10"
-# openpyxl, httpx, azure-ai-projects, azure-identity are already installed dependencies —
-# no version bump strictly required (bump openpyxl to >=3.1.2 only if pinned lower).
-
-# Frontend — no new packages at all
-# (i18next/react-i18next already support additional locales; just add
-#  "es-ES" to supportedLngs and create frontend/public/locales/es-ES/*.json)
+# Core — components + icons only. Griffel and react-theme come transitively.
+cd frontend
+npm install @fluentui/react-components@^9.74.4 @fluentui/react-icons@^2.0.334
 ```
 
-```toml
-# backend/pyproject.toml — add to [project] dependencies
-"slowapi>=0.1.10",
+No `-D` (devDependency) installs are required. No `@griffel/*` package should be added to `package.json` directly — it is already present in the tree transitively and adding it explicitly risks version drift from what `@fluentui/react-components` expects internally (Griffel's own source comments note its constants use a global `Symbol.for()` registry shared across instances — duplicate/mismatched installs are a documented risk class, not a theoretical one).
+
+## Griffel vs Tailwind: Style Injection Order (verified from source, not just docs)
+
+This is the #1 infrastructure risk flagged for this milestone. Verified mechanics, read directly from the published `@griffel/core` / `@griffel/react` package source (not just narrative docs):
+
+**How Griffel injects styles:**
+
+1. Griffel does NOT inject one big stylesheet. It creates one `<style>` tag per "style bucket" (reset `r`, catch-all `d`, link `l`, visited `v`, focus-within `w`, focus `f`, focus-visible `i`, hover `h`, active `a`, at-rules for reset `s`, keyframes `k`, at-rules `t`, `@media` `m`, `@container` legacy `c` / sorted `x` — 15 fixed buckets, in a hardcoded `styleBucketOrdering` array), and inserts each bucket's `<style>` tag into `<head>` at a position determined by:
+   - `insertionPoint` — if provided to `createDOMRenderer(document, { insertionPoint })`, all buckets are anchored relative to that DOM element.
+   - Bucket sort order (`styleBucketOrderingMap`) — buckets are inserted in the fixed order above, scanning existing `[data-make-styles-bucket]` elements already in `<head>`, **not** based on when your app code happens to render.
+2. Every Griffel class is a single, low-specificity atomic class (one class selector, specificity 0,1,0) — Griffel classes never use nested selectors or `!important`. Tailwind utility classes are also atomic, single-class, unnested, specificity 0,1,0. **Both systems structurally avoid specificity wars by design.**
+3. Because both use equal-specificity atomic selectors, **the practical conflict is not "who wins the specificity war" — it is "whichever stylesheet's rule for the same CSS property appears later in `<head>` source order wins"** (standard CSS cascade tie-break when specificity is equal).
+
+**Concrete, actionable control (implement in Phase 39/A):**
+
+```tsx
+// src/main.tsx or App.tsx — one renderer instance for the whole app
+import { RendererProvider, createDOMRenderer, FluentProvider } from "@fluentui/react-components";
+
+// In index.html, add as the FIRST child of <head>:
+//   <div id="fluent-insertion-point" style="display:none"></div>
+// This must appear BEFORE Tailwind's injected <style>/<link> (which @tailwindcss/vite
+// emits from processing your src/styles/index.css import, later in the head).
+const insertionPoint = document.getElementById("fluent-insertion-point");
+const renderer = createDOMRenderer(document, { insertionPoint });
+
+<RendererProvider renderer={renderer} targetDocument={document}>
+  <FluentProvider theme={theme}>
+    <App />
+  </FluentProvider>
+</RendererProvider>
 ```
+
+- Anchoring `insertionPoint` as the first element in `<head>` forces all Griffel bucket `<style>` tags to be inserted immediately after it — i.e. as early as possible, **before** Tailwind's stylesheet. That means **Tailwind wins ties by default** (it appears later in source order), matching the migration plan's own decision (`.omc/plans/fluent-ui-migration-plan.md` §2: "consumer `className` (Tailwind) transmits and can override Griffel classes for layout, but not guaranteed for token colors/borders").
+- **Always pass an explicit `insertionPoint` — do not rely on the default (`undefined`) behavior.** Without it, Griffel appends bucket stylesheets at the very end of `<head>`, in whatever order components first mount — fragile and inconsistent between dev/prod, and specifically flagged in the migration plan as a StrictMode double-render risk. An explicit anchor makes bucket position deterministic and independent of render timing, removing that risk category entirely.
+- `RendererProvider` and `createDOMRenderer` are both re-exported directly from `@fluentui/react-components` (confirmed present in its `.d.ts`) — no separate `@griffel/react` import needed even for this advanced control.
+- Secondary levers (`compareMediaQueries`/`compareContainerQueries` on `createDOMRenderer`) only order Griffel's own `@media`/`@container` buckets relative to each other — irrelevant to Tailwind interop, skip for this migration.
+
+**SSR:** Not applicable — this is a Vite SPA (`vite build` → static assets served by nginx per `frontend/Dockerfile`), not an SSR framework. `renderToStyleElements`/`rehydrateRendererCache` (Griffel's SSR APIs, also re-exported by `@fluentui/react-components`) are not needed here.
+
+## FluentProvider + Theme Creation (10 pre-generated themes: 5 accent × light/dark)
+
+All required APIs come from `@fluentui/react-components` directly (verified re-exports — no extra package):
+
+```ts
+// src/styles/fluent-theme.ts
+import { createLightTheme, createDarkTheme, type BrandVariants, type Theme } from "@fluentui/react-components";
+
+// One BrandVariants (16-step ramp: keys 10..160) per accent, hand-authored to align with
+// the existing Tailwind accent CSS custom properties already defined for the 5 accent classes.
+const blueBrand: BrandVariants = { 10: "...", 20: "...", /* ...through 160 */ };
+// repeat for each of the other 4 accents already defined in theme-store.ts's 5 accent classes
+
+export const fluentThemes: Record<string, { light: Theme; dark: Theme }> = {
+  blue: { light: createLightTheme(blueBrand), dark: createDarkTheme(blueBrand) },
+  // ...4 more accents = 10 Theme objects total, generated once at module load (not per render)
+};
+
+export function getFluentTheme(mode: "light" | "dark", accent: string): Theme {
+  return fluentThemes[accent][mode];
+}
+```
+
+- `webLightTheme` / `webDarkTheme` (also re-exported) are Microsoft's default un-branded Fluent 2 themes — useful only as a sanity-check fallback while wiring up `FluentProvider`, not for the final 10-theme brand matrix (they carry Microsoft's own blue brand, not this project's 5 accents).
+- `BrandVariants` is a plain object type with 16 numeric keys (10, 20, ..., 160) — `createLightTheme` and `createDarkTheme` both take the *same* `BrandVariants` object and internally adjust for light vs. dark palettes; you don't need a separate ramp per mode. This matches the migration plan's "theme is a one-way mapping generated offline, written as constants" approach (`.omc/plans/fluent-ui-migration-plan.md` §3).
+- Wire `FluentProvider`'s `theme` prop to `useThemeStore()` (existing store, `useSyncExternalStore` over `document.documentElement.classList`) so the existing `.dark` + 5-accent-class mechanism continues to drive which of the 10 pre-generated `Theme` objects is active — no change to the theme store itself, just a new consumer reading from it.
+
+## Bundle-Size Impact
+
+| Package | Tree-shaking mechanism | Verified evidence |
+|---------|------------------------|--------------------|
+| `@fluentui/react-components` | `"sideEffects": false` at package root + ESM (`module`/`import` condition → `lib/index.js`) + named exports per component | Confirmed via `package.json` inspection (`sideEffects: False`, `module: lib/index.js`). With Vite/Rollup's production build, unused named exports (e.g. `Accordion` if never imported) are eliminated. Because it's one umbrella package aggregating ~50 sub-packages, Rollup must parse the full re-export graph to determine reachability — this adds build-time analysis cost but does not bloat the shipped bundle; dead code is still eliminated. |
+| `@fluentui/react-icons` | `"sideEffects": false` for icon modules (only 2 CSS-font-related glob paths marked side-effectful) | Confirmed via `package.json`: `sideEffects: ["**/headless/fonts/styles.css", "**/headless/styles.css"]` — icon SVG/JSX modules are NOT in this list, so named imports like `import { ArrowRight24Regular } from "@fluentui/react-icons"` tree-shake cleanly; only imported icons ship. This directly satisfies the migration plan's Phase D requirement ("具名导入保证 tree-shaking"). Package is large on disk (~299MB unpacked, since it ships every icon in every size/theme as individual files) but this has zero bearing on shipped bundle size given correct named-import usage. Do not `import * as Icons`, and do not use the `/fonts` icon-font subpath (side-effectful, pulls in a whole webfont). |
+| Griffel (`@griffel/react`, `@griffel/core`) | Runtime CSS-in-JS — atomic rule sets generated at `makeStyles()` call time, injected as `<style>` tags at runtime, not bundled as static CSS strings beyond the JS describing the rules | Griffel's own runtime footprint is small (~30KB unpacked per package-size check) — not a factor comparable to component code size. |
+
+**One directional data point obtained (rate-limited on further bundlephobia queries):** a naive full, non-tree-shaken import of `@fluentui/react-icons` reports ~15.5MB raw / ~3.09MB gzip via Bundlephobia — this underscores why per-icon named imports (not namespace imports) are essential; it is not representative of actual shipped size when only the ~84 icons this codebase needs are imported by name.
+
+**Practical guidance for Phase 39/D:** Always import from the top-level named export surface (`import { Button } from "@fluentui/react-components"`, `import { ArrowRight24Regular } from "@fluentui/react-icons"`). Never deep-import from internal `lib/` paths. Verify actual shipped delta after Phase B/D by running `npm run build` and diffing `dist/assets/*.js` sizes before/after — console-printed Vite build output sizes are sufficient for a directional before/after comparison; add `rollup-plugin-visualizer` only if a visual breakdown is wanted for the commit note, then remove it.
+
+## Vite-Specific Configuration
+
+**Recommended `vite.config.ts` change — `optimizeDeps.include`:**
+
+```ts
+// frontend/vite.config.ts
+export default defineConfig({
+  // ...existing config (React plugin, Tailwind plugin, @/ alias)...
+  optimizeDeps: {
+    include: ["@fluentui/react-components", "@fluentui/react-icons"],
+  },
+});
+```
+
+**Why:** `@fluentui/react-components` aggregates ~50 separate ESM sub-packages (confirmed via its own `dependencies` list: `@fluentui/react-accordion`, `@fluentui/react-avatar`, `@fluentui/react-button`, `@fluentui/react-dialog`, etc.). In Vite dev mode, without `optimizeDeps.include`, the first cold start after adding Fluent triggers Vite's dependency crawler to discover and pre-bundle this fan-out on the fly — slow, and can trigger a dev-server "new dependencies optimized" restart mid-session. Explicitly listing both umbrella entry points lets esbuild pre-bundle the whole graph upfront. This is a standard Vite pattern for large aggregated ESM packages, not a bug fix — low risk, purely a dev-experience improvement.
+
+**Not required for this project:**
+- `ssr.noExternal` / `ssr.external` — irrelevant; this is a client-only Vite SPA build (confirmed via `vite build` → static assets served by nginx per `frontend/Dockerfile`), no Vite SSR mode in use.
+- `resolve.dedupe` — not needed; Fluent's internal Griffel dependency ranges (`^1.5.32` from react-components, `^1.6.1` from react-icons) both resolve within the same `1.x` major line, and npm/Vite naturally dedupes without manual intervention.
+- No CommonJS interop plugin — both packages ship proper `exports` maps with dual `import`/`require` conditions; Vite's default esbuild-based CJS handling is sufficient. No `@rollup/plugin-commonjs` needed.
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|--------------------------|
-| Direct Knowledge Base `retrieve` REST call via `httpx` for anonymous citations | Route anonymous chat through the existing Foundry Agent + `knowledge_base_retrieve` MCP tool (reuse `agent_chat_service.py` as-is) | Only if citations can be relaxed to "best-effort title mention in prose" rather than structured, clickable page/document links — not acceptable given the explicit "source separation" + "auditable" requirements in CLAUDE.md / `docs/requirements.md`. |
-| `httpx` REST calls to the Search `retrieve` endpoint | `azure-search-documents` SDK (`azure.search.documents.knowledgebases.KnowledgeBaseRetrievalClient`, preview `11.7.0b2`; not confirmed whether GA `12.0.0` includes this module) | If the team later wants strong typing over the retrieve request/response instead of raw JSON, and is comfortable tracking a preview-versioned Azure SDK (this repo's own comment in `pyproject.toml` about `azure-ai-projects`'s `create_from_package` being removed is a cautionary precedent for preview SDK churn). |
-| `openpyxl` for reading the CRM mapping XLSX | `pandas` (`pd.read_excel`) | Only if the mapping table grows beyond a simple flat lookup (e.g., needs joins/filters/aggregation before import) — unlikely for a POC "Excel-based mapping, no live CRM integration." |
-| `slowapi` for anonymous-endpoint rate limiting | Azure API Management / Azure Front Door WAF rate limiting at the infra layer | For production hardening post-POC, or if multiple public endpoints need centrally managed limits — but that's a new Azure resource, more setup than the demo timeline allows now. |
-| Custom lightweight store for guest session id | `zustand` | If anonymous-mode client state grows complex (multi-step wizards, cross-tab sync) beyond a session id + language — not the case here. |
+| `@fluentui/react-components` (umbrella package) | Installing individual `@fluentui/react-button`, `@fluentui/react-dialog`, etc. sub-packages directly | Only if you need to pin one sub-package's version independently (e.g. patch a component bug without bumping the umbrella). Not warranted here — adds version-management overhead for zero benefit given tree-shaking already eliminates unused code from the umbrella. |
+| `createLightTheme`/`createDarkTheme` + `BrandVariants` (from `@fluentui/react-components`) | `webLightTheme`/`webDarkTheme` as final themes | Only if shipping Microsoft's default un-branded Fluent 2 look with zero brand customization — not applicable here, since the milestone requires 5 custom accent brands aligned to existing Tailwind CSS variables. |
+| Explicit `insertionPoint` via `createDOMRenderer` + `RendererProvider` | Default `FluentProvider` with no explicit renderer (Griffel's implicit default, styles appended at first-render time) | Only acceptable for a throwaway prototype where style-order determinism doesn't matter. For this production migration where Tailwind coexists long-term (Phases A–E), explicit `insertionPoint` is required — this is the single most important config decision surfaced by this research. |
+| `@fluentui/react-icons` standard SVG entry | `@fluentui/react-icons`'s `/fonts` icon-font subpath | Only if you specifically need webfont-based icon rendering (e.g. legacy `<i>`-tag usage) — irrelevant here, and it defeats tree-shaking since it's the one side-effectful export path. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|--------------|
-| Building citation extraction by prompt-engineering the Agent to emit `[ref: doc.pdf p.3]`-style markers in its free-text answer | The `knowledge_base_retrieve` MCP tool result is unstructured JSON-in-text (`ref_id` + `title` only, no URL/page), and LLMs are unreliable at consistently emitting exact machine-parseable markers — this produces broken/missing citations in production, not just occasionally. Confirmed via MS Learn: the MCP path has no `references`/`activity` envelope at all. | Direct `retrieve` REST call with `includeReferences=true`, `includeReferenceSourceData=true` — get citations as structured data, not scraped text. |
-| `azure-search-documents` SDK just to make one `retrieve` call | Adds a second, preview-versioned Azure SDK to track for breaking changes, when the codebase has already standardized on raw `httpx` + REST for every other Search interaction (`knowledge_base_service.py`). Inconsistent patterns increase maintenance cost more than they save typing. | `httpx` against the documented REST endpoint, same auth helper already in `knowledge_base_service.py`. |
-| `pandas` / `xlrd` for the CRM mapping import | Unnecessary heavy dependency (pandas pulls in numpy) for reading one small lookup sheet; `xlrd` no longer supports `.xlsx` (legacy `.xls` only) and would be the wrong tool regardless. | `openpyxl` (already installed). |
-| Zustand/Redux for anonymous session state | Contradicts this repo's explicit "No Redux — use TanStack Query for server state, lightweight store for auth" convention; a session id + language preference doesn't need a state library. | Extend the existing custom store pattern (`frontend/src/stores/`). |
-| Skipping rate limiting on the anonymous endpoint entirely | It is the only unauthenticated, LLM/Search-backed endpoint in the app — leaving it unlimited is a direct cost and availability risk once the demo link is shared externally. | `slowapi`, even a generous limit (e.g., 20 req/min/IP) is enough to blunt accidental abuse for a POC. |
-| Assuming the Foundry IQ index's `sourceData`/semantic configuration already exposes a document URL and page number | Not verified in this pass — the retrieve action's `references[].sourceData` is only populated for whatever fields the underlying search index's semantic configuration and `sourceDataFields` actually project (see Gaps below). If the Phase 17 index doesn't include a blob URL / page field, citations will show titles but no working links. | Before implementing, inspect the actual index schema used by the existing Foundry IQ KB (Phase 17) and add a URL/page field to `sourceDataFields` if missing — this is an indexing-pipeline task, not a library choice. |
+| `@fluentui/react` (Fluent UI **v8**, the older "Northstar"-era package sometimes still surfaced in search results/tutorials) | Wrong major version — v8 is the pre-Griffel, JSS-based Fluent 1 design system, not the Fluent 2 / Azure AI Foundry portal look this milestone targets. Entirely different component API; would require a second, incompatible adapter layer. | `@fluentui/react-components` (v9) — confirmed this ships Fluent 2 / the Foundry-portal aesthetic. |
+| `@fluentui/react-northstar` | Deprecated predecessor exploration of a "Fluent 2"-style API before v9 consolidated it; no longer actively maintained. | `@fluentui/react-components` v9. |
+| Installing `@griffel/react` or `@griffel/core` directly in `package.json` | Unnecessary — both are already transitive dependencies, and `RendererProvider`/`createDOMRenderer`/`makeStyles`/`mergeClasses` are all re-exported from `@fluentui/react-components`. Adding them explicitly risks version drift from what Fluent's internals expect — Griffel's own source notes its constants are shared via a global `Symbol.for()` registry, so duplicate/mismatched installs are a real, documented risk class. | Import everything Griffel-related from `@fluentui/react-components`'s public API surface. |
+| Installing `@fluentui/react-theme` directly | Same reasoning — fully re-exported by `@fluentui/react-components` (confirmed present in its `.d.ts`: `createLightTheme`, `createDarkTheme`, `BrandVariants`, `webLightTheme`, `webDarkTheme`). | Import from `@fluentui/react-components`. |
+| Any second global CSS reset/normalize layer applied alongside Griffel and Tailwind Preflight (e.g. re-adding `emotion`/`styled-components` global resets, or a hand-rolled global reset targeting the same elements Griffel's `r` bucket already resets) | Griffel already injects its own scoped reset bucket (`r`, first in `styleBucketOrdering`) for Fluent components specifically. Tailwind v4 already applies its own global Preflight reset via `@tailwindcss/vite`. A third global reset would double-apply and fight both, producing hard-to-trace order bugs. | Keep Tailwind Preflight as the one global reset; let Griffel's scoped `r` bucket handle only Fluent-internal component resets (already scoped by Griffel's atomic class model, not applied globally). |
+| A separate icon-font `<link>`/`@font-face` for Fluent System Icons | Bypasses tree-shaking — the `/fonts` subpath and its two CSS files are the only side-effectful part of `@fluentui/react-icons`, and using them forces loading the entire icon set as a webfont regardless of which ~84 icons are actually used. | Named SVG-icon imports (`import { ArrowRight24Regular } from "@fluentui/react-icons"`), matching the migration plan's Phase D icon-adapter approach exactly. |
+| Keeping `@radix-ui/react-slot` around specifically to reimplement `asChild` for the new adapter layer | Fluent v9 has no `Slot`/`asChild` concept, and the migration plan already resolved this ("adapter 内用最小 cloneElement 替代") — pulling in more Radix for this one pattern reintroduces a dependency Phase F is meant to remove. | Minimal `React.cloneElement`-based helper inside the adapter layer, no new package. |
+| Upgrading React to 19 "to be safe" for Fluent v9 | Unnecessary and out of scope — verified peer range `react: ">=16.14.0 <20.0.0"` fully covers `react@^18.3.0` already in use; no compatibility gap exists. | Keep React 18.3, do not touch this dependency for this milestone. |
 
 ## Stack Patterns by Variant
 
-**If anonymous mode needs spoken (avatar) output, not just text:**
-- Do the `retrieve` call server-side first (with `outputMode: "answerSynthesis"` so Search's own LLM step produces one clean answer string), then feed that finished string into Azure Speech TTS / Voice Live for a single-shot utterance.
-- Don't route anonymous voice through Voice Live → Agent → MCP-tool-KB, for the same citation-loss reason as text mode.
+**If a future SSR/Next.js migration is ever considered (not applicable to the current Vite SPA):**
+- Use `renderToStyleElements` + `rehydrateRendererCache` (both re-exported from `@fluentui/react-components`) to extract Griffel's server-rendered styles and rehydrate them client-side. Out of scope for now — no config change needed today.
 
-**If personalized (logged-in) mode later needs its own KB citations too:**
-- Keep the existing Agent+MCP path for the conversational/CRM-injected behavior, but if citations become a requirement there as well, call `retrieve` in parallel (or first, then pass its `response` text into the Agent as context) rather than trying to extract citations from the Agent's own MCP-grounded reply.
-
-**If Container Apps scales the backend beyond one replica:**
-- Switch `slowapi`/`limits` storage from the in-memory default to Redis (Azure Cache for Redis), otherwise per-replica rate limits are effectively multiplied by replica count.
+**If bundle size monitoring becomes an ongoing practice after Phase D:**
+- Add `rollup-plugin-visualizer` as a devDependency permanently only if the team wants recurring bundle reports; otherwise keep it a one-off, removed-after-use tool per commit.
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
-|-----------|------------------|-------|
-| `slowapi==0.1.10` | Python `>=3.7,<4.0`, Starlette-based FastAPI `>=0.115.0` | No conflict with existing pinned FastAPI/Starlette versions. |
-| `openpyxl>=3.1.2` (installed) / `3.1.5` (latest) | Python 3.11 | No breaking changes between 3.1.2→3.1.5 relevant to basic cell reads; safe to leave as-is or bump opportunistically. |
-| Knowledge Retrieval REST `api-version=2026-05-01-preview` | Same Azure AI Search resource already used for `SEARCH_API_VERSION` in `knowledge_base_service.py` | Reuse that existing constant rather than hardcoding a second literal — keeps the whole codebase on one Search API version and one place to bump it later. |
-| `i18next 25.10.5` / `react-i18next 16.6.2` | Adding `es-ES` locale | No version constraint; ensure the `ns` array in `frontend/src/i18n/index.ts` and the set of JSON files under `public/locales/es-ES/` stay in sync with `en-US`/`zh-CN` (14 namespaces today) — a missing namespace file silently falls back to `fallbackLng` (`en-US`) for that section only, which is easy to miss in review (see `.planning/debug/i18n-missing-zh-translations.md` for a prior instance of exactly this class of bug). |
+|-----------|-------------------|-------|
+| `@fluentui/react-components@9.74.4` | `react@^18.3.0`, `react-dom@^18.3.0` | Verified peer range `>=16.14.0 <20.0.0` — no upgrade needed. |
+| `@fluentui/react-components@9.74.4` | `@fluentui/react-icons@2.0.334` | No direct interdependency, but both independently depend on compatible `@griffel/react` ranges (`^1.5.32` vs `^1.6.1`) that npm resolves to a single deduped `1.x` install without conflict. |
+| `@fluentui/react-components@9.74.4` | `typescript@^5.6.0` (existing) | Fluent v9's `.d.ts` files use standard modern TS syntax; no minimum-TS-version issue observed against 5.6. |
+| `@fluentui/react-components` (Griffel-based styling) | `tailwindcss@^4.0.0` + `@tailwindcss/vite@^4.0.0` (existing) | Coexist safely via atomic-CSS-vs-atomic-CSS equal-specificity design; requires an explicit `insertionPoint` (see Griffel section) for deterministic style-source-order — not because of a specificity conflict, but to make override behavior between the two systems predictable rather than mount-order-dependent. |
+| `@fluentui/react-components` | `vite@^6.0.0` | No Vite-major-version-specific incompatibility found; the only recommended addition is `optimizeDeps.include` for dev-server cold-start performance, a general Vite pattern for large aggregated ESM packages, not a Fluent-specific fix. |
 
 ## Sources
 
-- `backend/app/services/knowledge_base_service.py` (repo) — existing Search REST/httpx auth pattern, `SEARCH_API_VERSION` constant, `build_search_tools`/MCPTool wiring — HIGH confidence (read directly)
-- `backend/app/services/agent_chat_service.py` (repo) — existing Responses API `agent_reference` streaming pattern for the "text direct-to-Agent" path — HIGH confidence (read directly)
-- `backend/app/dependencies.py`, `backend/app/models/user.py`, `backend/app/services/material_service.py`, `backend/app/services/skill_text_extractor.py`, `frontend/src/i18n/index.ts`, `frontend/src/stores/auth-store.ts` (repo) — confirmed no existing optional-auth dependency, no XLSX read path, no citation code anywhere, i18n `supportedLngs` currently `["en-US","zh-CN"]` only — HIGH confidence (read directly)
-- [Agentic Retrieval Overview — Azure AI Search (Microsoft Learn, updated 2026-07-02)](https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-overview) — confirms Foundry IQ is built on Search's agentic retrieval pipeline, and that it "can return source references and an activity log" — HIGH confidence (official docs, current)
-- [Query Knowledge Base via API or MCP — Azure AI Search (Microsoft Learn, updated 2026-07-24)](https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-how-to-retrieve) — **critical finding**: the `retrieve` REST/SDK action returns `response`/`activity`/`references` (with `docKey`, `sourceData`, `activitySource`), but the MCP tool result used by Foundry Agents does **not** return `activity`/`references` — only `result.content[].text` as a JSON-encoded string with `ref_id`/`title` — HIGH confidence (official docs, dated within the last week)
-- PyPI: `slowapi` 0.1.10 (released 2026-06-13), `openpyxl` 3.1.5 (latest; 3.1.2 installed), `azure-search-documents` 12.0.0 GA / 11.7.0b2 preview (verified via `pip index versions` and `pypi.org` JSON API) — HIGH confidence (live registry query)
-
-## Gaps to Address (before implementation, not blocking research)
-
-- **Not verified:** whether the actual Foundry IQ knowledge base / search index created in v1.0 Phase 17 has `sourceDataFields`/semantic configuration that includes a document URL and page number. If not, the `retrieve` action's `references[].sourceData` will lack the fields needed to render a clickable "document link" — this needs a quick inspection of the live index schema (or a small indexer/skillset change) before the anonymous citation UI can be considered done, not just "returns something."
-- **Not verified:** whether `azure-search-documents` 12.0.0 GA has folded in the `knowledgebases` module (only confirmed present in `11.7.0b1`/`b2` preview via docs) — irrelevant to the recommended `httpx` approach, but worth a five-minute check if the team ever wants the typed SDK later.
+- npm registry direct queries (`npm view @fluentui/react-components ...`, `npm view @fluentui/react-icons ...`, `npm view @griffel/react versions`, `npm view @griffel/core version`, publish-date `time` field) — HIGH confidence, live registry data checked 2026-08-06.
+- Downloaded and inspected actual package tarballs via `npm pack` for `@fluentui/react-components@9.74.4`, `@fluentui/react-icons@2.0.334`, `@fluentui/react-theme@9.2.1`, `@griffel/core@1.21.3`, `@griffel/react@1.5.32` — read `package.json` (`sideEffects`, `exports`, `dependencies`, `peerDependencies`) and `.d.ts`/`.js` source directly (`createDOMRenderer.d.ts`, `createDOMRenderer.js`, `getStyleSheetForBucket.js`, `constants.js`, `index.d.ts`) — HIGH confidence, verified against shipped code, not documentation prose.
+- `@fluentui/react-components/dist/index.d.ts` re-export list — confirmed `RendererProvider`, `createDOMRenderer`, `makeStyles`, `mergeClasses`, `FluentProvider`, `createLightTheme`, `createDarkTheme`, `BrandVariants`, `webLightTheme`, `webDarkTheme`, `teamsLightTheme`, `teamsDarkTheme`, `Theme`, `PartialTheme` are all present — HIGH confidence.
+- WebFetch of Griffel's `@griffel/react` package declaration files (`RendererContext.d.ts`, `renderToStyleElements.d.ts`) for SSR API surface — MEDIUM confidence (decl files, not narrative docs, but sufficient to confirm API existence and non-necessity for this SPA project).
+- Bundlephobia API query — partially rate-limited (429s); obtained one successful data point for a naive full import of `@fluentui/react-icons@2.0.334` (~15.5MB raw / ~3.09MB gzip) — MEDIUM confidence, single directional data point, not authoritative for actual tree-shaken output size.
+- GitHub issue search (`microsoft/fluentui` repo) for Vite `optimizeDeps` guidance — LOW confidence / inconclusive (search tooling returned minimal results); the `optimizeDeps.include` recommendation is based on general, well-established Vite dependency-optimization practice for large multi-package ESM aggregations, not a directly-sourced Fluent-specific GitHub issue — flagged as the one area validated more by general Vite knowledge than a Fluent-specific citation.
+- `.planning/PROJECT.md` and `.omc/plans/fluent-ui-migration-plan.md` (repo) — milestone scope, adapter-mode decisions, and already-resolved risk items (scroll-area kept on Radix, `SheetContent side="bottom"` single call site, toast bridge requirements) — HIGH confidence (read directly).
+- `frontend/package.json` (repo) — confirmed current React 18.3, Vite 6, Tailwind v4, TypeScript 5.6, and the 24-component Radix/shadcn baseline being migrated away from — HIGH confidence (read directly).
 
 ---
-*Stack research for: AI Avatar Platform v2.0 Avatar MVP (anonymous grounded Q&A + citations, CRM-Excel personalization, es-ES i18n, avatar-first UI)*
-*Researched: 2026-07-31*
+*Stack research for: Fluent UI v9 (Fluent 2) migration infrastructure — AI Avatar Platform frontend, v3.0 milestone*
+*Researched: 2026-08-06*

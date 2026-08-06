@@ -1,174 +1,153 @@
 # Project Research Summary
 
-**Project:** AI Avatar Platform
-**Milestone:** v2.0 Avatar MVP (anonymous grounded Q&A + citations, CRM-Excel personalization, es-ES i18n, avatar-first UI, legacy coach hide)
-**Domain:** Grounded knowledge-Q&A digital human — brownfield integration onto an existing authenticated MR-coaching platform (FastAPI + React, Azure PaaS)
-**Researched:** 2026-07-31
-**Confidence:** MEDIUM-HIGH
+**Project:** AI Avatar Platform — v3.0 Fluent UI v9 Migration
+**Domain:** UI component library adapter-mode migration (shadcn/Radix+Tailwind to @fluentui/react-components v9), aligning frontend visual language with the Azure AI Foundry portal
+**Researched:** 2026-08-06
+**Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone is not a greenfield RAG-chatbot build — it is a targeted graft of four capabilities onto a mature, authenticated-only coaching platform (Phases 1–31 already shipped). The standard industry pattern for the headline capability (anonymous grounded Q&A with citations) is retrieval → strictness-filtered generation → structured, extractive citations rendered separately from the answer. The critical technical discovery across all four research files is that this repo's existing Foundry IQ integration (the MCP `knowledge_base_retrieve` tool used by the Agent) does NOT return a structured citation envelope — only Azure AI Search's direct `retrieve` REST action does. This single fact reshapes the architecture: citations must come from a second, concurrent `retrieve()` call (the "dual-query shadow" pattern), not by parsing the Agent's own grounding call.
+This is a technical migration, not a greenfield feature build: swap the internal implementation of 21 `@/components/ui/*` exports from Radix primitives + cva/Tailwind variants to `@fluentui/react-components` v9 (Fluent 2), while keeping every one of the 126 consumer files compiling unchanged. Experts approach this class of migration as an adapter layer: the public import surface and prop contracts stay stable while internals are rewritten one component at a time, each its own commit, so the change is bisectable and rollback-safe until the final irreversible dependency-removal phase. The installation footprint is minimal (2 npm packages: `@fluentui/react-components` + `@fluentui/react-icons`; Griffel and `@fluentui/react-theme` come transitively and should never be installed directly), no React version change is required, and Fluent v9 is fully typed and Vite-compatible with one recommended `optimizeDeps.include` tweak for dev-server cold-start.
 
-The recommended approach reuses almost everything already in the stack — `httpx`, `openpyxl`, `azure-ai-projects`, `i18next` — and adds exactly one new dependency (`slowapi`, for rate limiting). Architecturally, the safest path is additive: new `AnonymousAvatarSession`, `AvatarInteractionLog`, `PublicKnowledgeConfig`, and `CrmProfileMapping` models sit alongside (not inside) the existing `CoachingSession`/`HcpKnowledgeConfig` tables, which are hard-wired with NOT NULL FKs into the coach domain and are unsafe to repurpose for anonymous/public traffic. A single shared "public avatar" hosted Foundry agent is reused for both anonymous and personalized turns, with per-user CRM context injected at chat time (not baked into agent instructions) to avoid per-user agent sprawl.
+The recommended approach is: land infra first (theme bridge with 10 pre-generated Theme objects, and a deterministic Griffel/Tailwind style-order contract via an explicit insertionPoint anchor + RendererProvider, wired before any Fluent component renders); migrate the 12 leaf components to establish the adapter pattern (data-slot preservation, mergeClasses internals, cloneElement shim for asChild); migrate the 9 composites (C1-C8, minus scroll-area which is explicitly excluded), sequencing the two highest-risk/zero-test-coverage components (Select, DropdownMenu) with dedicated time budget; swap icons and toast, both independent of the composite work and gated by their own empirical spikes; only after all of A-E are verified, run the irreversible Radix/lucide/sonner dependency removal.
 
-The biggest risks are not stack risks but security/trust-boundary risks inherited from a codebase where JWT auth has silently doubled as the only rate limiter and the only Voice-Live cost control. Opening any endpoint to anonymous traffic — chat, citations, or Voice Live tokens — without an explicit rate limiter and a hard-allow-listed single public agent/KB is the top blocking risk (cost exposure on a premium Azure service, plus scope-leakage into personalized/HCP-only agents). The second-biggest risk is citation integrity: because citations require a bespoke extraction path that doesn't exist today, it is easy to ship a demo where the avatar "talks" convincingly while citations are stale, mismatched, or fabricated — this must be tested explicitly, not eyeballed. Both risks are well-understood and have concrete mitigations documented below; there are no open stack-availability blockers.
+The dominant risk across all four research files is not any single component's API delta, it's the structural risk that Griffel and Tailwind both emit equal-specificity atomic CSS, so whichever stylesheet lands later in `<head>` wins ties, and without an explicit anchor this order is non-deterministic across dev/prod/reloads. This is fully solved by an insertionPoint anchor placed before Tailwind's injected stylesheet, verified against the built dist/index.html, not just dev mode. The second-tier risk is concentrated in exactly two composites, Select (C3) and DropdownMenu (C4), which combine the largest Radix-to-Fluent API-shape deltas with zero pre-existing test coverage. Three specific behaviors could not be resolved by desk research and need one-time empirical spikes before their respective phases proceed: whether Fluent's toastId truly survives into dispatchToast (blocks Phase 41/E rollout), the exact default-sizing behavior of individually-imported Fluent icons (blocks Phase 41/D batch rollout), and confirmation that React 18 StrictMode's double-render doesn't destabilize the Griffel renderer (a Phase 39/A code-review gate, not a blocking spike). One meaningful correction surfaced by this research: the migration plan's assumption that Fluent's OverlayDrawer has no bottom-position support is wrong, position="bottom" is supported (verified against the shipped .d.ts), so the single avatar-page.tsx side="bottom" call site is not a blocker.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Almost none of the four new capabilities need a new heavy dependency — the work is new usage of libraries already present, plus one small new dependency. The one architecturally consequential decision is bypassing the Agent+MCP path for anonymous citations in favor of a direct REST call to Azure AI Search's Knowledge Retrieval `retrieve` action.
+Only two direct npm installs are needed: `@fluentui/react-components@^9.74.4` (the umbrella package re-exporting ~50 sub-packages plus Griffel's styling APIs and theme creators) and `@fluentui/react-icons@^2.0.334` (named per-icon exports, tree-shakes cleanly). Both are verified React-18-compatible (peerDependencies: react >=16.14.0 <20.0.0), no React upgrade is needed or warranted for this milestone. Griffel and `@fluentui/react-theme` ship transitively and must never be added directly to package.json, both are fully re-exported from the umbrella package, and Griffel's own source uses a global Symbol.for() registry that makes duplicate/mismatched installs a real risk class. The one Vite-specific config change recommended is adding `optimizeDeps.include: ["@fluentui/react-components", "@fluentui/react-icons"]` to avoid a slow/flaky dev-server cold start.
 
 **Core technologies:**
-- Azure AI Search Knowledge Retrieval `retrieve` REST action (`api-version=2026-05-01-preview`) — the only Foundry IQ code path returning a structured `references[]` array (docKey, sourceData, activitySource); required for auditable, clickable citations. Confirmed via Microsoft Learn: the MCP tool path used by the existing Agent integration does NOT return this envelope.
-- `httpx` (existing dep) — call the `retrieve` endpoint directly, reusing the same auth helper pattern already in `knowledge_base_service.py`.
-- `openpyxl` (existing dep) — read the CRM Excel mapping table (user_id → profile/preferences) into a DB table; a new read-path, not a new library.
-- `fastapi.security.OAuth2PasswordBearer(auto_error=False)` — new `get_current_user_optional` dependency so one endpoint contract can serve both anonymous and logged-in avatar sessions.
-- `slowapi >=0.1.10` (new dep) — the one genuinely new package, needed because every other endpoint in this codebase relies on JWT auth as its implicit rate limiter; an anonymous endpoint has none of that protection by default.
-- `i18next` / `react-i18next` (existing deps) — adding `es-ES` is a config + content change (locale folder + JSON files), not a library upgrade.
+- `@fluentui/react-components` (9.74.4): Fluent 2 component library, single install for ~50 sub-packages — chosen because Foundry-portal visual parity requires Fluent 2 specifically, not v8/"Northstar"
+- `@fluentui/react-icons` (2.0.334): Fluent System Icons, named SVG imports — tree-shakes correctly only via named imports; wildcard imports are an easy-to-introduce bundle-bloat trap
+- `createLightTheme`/`createDarkTheme`/`BrandVariants` (re-exported, not installed separately): generates 10 pre-generated theme objects (5 accents x light/dark) from offline-authored 16-stop color ramps — chosen over runtime ramp generation since no ramp-generator ships in the runtime package
 
-**Gaps flagged in STACK.md:** whether the live Foundry IQ index's `sourceDataFields`/semantic configuration actually projects a document URL + page number is unverified — if not, citations will show titles with no working links and need an indexing-pipeline fix before the anonymous citation UI is "done."
+### Expected Features (= Component Migration Landscape)
 
-### Expected Features
+This milestone is a component-mapping deliverable, not a market feature set. The "features" are contractual guarantees that must survive the swap.
 
-**Must have (table stakes):**
-- No-login entry to avatar Q&A — blocked today by `CoachingSession.user_id` being NOT NULL; needs a dedicated anonymous session mechanism
-- Answers grounded only in indexed public-site content, with a defined refusal/fallback for no-match queries — required to avoid unaudited pharma claims
-- Per-answer citation (page + document link) rendered as a UI element separate from the avatar's speech/text — explicit `CLAUDE.md` Domain Rule #6/#7, not polish
-- Login-gated personalized mode using Excel-based profile mapping + system-prompt preference injection
-- Spanish (`es`) added to the i18n framework for UI text
-- Clean UI: only digital human + document links visible; legacy coach nav hidden (code retained)
+**Must have (table stakes, non-negotiable):**
+- All 21 exports keep identical name + props signature (126 consumer files must compile unchanged)
+- `data-slot="xxx"` preserved on every component (~39 test assertions key off it)
+- `asChild` behavior preserved via a cloneElement shim (Fluent has no Slot concept) — 33 files depend on this
+- Checkbox/Switch `onCheckedChange(boolean)` call-site contract preserved despite Fluent's `onChange(ev, data)` signature (Fluent's tri-state value is the string "mixed", not "indeterminate" — a documented footgun)
+- `toast.loading()`/`toast.dismiss(id)` lifecycle (one real call site, avatar-page.tsx:224-243) — handled via a pub/sub bridge decoupling non-component callers from Fluent's hook-bound dispatchToast
+- Radix `data-state` test assertions — Fluent emits no equivalent attribute; must be rewritten to ARIA per component, or the adapter must re-emit data-state manually where cheaper than rewriting tests
 
-**Should have (competitive/differentiator):**
-- Auditable per-response knowledge-source trail (same underlying work as citations, framed for trust)
-- Single avatar UI serving both anonymous and personalized modes (recommend "start fresh on login" rather than seamless upgrade, for v1 simplicity)
-- Configurable premium Azure AI Avatar with Speech-TTS-only fallback (already exists; confirm it also applies to the new anonymous surface)
+**Should have (value of migration):**
+- Visual parity with Azure AI Foundry portal (the actual business driver)
+- Griffel makeStyles/theme-token-driven variants replacing ad-hoc Tailwind variant strings
+- Native WAI-ARIA authoring-practice compliance as a side benefit of Fluent's composite components
 
-**Defer (v1.x / v2+):**
-- Mid-session language switching without avatar-session restart (avatar-level Spanish support and reconnect mechanics are unverified — ship "switch = new session" for v1)
-- Seamless anonymous→personalized continuity mid-conversation
-- Live CRM integration, automated preference learning/deep memory, OAuth/Entra SSO, Teams Tab channel, full legacy code deletion — all explicitly out of scope per `PROJECT.md`
+**Defer / explicitly excluded:**
+- `scroll-area` migration — user-decided exception (2026-08-05), stays on Radix permanently
+- Full `Field` component adoption for forms — narrowly scoped to swapping only FormLabel's internal Label
+- Auto-scripted icon mapping — explicitly rejected; all 84 lucide-to-Fluent icon mappings must be manually reviewed
 
 ### Architecture Approach
 
-The integration is additive and parallel-structure, not a modification of existing coach-domain models. A new `public_avatar.py` router (no auth, slowapi-limited) and a new `avatar.py` router (JWT-gated) both delegate to one shared `avatar_service.handle_turn()` orchestrator, which runs the existing `agent_chat_service.stream_agent_response()` (reused unchanged) concurrently with a new `avatar_search_service.retrieve()` call for citations, then writes an audit-log row. Personalization is injected per-turn as a prepended context message via a small additive parameter on `agent_chat_service`, not by re-syncing a Foundry agent per user.
+The integration is a set of small, isolated infrastructure additions layered above the existing app shell, not a restructuring of it. FluentProvider becomes the outermost visual/innermost logical wrapper inside the existing provider tree (inside QueryClientProvider, above RouterProvider), rendered with `className="contents"` + transparent background so it never competes with body's Tailwind-owned background or introduces an extra box into layout-sensitive pages. A parallel, independent theming system (FluentThemeBridge, a read-only subscriber to the existing useThemeStore()) translates the current `.dark`/`.theme-{accent}` class mechanism into one of 10 offline-pre-generated Fluent Theme objects — theme-store.ts itself requires zero changes. The single most consequential architectural decision is the explicit insertionPoint anchor combined with a module-scope (never component-body) createDOMRenderer/RendererProvider pair — this makes Tailwind deterministically win cascade ties over Griffel for the entire multi-phase coexistence period. Two new subsystems round out the infra: an icon adapter (84 lucide-named wrappers around Fluent icons that strip Fluent's default fontSize so Tailwind size-* utilities keep controlling rendered size) and a toast bridge (a pub/sub bus that decouples the 46 non-component call sites of toast.xxx() from Fluent's hook-bound useToastController).
 
 **Major components:**
-1. `avatar_service.py` (new) — per-turn orchestrator: agent chat stream + citation retrieve (concurrent) + audit-log write
-2. `avatar_search_service.py` (new) — direct `httpx` wrapper around AI Search's `retrieve` REST action, reusing existing `SEARCH_API_VERSION`/auth helpers
-3. `AnonymousAvatarSession` / `AvatarInteractionLog` / `PublicKnowledgeConfig` (new models) — parallel, low-blast-radius tables kept entirely outside the `CoachingSession`/`HcpKnowledgeConfig` bounded context
-4. `personalization_service.py` (new) — builds a per-user context message from `CrmProfileMapping` rows, injected at chat time (not agent-sync time)
-5. `crm_mapping_service.py` (new) — Excel ingestion pattern-borrowed from the existing `material_service.py` upload/versioning shape
-6. Frontend `avatar-page.tsx` + `sources-panel.tsx` (new) — two distinct DOM regions satisfying the "never merge answer and citation" rule; extends `use-sse.ts` with a `citations` event case
+1. Theme bridge (`fluent-theme.ts` + `fluent-theme-bridge.tsx`) — generates/caches 10 Theme objects, subscribes to existing theme store, feeds FluentProvider
+2. Griffel/Tailwind insertion-order contract (index.html anchor + module-scope renderer) — the deterministic cascade-tie-break mechanism every other phase depends on
+3. Adapter layer (`components/ui/*.tsx`, 21 components) — internal Griffel makeStyles/mergeClasses, data-slot preserved, cloneElement shim for asChild, consumer className always merged last
+4. Icon adapter (`components/icons/`) — 84 lucide-compatible named exports wrapping Fluent icons
+5. Toast bridge (`lib/toast/`) — pub/sub decoupling for the global toast.xxx() singleton API
 
 ### Critical Pitfalls
 
-1. **App assumes "authenticated everywhere" (router + feature-flag layer)** — `router/index.tsx` wraps everything in `ProtectedRoute`/`GuestRoute` with `/` hardcoded to redirect to `/login`, and `ConfigProvider` only resolves feature flags `if (isAuthenticated)`. Avoid by adding a genuinely public top-level route and a public, unauthenticated `GET /api/v1/config/public` flags endpoint — do not reuse the authenticated `useFeatureFlags` hook.
-2. **No rate limiting exists anywhere in the backend today** — JWT auth has been the only cost control on the premium Voice Live/Search/OpenAI path. Any anonymous endpoint without an explicit limiter (`slowapi`) is a direct, fast-accumulating Azure cost and abuse risk from hour one of public exposure. Must be solved in the same phase as the anonymous endpoint, not deferred.
-3. **Anonymous WebSocket/chat must not reuse the authenticated trust boundary "with auth made optional"** — build a dedicated, allow-listed single-agent/single-KB anonymous entrypoint; never let an anonymous caller supply an `hcp_profile_id`/agent identifier that could reach personalized or internal-training content.
-4. **Citations have no extraction path today and are easy to fake** — `AgentResponseEvent` only carries `text`/`completed`; nothing surfaces which document backed an answer. Must build explicit, tested citation extraction (via the `retrieve` REST call) as a first-class `sources` field from day one — verify with two different questions in a row and confirm citations actually change.
-5. **Prompt injection / PII exposure via Excel-derived preference injection** — CRM/Excel values are internal but not automatically safe to concatenate unsanitized into a system prompt; treat as untrusted input (allowlist/delimit), minimize injected fields, and never log full prompts with PII at default level.
-6. **Adding `es` silently breaks hardcoded 2-locale assumptions** (`supportedLngs`, an existing E2E assertion, `User.preferred_language`) and i18next's fallback masks missing-translation gaps rather than failing loudly — requires an atomic update plus an automated key-parity check across all namespaces, not manual spot-checking.
-7. **"Hide legacy coach entrance" is ambiguous between nav-link hiding and route-guarding** — over-scoping into route guards breaks the large existing E2E suite that navigates via direct `page.goto()`; explicitly scope to nav-link visibility only, leave all routes reachable.
+1. **Griffel/Tailwind style-order inversion** — without an explicit insertionPoint, Griffel appends styles at mount time, making cascade-tie winner non-deterministic across dev/prod/reloads (silent color/override bugs). Avoid via the module-scope insertionPoint anchor, verified as a repeatable build-check against the built dist/index.html.
+2. **Fluent icon fontSize silently defeats Tailwind size-* sizing** — a no-compile-error, potentially all-84-icons-at-once visual regression. Avoid by spiking 3-5 representative icons at multiple size-* values before any directory-batch rollout begins (hard entry gate).
+3. **FluentProvider paints over body's Tailwind background / breaks grid layouts** — avoid with `className="contents"` + transparent background, verified against avatar-page.tsx's CSS-grid layout.
+4. **Toast loading()/dismiss(id) lifecycle silently breaks** two ways: toastId may not actually survive into dispatchToast (needs a live check before the 46-file rollout), and `vi.mock("sonner")` migrations can silently stop intercepting if not verified per-file.
+5. **Select (C3) and DropdownMenu (C4) carry compounded risk** — largest Radix-to-Fluent API-shape deltas AND zero pre-existing test coverage; tests must be written fresh against Fluent's ARIA semantics.
+6. **`data-state` blast radius extends well beyond the 2 known checkbox.test.tsx lines** — Dialog, Sheet, DropdownMenu, Tabs, and Tooltip all emit data-state today with no dedicated test file to flag the risk; a per-component grep is required before each composite's migration.
 
 ## Implications for Roadmap
 
-Based on combined research, suggested phase structure (dependency-ordered; items within a phase can parallelize):
+This milestone already has an externally-fixed phase numbering (39-42) and internal Plan A-F structure agreed in `.planning/PROJECT.md` and the migration plan doc; research confirms this structure is sound and adds sequencing/gating detail within it.
 
-### Phase 1: Anonymous Session & Public Surface Foundation
-**Rationale:** Every other anonymous-mode feature depends on resolving the "authenticated everywhere" assumption baked into the router, `ConfigProvider`, and `CoachingSession.user_id` NOT NULL constraint. This must exist before any anonymous UI or chat logic is written (Pitfall 1).
-**Delivers:** New `AnonymousAvatarSession`/`AvatarInteractionLog`/`PublicKnowledgeConfig` models + migration; public unguarded route (`/avatar` or new `/` target); public `GET /api/v1/config/public` flags endpoint; `slowapi` wired into `main.py`.
-**Addresses:** "No-login entry to avatar Q&A" (table stakes, FEATURES.md)
-**Avoids:** Pitfall 1 (auth-everywhere assumption), Pitfall 2 (no rate limiting) — rate limiting must land here, not later, per the premium-service cost constraint in `CLAUDE.md`.
+### Phase 39: Infra (Plan A) + Leaf Components (Plan B)
+**Rationale:** Nothing else can render correctly without the theme bridge and the deterministic Griffel/Tailwind insertion-order contract landing first. Leaf components then establish the adapter pattern (data-slot preservation, mergeClasses, cloneElement shim) that every composite in Phase 40 will reuse.
+**Delivers:** Working FluentProvider + theme bridge with zero visual change; 12 leaf components migrated, each its own commit.
+**Addresses:** All "table stakes" contractual guarantees (data-slot, asChild, event-signature shims) at the component granularity where they're cheapest to get right.
+**Avoids:** Pitfalls 1 (insertion order), 1b (StrictMode double-render), 3 (FluentProvider background bleed), 5 (Checkbox/Switch signature drop), 13 (ProgressBar 0-1 vs 0-100 scale), 16 (asChild shim edge cases), 20 (Input/Textarea ref-target change), 21 (Avatar broken-image fallback).
 
-### Phase 2: Anonymous Grounded Q&A + Citations
-**Rationale:** The headline capability and the reason for the milestone; depends on Phase 1's session/router foundation. Citation extraction is core to acceptance criteria, not follow-on polish (Pitfall 4).
-**Delivers:** Dedicated "public avatar" hosted Foundry agent (one-time provision, reusing `agent_sync_service`); `avatar_search_service.retrieve()` REST wrapper; `avatar_service.handle_turn()` orchestrator running agent-chat + citation-retrieve concurrently; SSE `text`/`citations`/`done`/`error` events; `sources-panel.tsx` rendered as a UI element separate from the avatar's speech/text; refusal/fallback behavior for no-KB-match queries; anonymous WS/token endpoint scoped to exactly one allow-listed agent (never accepts client-supplied `hcp_profile_id`).
-**Uses:** Azure AI Search `retrieve` REST action, `httpx`, existing `agent_chat_service.stream_agent_response()` (reused unchanged)
-**Implements:** "Dual-query citation shadow" pattern (ARCHITECTURE.md Pattern 1)
-**Avoids:** Pitfall 3 (WS scope leakage), Pitfall 4 (missing citation extraction)
+### Phase 40: Composite Components (Plan C, C1-C8)
+**Rationale:** Composites depend on Phase 39's Griffel pattern and adapter conventions being established, but are independent of icon/toast work. Select (C3) and DropdownMenu (C4) should be treated as separate, budget-extended sub-phases given their compounded API-delta + zero-coverage risk.
+**Delivers:** Dialog, Sheet, Select, DropdownMenu, Tabs, Tooltip, Card (decision point: real Fluent Card vs. plain divs), Form (narrow Label-only swap) — scroll-area explicitly excluded, stays on Radix.
+**Addresses:** All composite-level contractual guarantees (data-state-to-ARIA rewrites, OverlayDrawer controlled-only migration, Tooltip's required relationship prop default, DropdownMenu's list-level state lifting).
+**Avoids:** Pitfalls 6 (data-state blast radius), 7 mode 1 (coexistence composability regressions, esp. Tooltip+Button+MenuTrigger), 11 (nested FluentProvider in portals), 12 (focus/keyboard regressions), 14 (OverlayDrawer defaultOpen no-op), 15 (Tooltip relationship footgun), 17 (coverage-threshold math on exclusion removal), 18 (Playwright ARIA-selector drift).
 
-### Phase 3: Personalized CRM-Excel Avatar
-**Rationale:** Independent of Phases 1–2's anonymous plumbing except for sharing the same `avatar_service.handle_turn()` orchestrator and hosted agent; can be developed in parallel with Phase 2 once Phase 1's foundation exists. Login-gating already exists (v1.0 Phase 1 JWT auth), so this phase is additive.
-**Delivers:** `CrmProfileMapping` (`CrmMappingImport`+`CrmMappingRow`) models + migration; `crm_mapping_service.py` Excel ingestion (admin upload, pattern-borrowed from `material_service.py`); `personalization_service.py` per-user context-message builder with sanitization/allowlisting of preference values; minimal additive `extra_input` param on `agent_chat_service._build_openai_request()`; authenticated `avatar.py` router.
-**Addresses:** "Login-gated personalized mode" + "Preference injection via system prompt" (FEATURES.md P1 items)
-**Avoids:** Pitfall 5 (prompt injection / PII exposure) — must design sanitization into the ingestion/injection pipeline from the start, not retrofit.
+### Phase 41: Icons (Plan D) + Toast (Plan E)
+**Rationale:** Both depend only on Phase 39's FluentProvider tree existing — neither depends on Phase 40's composites, and D/E can run in either order relative to each other. Each has exactly one empirical spike that is a hard entry gate: icon fontSize-strip behavior (D) and toastId survival into dispatchToast (E).
+**Delivers:** 84-icon lucide-compatible adapter, batched by directory (admin, shared, voice, pages); toast pub/sub bridge, batched across 46 call sites.
+**Addresses:** Icon/toast ecosystem parity requirements without touching component-level contracts already resolved in 39/40.
+**Avoids:** Pitfalls 2 (icon fontSize sizing), 4 (toast lifecycle + silent vi.mock no-op), 8 (filled/regular icon mismatch), 9 (wildcard icon import bundle bloat), 10 (missing 1:1 icon equivalents deferred and forgotten).
 
-### Phase 4: Spanish (es) i18n
-**Rationale:** Orthogonal to the chat architecture — can land on any tier without blocking, per the research, but is scoped as its own phase because of the hidden-gap risk of i18next's silent fallback (Pitfall 6). Best sequenced once UI shells from Phases 2–3 exist so there's real content to translate, but has no hard technical dependency.
-**Delivers:** `es-ES` (or a single decided code, e.g. `es-ES` vs `es-MX`) added to `supportedLngs`; full namespace-parity JSON translation set; automated CI key-parity check across `en-US`/`zh-CN`/`es-ES`; updated `i18n-switching.spec.ts` and any other hardcoded 2-locale assertions; `User.preferred_language` enum/default updated.
-**Addresses:** "UI language selector covering zh-CN/en-US/es" (table stakes)
-**Avoids:** Pitfall 6 (hardcoded 2-locale assumptions, silent fallback masking gaps)
-
-### Phase 5: Clean UI — Hide Legacy Coach Entrance
-**Rationale:** Sequenced last so nav-visibility changes don't collide with in-flight route additions from Phases 1–4; also lets Phase 5 exercise the full existing E2E suite as a regression check against the completed new surfaces.
-**Delivers:** `feature_coach_nav_visible` flag (mirroring existing `feature_*` config pattern); nav-link-only hiding in `UserLayout`/`AdminLayout`; explicit confirmation that no route guards were touched; full existing Playwright suite re-run with zero new failures.
-**Addresses:** "Clean UI: only digital human + document links visible" (table stakes)
-**Avoids:** Pitfall 7 (over-scoping "hide" into route removal, breaking the large legacy E2E suite)
+### Phase 42: Irreversible Cleanup (Plan F)
+**Rationale:** Blocked on ALL of Phases 39-41 being complete and verified — the one phase where the "one component = one commit, revertible" safety net is intentionally given up.
+**Delivers:** Zero-hit grep confirmation (re-run immediately before the uninstall commit) for @radix-ui|lucide-react|sonner|vaul (scroll-area's Radix kept); dependency uninstall; brand-ramp visual fine-tuning against Foundry portal screenshots; Lighthouse/a11y audit; coverage-threshold recalibration.
+**Uses:** Confirms/finalizes the provisional theme ramps generated in Phase 39 and the incrementally-raised coverage thresholds from Phase 40's exclusion removals.
 
 ### Phase Ordering Rationale
 
-- Phase 1 must come first because it resolves a structural assumption (auth-everywhere) that every other anonymous-mode feature depends on, and because rate limiting is a hard blocker per the premium-service budget constraint, not deferrable polish.
-- Phases 2 and 3 share the same orchestrator/agent-chat reuse but are otherwise independent bounded contexts (anonymous vs. personalized) — they can be parallelized by different engineers once Phase 1 lands, though citation extraction logic built in Phase 2 should be reused as-is in Phase 3 if personalized mode also needs citations.
-- Phase 4 (i18n) is architecturally decoupled and could technically run in parallel with Phases 2–3, but is kept as its own phase to force the completeness-check tooling to be built deliberately rather than as trailing cleanup.
-- Phase 5 is last by design — legacy-entrance hiding is a pure nav/routing change that has no technical dependency on the other phases but benefits from being the final regression gate against the full existing E2E suite once all new surfaces exist.
-- Every phase carries the cross-cutting coverage-gate discipline (Pitfall 8: the repo enforces `--cov-fail-under=89` aggregate) — tests must be written alongside each phase's code, not batched at the end.
+- Infra-before-components is a hard dependency (no Fluent token resolves without FluentProvider mounted) — not a stylistic preference.
+- Leaf-before-composite is a soft but strong dependency: leaf components establish the adapter conventions that composites reuse.
+- Icon/toast (Phase 41) is deliberately decoupled from composites (Phase 40) because neither touches the other's code paths.
+- Cleanup (Phase 42) must be strictly last and is the only phase where the migration's own safety net is intentionally suspended.
 
 ### Research Flags
 
-Needs deeper research during phase planning:
-- **Phase 1 / Phase 2:** Whether the live Foundry IQ index's `sourceDataFields` actually project a document URL + page number (unverified per STACK.md Gaps) — inspect the actual index schema before committing to the citation UI's "clickable link" acceptance criterion.
-- **Phase 2:** Exact shape of the Responses API's tool-call/tool-result stream events for `knowledge_base_retrieve`, and whether `azure-search-documents` GA (`12.0.0`) has folded in the `knowledgebases` module (only confirmed in preview `11.7.0b2`) — low priority since the recommended path is raw `httpx`, but worth a five-minute check.
-- **Phase 3 / Phase 4:** Avatar-level (not just plain-TTS) Spanish locale support and whether mid-session language switching requires a Voice Live reconnect — flagged MEDIUM/LOW confidence in FEATURES.md; needs a targeted check before promising a live language switch, otherwise ship "switch = new session" for v1.
+Needs deeper research/spikes during planning (empirical, not desk-resolvable):
+- **Phase 39 (A):** StrictMode double-render effect on the Griffel renderer — verify via code review discipline (module-scope construction).
+- **Phase 40 (C3 Select, C4 DropdownMenu):** No pre-existing test coverage exists for either — budget dedicated time for fresh ARIA-based test-writing.
+- **Phase 41 (D):** Fluent icon default fontSize behavior — hard entry-gate spike before any directory batch starts.
+- **Phase 41 (E):** toastId round-trip into dispatchToast/dismissToast — hard entry-gate spike before the 46-file call-site migration begins.
 
-Phases with standard, well-documented patterns (research-phase likely unnecessary):
-- **Phase 1:** Public route + feature-flag endpoint follows established FastAPI/React patterns already used elsewhere in this repo (mirrors `voice_live.py` router structure minus auth).
-- **Phase 3:** Excel ingestion directly mirrors the existing `material_service.py` upload/versioning pattern.
-- **Phase 4:** i18next locale addition is purely additive content work against an already-integrated framework.
-- **Phase 5:** Feature-flag-gated nav visibility directly mirrors existing `feature_*` settings in `backend/app/config.py`.
+Phases/components with well-documented, low-risk patterns (standard adapter work, skip dedicated research-phase):
+- **Phase 39 (B):** Button, Input, Label, Textarea, Separator/Divider, Skeleton — low API delta, straightforward prop renames.
+- **Phase 40 (C5 Tabs, C6 Tooltip):** Medium complexity but self-contained, well-specified adapter shape already.
+- **Phase 40 (C8a Card):** Framed as a build/no-build decision, not a research gap — default to the lower-risk "keep as divs" option.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM-HIGH | Citation architecture verified against current Microsoft Learn docs (updated within the last week); the specific index-schema question (does the live KB project a URL/page field) is explicitly unverified and flagged as a pre-implementation gap, not a stack-choice uncertainty. |
-| Features | MEDIUM-HIGH | Azure/Foundry mechanics verified against official docs and direct repo inspection (HIGH); general anonymous-session/personalization UX conventions are informed by well-established patterns but `WebSearch` was unavailable this session, so those specific claims are self-flagged LOW/MEDIUM in the source file and should get a light sanity-check during phase planning. |
-| Architecture | HIGH | Entirely derived from direct, line-level codebase inspection (no external ecosystem claims made) — file/line citations for every component and pattern. |
-| Pitfalls | HIGH (codebase-specific) / MEDIUM-LOW (general Azure ecosystem claims) | Codebase-specific findings (router guards, missing rate limiter, NOT NULL constraints, coverage gate) are verified by direct source reading. General Azure AI Foundry/Voice Live ecosystem claims rely on training-data knowledge because `WebSearch` returned consistent 400 errors this session — explicitly flagged for re-verification against current docs before implementation. |
+| Stack | HIGH | Versions, peer-deps, exports, and Griffel injection mechanics verified directly against npm registry tarballs, package.json fields, and .d.ts/source files. One LOW-confidence sub-item: exact current URL of Microsoft's offline Theme Designer tool. |
+| Features | HIGH | Fluent v9 API surface verified against published .d.ts/.types.ts source, cross-checked against direct reads of the current 21-component codebase and its test files. |
+| Architecture | HIGH for package APIs verified against published type declarations. MEDIUM for the Tailwind+Griffel insertion-order-as-override-control pattern specifically — a reasoned extension, not a copied official guide. |
+| Pitfalls | HIGH for mechanics inherited from the other three files' verified findings; MEDIUM for three specific behavioral claims not yet empirically confirmed in this repo's runtime: StrictMode's effect on the Griffel renderer, toastId surviving into dispatchToast, and Fluent icons' exact default fontSize value. All three are explicitly flagged with required spikes and their gating phase. |
 
-**Overall confidence:** MEDIUM-HIGH — the codebase-specific findings (which drive most of the roadmap-critical decisions: session model, rate limiting, router assumptions, citation extraction gap) are all HIGH confidence from direct inspection. The residual uncertainty is concentrated in a small number of externally-verifiable facts (index schema, avatar-level Spanish support, GA SDK module inclusion) that are cheap to resolve early in the relevant phase rather than blocking roadmap creation now.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Foundry IQ index schema (document URL/page field availability):** Not verified this session. Handle by inspecting the live Phase-17 index's `sourceDataFields`/semantic configuration as the first task of the anonymous-Q&A phase, before the citation UI is considered acceptance-testable.
-- **`WebSearch` tool outage this session:** General industry/ecosystem claims (anonymous-session conventions, citation-panel layout conventions, Azure Voice Live Spanish avatar support) rely on official-docs fetches and training-data inference rather than live web search. Handle by doing a light validation pass with a working search tool during phase-level research for Phase 2 (citations) and Phase 4 (Spanish avatar voice), not as a blocker to starting the roadmap.
-- **Avatar-level (vs. TTS-level) Spanish locale support and mid-session language-switch reconnect mechanics:** Explicitly unverified; the MVP plan already assumes the conservative fallback ("switch = new session") — confirm or relax this during Phase 4 planning.
-- **`azure-search-documents` GA module coverage:** Irrelevant to the recommended `httpx`-based approach but worth a five-minute confirmation if the team later wants a typed SDK instead of raw REST calls.
-- **Exact anonymous rate-limit thresholds and whether this surface will be public-internet-facing vs. intranet-only:** Not a research gap so much as a product decision needed before Phase 1 — affects whether bot-defense (CAPTCHA/WAF) is in scope for this milestone or deferred.
+- Griffel/Tailwind insertion order must be verified against the built artifact, not just dev mode — add a repeatable build-check script. Address in Phase 39's exit criteria.
+- toastId survival into dispatchToast — one live throwaway test must run before Phase 41/E's 46-file rollout; if it fails, redesign the bridge with an internal id-mapping layer.
+- Fluent icon default fontSize/sizing behavior — one spike rendering 3-5 representative icons at multiple Tailwind size-* values, pixel-diffed against lucide originals, before Phase 41/D's first directory batch.
+- data-state full blast radius — not fully enumerable by static analysis; each Phase 40 composite needs its own pre-migration grep before that component's work starts.
+- Theme ramp perceptual accuracy — the 10 offline-generated BrandVariants ramps are provisional against a single anchor hex per accent; exact stop-by-stop match to existing index.css CSS variables is not guaranteed and is explicitly deferred to Phase 42's fine-tuning pass.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct codebase inspection across all four research files: `backend/app/models/session.py`, `backend/app/models/hcp_knowledge_config.py`, `backend/app/services/agent_chat_service.py`, `backend/app/services/knowledge_base_service.py`, `backend/app/services/agent_sync_service.py`, `backend/app/services/material_service.py`, `backend/app/api/voice_live.py`, `backend/app/api/sessions.py`, `backend/app/dependencies.py`, `backend/app/main.py`, `backend/app/config.py`, `backend/pyproject.toml`, `frontend/src/router/index.tsx`, `frontend/src/contexts/config-context.tsx`, `frontend/src/i18n/index.ts`, `frontend/src/hooks/use-sse.ts`, `frontend/e2e/i18n-switching.spec.ts`, `.planning/PROJECT.md`, `CLAUDE.md`
-- [What is Foundry IQ? — Microsoft Learn](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/what-is-foundry-iq) (updated 2026-07-28)
-- [Query Knowledge Base via API or MCP — Azure AI Search — Microsoft Learn](https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-how-to-retrieve) (updated 2026-07-24) — source of the critical MCP-tool-lacks-citations finding
-- [Agentic Retrieval Overview — Azure AI Search — Microsoft Learn](https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-overview) (updated 2026-07-02)
-- [Using your data with Azure OpenAI (On Your Data, deprecated) — Microsoft Learn](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/concepts/use-your-data)
-- [How to use Grounding with Bing Search in Foundry Agent Service — Microsoft Learn](https://learn.microsoft.com/en-us/azure/foundry-classic/agents/how-to/tools-classic/bing-grounding) — source of citation display-separation requirement
-- [Text to speech avatar overview — Microsoft Learn](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/what-is-text-to-speech-avatar)
-- [Speech service language support (TTS) — Microsoft Learn](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)
-- PyPI registry (live query): `slowapi` 0.1.10, `openpyxl` 3.1.5, `azure-search-documents` 12.0.0 GA / 11.7.0b2 preview
+- npm registry direct queries + downloaded package tarballs (`@fluentui/react-components@9.74.4`, `@fluentui/react-icons@2.0.334`, `@fluentui/react-theme@9.2.1`, `@griffel/core@1.21.3`, `@griffel/react@1.5.32`) — package.json, .d.ts, and .js source read directly
+- `@fluentui/react-components/dist/index.d.ts` and package-level type declarations for Button, Checkbox, Switch, Avatar, Dialog, Drawer, Combobox/Dropdown, Menu, TabList/Tab, Tooltip, Card, Field, ProgressBar, Slider, Spinner, RendererProvider, createDOMRenderer, FluentProviderProps, useToastController/ToastOptions — fetched via jsdelivr/unpkg CDN
+- Direct repo reads: `frontend/src/components/ui/*.tsx` (all 21 in-scope components + scroll-area), `frontend/src/components/ui/index.ts`, `frontend/src/components/ui/checkbox.test.tsx`, `frontend/src/App.tsx`, `frontend/src/stores/theme-store.ts`, `frontend/src/styles/index.css`, `frontend/src/lib/utils.ts`, `frontend/index.html`, `frontend/vitest.config.ts`, `frontend/package.json`, `frontend/src/pages/avatar-page.tsx`, `.omc/plans/fluent-ui-migration-plan.md`, `.planning/PROJECT.md`
 
 ### Secondary (MEDIUM confidence)
-- [Azure-Samples/azure-search-openai-demo — GitHub](https://github.com/Azure-Samples/azure-search-openai-demo) — confirmed citation-rendering behavior in general terms; exact panel UX not verifiable from README alone
+- Griffel insertionPoint/RendererProvider mechanism applied specifically to override Tailwind's cascade — mechanism documented, combination reasoned rather than copied from an official Tailwind+Fluent guide
+- Fluent icon default-sizing runtime behavior — prop existence confirmed in .d.ts, exact default value not confirmed against a live runtime (flagged for Phase 41 spike)
+- toastId survival into ToastDispatchOptions — confirmed via TypeScript type algebra, not yet confirmed against a live runtime (flagged for Phase 41 spike)
 
-### Tertiary (LOW confidence, flagged for re-verification)
-- General anonymous-session/personalization UX conventions (FEATURES.md) — `WebSearch` unavailable this session
-- Azure AI Foundry Agents Responses API citation/annotation event shapes (PITFALLS.md) — training-data inference, not confirmed against current docs
-- Azure Voice Live premium pricing and typical anonymous-abuse patterns (PITFALLS.md) — training-data inference
-- Avatar-level (vs. TTS) Spanish locale support and mid-session language-switch reconnect mechanics (FEATURES.md/ARCHITECTURE.md) — explicitly unverified
+### Tertiary (LOW confidence)
+- Bundlephobia API query for @fluentui/react-icons full-import size (~15.5MB raw / ~3.09MB gzip) — single directional data point, rate-limited on further queries, not authoritative for actual tree-shaken output
+- Microsoft's offline Fluent "Theme Designer" ramp-generation tool's current URL — could not reach a live current URL in this research session
 
 ---
-*Research completed: 2026-07-31*
+*Research completed: 2026-08-06*
 *Ready for roadmap: yes*
