@@ -11,7 +11,8 @@
     "test:e2e:coverage": "INSTRUMENT_COVERAGE=true playwright test --config=e2e/playwright.config.ts && nyc report --reporter=text --reporter=html --report-dir=coverage --temp-dir=.nyc_output",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify:griffel-order": "node scripts/verify-griffel-insertion-order.mjs"
   },
   "dependencies": {
     "@azure/ai-voicelive": "^1.0.0-beta.3",
