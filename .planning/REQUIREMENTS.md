@@ -19,7 +19,7 @@
 ### 叶子组件适配 (LEAF) — Phase 39 (B)
 
 - [x] **LEAF-01**: `button` 内部改用 Fluent Button（variant→appearance 映射，destructive 用 Griffel 覆写），保留导出名/props/data-slot；`buttonVariants()` 弱化为兼容导出；`asChild` 用最小 cloneElement 替代
-- [ ] **LEAF-02**: `badge`、`separator`(Divider)、`skeleton` 内部替换为 Fluent 等价物，导出面不变
+- [x] **LEAF-02**: `badge`、`separator`(Divider)、`skeleton` 内部替换为 Fluent 等价物，导出面不变
 - [ ] **LEAF-03**: `input`、`textarea`、`label` 内部替换为 Fluent 等价物，导出面不变
 - [ ] **LEAF-04**: `checkbox`、`switch` 事件签名 shim——`onCheckedChange(bool|"indeterminate")` ↔ Fluent `onChange(ev, data)` `data.checked(bool|"mixed")`，正确映射 shape 与字符串值；保留 data-slot，现有 data-state 断言改 ARIA 等价
 - [ ] **LEAF-05**: `progress` 内部替换为 Fluent ProgressBar，适配 0–100 → 0–1 数值刻度（避免静默缩放 bug）；`slider` 单值映射（无双滑块用法）
@@ -77,7 +77,7 @@
 | INFRA-03 | Phase 39 | Pending |
 | INFRA-04 | Phase 39 | Pending |
 | LEAF-01 | Phase 39 | Complete |
-| LEAF-02 | Phase 39 | Pending |
+| LEAF-02 | Phase 39 | Complete |
 | LEAF-03 | Phase 39 | Pending |
 | LEAF-04 | Phase 39 | Pending |
 | LEAF-05 | Phase 39 | Pending |
