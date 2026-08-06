@@ -72,7 +72,7 @@ export {
 } from "./dialog";
 export { Switch } from "./switch";
 export { Skeleton } from "./skeleton";
-export { Badge, badgeVariants } from "./badge";
+export { Badge } from "./badge";
 // sonner and form have specific imports, exported separately
 export { Toaster } from "./sonner";
 export {

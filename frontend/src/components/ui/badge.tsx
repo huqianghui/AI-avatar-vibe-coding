@@ -1,48 +1,59 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import {
+  Badge as FluentBadge,
+  mergeClasses,
+  type BadgeProps as FluentBadgeProps,
+} from "@fluentui/react-components";
 
-import { cn } from "@/lib/utils";
+import { useBadgeDestructiveStyles } from "./badge.styles";
 
-const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
-        destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        success:
-          "border-transparent bg-strength/10 text-strength [a&]:hover:bg-strength/20",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-);
+/**
+ * shadcn-compatible `variant` union, preserved verbatim from the pre-migration
+ * `cva()` definition so every existing call site keeps compiling with the exact
+ * same prop values (LEAF-02). `success` has no Button equivalent -- Badge-only.
+ */
+export type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "success";
 
-function Badge({
-  className,
-  variant,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : "span";
+/**
+ * variant -> Fluent (color, appearance) two-axis lookup table (FEATURES.md's
+ * verified mapping; not a rename -- Fluent Badge has a genuinely different,
+ * two-axis appearance system compared to Button's single `appearance` axis).
+ */
+const VARIANT_MAP: Record<
+  BadgeVariant,
+  { color: FluentBadgeProps["color"]; appearance: FluentBadgeProps["appearance"] }
+> = {
+  default: { color: "brand", appearance: "filled" },
+  secondary: { color: "informative", appearance: "tint" },
+  destructive: { color: "danger", appearance: "filled" },
+  outline: { color: "subtle", appearance: "outline" },
+  success: { color: "success", appearance: "filled" },
+};
+
+export interface BadgeProps extends Omit<React.ComponentPropsWithoutRef<"span">, "color"> {
+  variant?: BadgeVariant;
+}
+
+/**
+ * Fluent-backed adapter for the legacy shadcn `Badge`. Follows the pattern
+ * established by Button (Plan 02): a variant mapping table plus an isolated
+ * Griffel override file for the one variant (`destructive`) that needs a
+ * byte-identical color Fluent's built-in palette doesn't provide.
+ */
+function Badge({ className, variant = "default", ...props }: BadgeProps) {
+  const destructiveStyles = useBadgeDestructiveStyles();
+  const { color, appearance } = VARIANT_MAP[variant];
+  const isDestructive = variant === "destructive";
 
   return (
-    <Comp
+    <FluentBadge
       data-slot="badge"
-      className={cn(badgeVariants({ variant }), className)}
+      color={color}
+      appearance={appearance}
+      className={mergeClasses(isDestructive ? destructiveStyles.root : undefined, className)}
       {...props}
     />
   );
 }
 
-export { Badge, badgeVariants };
+export { Badge };
