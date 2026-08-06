@@ -28,6 +28,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ["@fluentui/react-components", "@fluentui/react-icons"],
+  },
   server: {
     port: 5173,
     proxy: {
