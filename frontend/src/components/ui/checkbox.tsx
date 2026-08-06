@@ -1,29 +1,61 @@
-import * as React from "react";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { CheckIcon } from "lucide-react";
+import {
+  Checkbox as FluentCheckbox,
+  type CheckboxProps as FluentCheckboxProps,
+} from "@fluentui/react-components";
 
-import { cn } from "@/lib/utils";
+export interface CheckboxProps
+  extends Omit<FluentCheckboxProps, "checked" | "defaultChecked" | "onChange"> {
+  checked?: boolean | "indeterminate";
+  defaultChecked?: boolean | "indeterminate";
+  onCheckedChange?: (checked: boolean | "indeterminate") => void;
+}
 
+/**
+ * Fluent-backed adapter for the legacy Radix-based `Checkbox` (LEAF-04).
+ *
+ * Radix's tri-state contract uses the literal string `"indeterminate"`;
+ * Fluent's uses `"mixed"` for the exact same concept (Pitfall 5) -- both the
+ * shape (`onChange(ev, data)` vs bare `onCheckedChange(checked)`) AND the
+ * string vocabulary differ, and both must be shimmed at this boundary so no
+ * existing call site (`login.tsx`, `left-panel.tsx`, `topic-guide.tsx`) needs
+ * to change:
+ *   - inbound: public `checked="indeterminate"` -> Fluent `checked="mixed"`
+ *   - outbound: Fluent `data.checked === "mixed"` -> `onCheckedChange("indeterminate")`
+ *
+ * `data-state` is computed and re-emitted manually from the adapter's OWN
+ * incoming `checked` prop (never read back from Fluent internals) since
+ * Fluent's native Checkbox does not emit a Radix-style `data-state` attribute
+ * -- this keeps `checkbox.test.tsx`'s 2 pre-existing assertions (lines 20/26)
+ * passing unmodified (FEATURES.md's explicit cost-tradeoff recommendation:
+ * cheaper than rewriting tests to ARIA equivalents).
+ */
 function Checkbox({
   className,
+  checked,
+  defaultChecked,
+  onCheckedChange,
   ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+}: CheckboxProps) {
+  const fluentChecked: boolean | "mixed" | undefined =
+    checked === "indeterminate" ? "mixed" : checked;
+  const fluentDefaultChecked: boolean | "mixed" | undefined =
+    defaultChecked === "indeterminate" ? "mixed" : defaultChecked;
+
+  const dataState =
+    checked === true ? "checked" : checked === "indeterminate" ? "indeterminate" : "unchecked";
+
   return (
-    <CheckboxPrimitive.Root
+    <FluentCheckbox
       data-slot="checkbox"
-      className={cn(
-        "peer border bg-input-background dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
+      data-state={dataState}
+      checked={fluentChecked}
+      defaultChecked={fluentDefaultChecked}
+      onChange={(_ev, data) => {
+        onCheckedChange?.(data.checked === "mixed" ? "indeterminate" : data.checked);
+      }}
+      className={className}
       {...props}
-    >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="flex items-center justify-center text-current transition-none"
-      >
-        <CheckIcon className="size-3.5" />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
+    />
   );
 }
 
