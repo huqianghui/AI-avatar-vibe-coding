@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Completed 39-06-PLAN.md
-last_updated: "2026-08-06T07:42:37.986Z"
+stopped_at: Completed 39-07-PLAN.md
+last_updated: "2026-08-06T07:56:00.310Z"
 last_activity: 2026-08-06
 progress:
   total_phases: 4
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-06)
 ## Current Position
 
 Phase: 39 (Fluent Infrastructure + Leaf Components) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-08-06
 
@@ -171,6 +171,7 @@ Last activity: 2026-08-06
 | Phase 39 P04 | 55min | 3 tasks | 6 files |
 | Phase 39 P05 | 50min | 2 tasks | 4 files |
 | Phase 39 P39-06 | 35min | 2 tasks | 4 files |
+| Phase 39 P39-07 | 25min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -387,6 +388,8 @@ Recent decisions affecting current work:
 - [Phase 39]: 39-05: Checkbox/Switch stayed on Fluent's high-level components (no *_unstable hooks needed) since no consumer uses uncontrolled register()-via-ref binding; className on Checkbox routes to Fluent's root span not the input, requiring one test update
 - [Phase 39]: 39-06: Progress scale conversion uses divide-by-100 (value/100), Fluent max left at default 1
 - [Phase 39]: 39-06: Slider array<->scalar shim confirmed zero dual-thumb usage across all 6 consumers via grep
+- [Phase 39]: 39-07: Avatar's API-shape-translation adapter parses children via React.Children.forEach + child.type identity to bridge the legacy children-composition API onto Fluent's flat-prop Avatar; AvatarImage/AvatarFallback become inert marker components since grep confirmed zero standalone usage.
+- [Phase 39]: 39-07: Broken-image fallback manually re-implemented via useState + onError (Fluent does not auto-swap like Radix); verified via fireEvent.error probe before writing the mandatory Pitfall-21 test.
 
 ### Pending Todos
 
@@ -431,6 +434,6 @@ Recent decisions affecting current work:
 
 Last activity: 2026-08-03 - Completed quick task 260803-n3n: fix login redirect loop (GuestRoute now validates token via /me before redirecting away from /login; stale tokens are cleared and login stays reachable)
 Previous: Plan 37-04 complete: useAnonymousVoiceLive negotiates a recvonly video transceiver and surfaces avatarCharacter/avatarStyle/isAvatarConnected; avatar-page.tsx always renders the active persona's identity; E2E proves persona switching flips the displayed avatar identity (Lisa->Harry). PERSONA-05 closed end-to-end. Phase 37 (persona-fidelity-hardening) now 4/4 plans complete.
-Last session: 2026-08-06T07:42:37.982Z
-Stopped at: Completed 39-06-PLAN.md
+Last session: 2026-08-06T07:55:51.902Z
+Stopped at: Completed 39-07-PLAN.md
 Resume file: None

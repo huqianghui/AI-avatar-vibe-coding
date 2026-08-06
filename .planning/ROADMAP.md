@@ -363,7 +363,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 
 **Milestone Goal:** 将前端 UI 组件库与样式对齐 Azure AI Foundry 门户（Fluent 2 设计体系）——用适配器模式把 `@/components/ui/*` 的内部实现从 shadcn/Radix+Tailwind 逐个替换为 `@fluentui/react-components` v9，导入面与 props 签名（含 data-slot 属性）保持稳定，126 个消费文件基本不动。逐组件独立 commit，任一组件出问题直接 `git revert`。详细方案见 `.omc/plans/fluent-ui-migration-plan.md`，研究综述见 `.planning/research/SUMMARY.md`。
 
-- [ ] **Phase 39: Fluent Infrastructure + Leaf Components** - FluentProvider + Griffel/Tailwind theme bridge lands with zero visual change, and 12 low-risk leaf components establish the adapter pattern
+- [x] **Phase 39: Fluent Infrastructure + Leaf Components** - FluentProvider + Griffel/Tailwind theme bridge lands with zero visual change, and 12 low-risk leaf components establish the adapter pattern (completed 2026-08-06)
 - [ ] **Phase 40: Composite Component Adapters** - 9 composite components (8 migrated, scroll-area kept on Radix) migrate to Fluent, closing pre-existing test-coverage gaps on select/dropdown-menu/form
 - [ ] **Phase 41: Icon & Toast Adapter Layers** - 84-icon adapter and toast pub/sub bridge replace lucide-react/sonner call sites across 126/46 files, each gated by an empirical spike
 - [ ] **Phase 42: Cleanup & Foundry Alignment** - Irreversible dependency uninstall + brand-ramp/a11y/Lighthouse alignment with the Foundry portal baseline (go/no-go checkpoint required)
@@ -388,7 +388,7 @@ Plans:
 - [x] 39-04-PLAN.md — Input + Label + Textarea migration, ref-forwarding fix (LEAF-03)
 - [x] 39-05-PLAN.md — Checkbox + Switch migration, mixed/indeterminate shim (LEAF-04)
 - [x] 39-06-PLAN.md — Progress + Slider migration, scale/shape shims (LEAF-05)
-- [ ] 39-07-PLAN.md — Avatar migration, children parsing (LEAF-06)
+- [x] 39-07-PLAN.md — Avatar migration, children parsing (LEAF-06)
 **UI hint**: yes
 
 ### Phase 40: Composite Component Adapters
@@ -447,7 +447,7 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
 | 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 3/3 | Complete    | 2026-08-04 |
-| 39. Fluent Infrastructure + Leaf Components | v3.0 | 6/7 | In Progress|  |
+| 39. Fluent Infrastructure + Leaf Components | v3.0 | 7/7 | Complete   | 2026-08-06 |
 | 40. Composite Component Adapters | v3.0 | 0/? | Not started | - |
 | 41. Icon & Toast Adapter Layers | v3.0 | 0/? | Not started | - |
 | 42. Cleanup & Foundry Alignment | v3.0 | 0/? | Not started (go/no-go gate) | - |
