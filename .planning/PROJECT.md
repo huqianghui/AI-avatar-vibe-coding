@@ -19,9 +19,21 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 - WR-02: HCP editor 测试注释中的过时 D-10 引用
 - IN-01..03: 重复 "Model Deployment" 标签、`build_voice_live_metadata` 不可达 fallback 默认值、avatar_character 默认值不一致（lisa vs lori）
 
-## Next Milestone Goals
+## Current Milestone: v3.0 Fluent UI v9 Migration
 
-**v2.4 Fluent UI v9 Migration（规划中）：** `@/components/ui/*` 适配器迁移（对齐 Azure AI Foundry 视觉）— 导入路径与 props 签名不变，内部实现从 Radix+Tailwind 逐个换成 `@fluentui/react-components` v9；126 个消费文件基本不动。详细方案见 `.omc/plans/fluent-ui-migration-plan.md`（阶段 A-F：Provider/主题桥接 → 叶子组件 → 复合组件 → 图标层 → Toast 桥 → 卸载 Radix/lucide/sonner）。
+**Goal:** 将前端 UI 组件库与样式对齐 Azure AI Foundry 门户（Fluent 2 设计体系）——用适配器模式把 `@/components/ui/*` 的内部实现从 shadcn/Radix+Tailwind 逐个替换为 `@fluentui/react-components` v9，导入面与 props 签名（含 data-slot 属性）保持稳定，126 个消费文件基本不动。
+
+**Target features (A–F 六阶段 → Phase 39–42):**
+- **Phase 39 (A+B)** — 基础设施：装依赖（Fluent/lucide/sonner 共存）+ App.tsx 包 FluentProvider + Griffel 主题桥（CSS 变量单向映射，10 套预生成 theme：5 accent × light/dark）；12 个低风险叶子组件（button/badge/input/label/checkbox/switch/separator/skeleton/progress/textarea/slider/avatar）
+- **Phase 40 (C)** — 9 个高风险复合组件（dialog/sheet/select/dropdown-menu/tabs/tooltip/scroll-area/card/form），C1–C8 逐个独立 commit；顺带补齐 select/dropdown-menu/form 的测试覆盖（历史欠账）
+- **Phase 41 (D+E)** — 图标适配层（`components/icons/`，84 个与 lucide 同名的 Fluent icon 导出，按目录分批改 import）+ Toast 桥（发布订阅总线保留全局 toast.xxx() 语义，含 loading/dismiss(id)，46 文件改 import 路径）
+- **Phase 42 (F)** — 清理收尾（不可逆，含 go/no-go checkpoint）：卸载 Radix/lucide/sonner/vaul（scroll-area 的 Radix 依赖保留）+ 对照 Foundry 门户截图微调 brand ramp + Lighthouse/a11y 审计不低于迁移前基线
+
+**Key context:**
+- 适配器模式核心：导出名/props/data-slot 保留，逐组件独立 commit，任一组件出问题直接 `git revert` 单个 commit
+- 已核实取舍：scroll-area **保留 Radix 不迁移**（保留自定义滚动条视觉，用户 2026-08-05 决定）；`SheetContent side="bottom"` 全仓仅 avatar-page.tsx:446 一处需降级（Fluent Drawer 无 top/bottom）；`toast.loading()`+`dismiss(id)` 在 avatar-page.tsx:224-243 使用，桥必须支持；`buttonVariants()` 无外部消费者、Slider 无双滑块用法 → 两个潜在阻塞点已排除；`asChild` 出现在 33 文件 → adapter 内用最小 cloneElement 替代
+- 遗留 v2.3 tech debt（WR-01/02、IN-01..03）非本 milestone 范围，保留待清理
+- 遵循 CLAUDE.md 最高优先级规则：逐个组件 实现 → 100% unit test → Playwright E2E → 全通过 → commit → push
 
 ## Requirements
 
@@ -75,7 +87,7 @@ Visitors and logged-in users get instant, accurate, multi-language answers from 
 
 ### Active
 
-- [ ] Fluent UI v9 组件库迁移（v2.4 规划中）— `@/components/ui/*` 内部实现 Radix→Fluent 适配器替换，视觉对齐 Azure AI Foundry portal，见 `.omc/plans/fluent-ui-migration-plan.md`
+- [ ] Fluent UI v9 组件库迁移（v3.0）— `@/components/ui/*` 内部实现 Radix→Fluent 适配器替换，视觉对齐 Azure AI Foundry portal，导入面稳定，见 `.omc/plans/fluent-ui-migration-plan.md`（详见本文档 Current Milestone 段）
 
 ### Out of Scope
 
@@ -140,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-05 after v2.3 milestone completion (archived to .planning/milestones/); next: v2.4 Fluent UI v9 Migration*
+*Last updated: 2026-08-06 — started milestone v3.0 Fluent UI v9 Migration*

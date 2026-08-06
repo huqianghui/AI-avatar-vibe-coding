@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: Voice Mode Config (Foundry Portal Style)
-status: milestone_complete
-stopped_at: v2.3 milestone archived 2026-08-05
-last_updated: "2026-08-05T13:54:45.411Z"
-last_activity: 2026-08-05
+milestone: v3.0
+milestone_name: Fluent UI v9 Migration
+status: defining_requirements
+stopped_at: v3.0 milestone started 2026-08-06
+last_updated: "2026-08-06T00:00:00.000Z"
+last_activity: 2026-08-06
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 34
-  completed_plans: 34
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-05)
+See: .planning/PROJECT.md (updated 2026-08-06)
 
 **Core value:** Visitors and logged-in users get instant, accurate, multi-language answers from a digital human grounded in trusted knowledge sources — anonymous users draw from public site content, logged-in users get personalized answers shaped by their own profile and preferences.
-**Current focus:** Planning next milestone (v2.4 Fluent UI v9 Migration)
+**Current focus:** v3.0 Fluent UI v9 Migration — defining requirements
 
 ## Current Position
 
-Phase: — (v2.3 complete, no active phase)
+Phase: Not started (defining requirements)
 Plan: —
-Status: v2.3 milestone complete — awaiting /gsd-new-milestone for v2.4
-Last activity: 2026-08-05
+Status: Defining requirements
+Last activity: 2026-08-06 — Milestone v3.0 started
 
 ## Performance Metrics
 
