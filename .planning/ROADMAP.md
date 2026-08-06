@@ -385,7 +385,7 @@ Plans:
 - [x] 39-01-PLAN.md — Fluent install + Griffel/Tailwind theme bridge + FluentProvider mount (INFRA-01..04)
 - [x] 39-02-PLAN.md — Button migration, establishes adapter pattern (LEAF-01)
 - [x] 39-03-PLAN.md — Badge + Separator + Skeleton migration (LEAF-02)
-- [ ] 39-04-PLAN.md — Input + Label + Textarea migration, ref-forwarding fix (LEAF-03)
+- [x] 39-04-PLAN.md — Input + Label + Textarea migration, ref-forwarding fix (LEAF-03)
 - [ ] 39-05-PLAN.md — Checkbox + Switch migration, mixed/indeterminate shim (LEAF-04)
 - [ ] 39-06-PLAN.md — Progress + Slider migration, scale/shape shims (LEAF-05)
 - [ ] 39-07-PLAN.md — Avatar migration, children parsing (LEAF-06)
@@ -447,7 +447,7 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
 | 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 3/3 | Complete    | 2026-08-04 |
-| 39. Fluent Infrastructure + Leaf Components | v3.0 | 3/7 | In Progress|  |
+| 39. Fluent Infrastructure + Leaf Components | v3.0 | 4/7 | In Progress|  |
 | 40. Composite Component Adapters | v3.0 | 0/? | Not started | - |
 | 41. Icon & Toast Adapter Layers | v3.0 | 0/? | Not started | - |
 | 42. Cleanup & Foundry Alignment | v3.0 | 0/? | Not started (go/no-go gate) | - |
