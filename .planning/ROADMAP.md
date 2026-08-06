@@ -382,7 +382,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
   5. The full pre-existing Playwright E2E suite passes with zero new failures attributable to the leaf-component swap (regression net for the rest of the milestone)
 **Plans**: 7 plans
 Plans:
-- [ ] 39-01-PLAN.md — Fluent install + Griffel/Tailwind theme bridge + FluentProvider mount (INFRA-01..04)
+- [x] 39-01-PLAN.md — Fluent install + Griffel/Tailwind theme bridge + FluentProvider mount (INFRA-01..04)
 - [ ] 39-02-PLAN.md — Button migration, establishes adapter pattern (LEAF-01)
 - [ ] 39-03-PLAN.md — Badge + Separator + Skeleton migration (LEAF-02)
 - [ ] 39-04-PLAN.md — Input + Label + Textarea migration, ref-forwarding fix (LEAF-03)
@@ -447,7 +447,7 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
 | 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 3/3 | Complete    | 2026-08-04 |
-| 39. Fluent Infrastructure + Leaf Components | v3.0 | 0/7 | Not started | - |
+| 39. Fluent Infrastructure + Leaf Components | v3.0 | 1/7 | In Progress|  |
 | 40. Composite Component Adapters | v3.0 | 0/? | Not started | - |
 | 41. Icon & Toast Adapter Layers | v3.0 | 0/? | Not started | - |
 | 42. Cleanup & Foundry Alignment | v3.0 | 0/? | Not started (go/no-go gate) | - |
