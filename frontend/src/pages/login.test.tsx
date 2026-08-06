@@ -181,7 +181,7 @@ describe("LoginPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/admin/dashboard");
   });
 
-  it("navigates user to /user/dashboard on login success", async () => {
+  it("navigates user to / on login success", async () => {
     const user = userEvent.setup();
     mockMutate.mockImplementation((_data: unknown, options: { onSuccess: (u: { role: string }) => void }) => {
       options.onSuccess({ role: "user" });
@@ -192,7 +192,7 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("password"), "pass");
     await user.click(screen.getByRole("button", { name: "signIn" }));
 
-    expect(mockNavigate).toHaveBeenCalledWith("/user/dashboard");
+    expect(mockNavigate).toHaveBeenCalledWith("/");
   });
 
   it("can check the remember me checkbox", async () => {
