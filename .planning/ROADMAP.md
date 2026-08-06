@@ -7,6 +7,7 @@
 - ✅ **v2.1 Avatar Persona & Post-Login Experience** - Phase 36 (complete 2026-08-02)
 - ✅ **v2.2 Persona Fidelity & Hardening** - Phase 37 (complete 2026-08-03)
 - ✅ **v2.3 Voice Mode Config (Foundry Portal Style)** - Phase 38 (shipped 2026-08-05, archived to milestones/v2.3-ROADMAP.md)
+- 📋 **v3.0 Fluent UI v9 Migration** - Phases 39-42 (in progress, started 2026-08-06)
 
 ## Phases
 
@@ -358,10 +359,74 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 
 </details>
 
+### 📋 v3.0 Fluent UI v9 Migration (Phases 39-42)
+
+**Milestone Goal:** 将前端 UI 组件库与样式对齐 Azure AI Foundry 门户（Fluent 2 设计体系）——用适配器模式把 `@/components/ui/*` 的内部实现从 shadcn/Radix+Tailwind 逐个替换为 `@fluentui/react-components` v9，导入面与 props 签名（含 data-slot 属性）保持稳定，126 个消费文件基本不动。逐组件独立 commit，任一组件出问题直接 `git revert`。详细方案见 `.omc/plans/fluent-ui-migration-plan.md`，研究综述见 `.planning/research/SUMMARY.md`。
+
+- [ ] **Phase 39: Fluent Infrastructure + Leaf Components** - FluentProvider + Griffel/Tailwind theme bridge lands with zero visual change, and 12 low-risk leaf components establish the adapter pattern
+- [ ] **Phase 40: Composite Component Adapters** - 9 composite components (8 migrated, scroll-area kept on Radix) migrate to Fluent, closing pre-existing test-coverage gaps on select/dropdown-menu/form
+- [ ] **Phase 41: Icon & Toast Adapter Layers** - 84-icon adapter and toast pub/sub bridge replace lucide-react/sonner call sites across 126/46 files, each gated by an empirical spike
+- [ ] **Phase 42: Cleanup & Foundry Alignment** - Irreversible dependency uninstall + brand-ramp/a11y/Lighthouse alignment with the Foundry portal baseline (go/no-go checkpoint required)
+
+## Phase Details (v3.0)
+
+### Phase 39: Fluent Infrastructure + Leaf Components
+**Goal**: FluentProvider is mounted with a deterministic Griffel/Tailwind theme bridge (zero visual regression), and the 12 lowest-risk leaf components run on Fluent internals while preserving the adapter contract (data-slot, asChild, event signatures) that Phase 40's composites will reuse
+**Depends on**: Nothing (first v3.0 phase; builds on the existing frontend component library from v1.0-v2.3). Blocks Phase 40, Phase 41, and Phase 42 — no Fluent token resolves without FluentProvider mounted.
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, LEAF-01, LEAF-02, LEAF-03, LEAF-04, LEAF-05, LEAF-06
+**Success Criteria** (what must be TRUE):
+  1. `<FluentProvider>` is mounted at the App.tsx root (transparent, `className="contents"`) subscribed read-only to the existing `useThemeStore()`, and the app renders with no visual diff across all 10 pre-generated theme combinations (5 accent × light/dark) — the existing `.dark`/`.theme-*` class mechanism is untouched
+  2. `npm run build` produces a `dist/index.html` where the Griffel `insertionPoint` anchor precedes Tailwind's injected stylesheet (verified by a repeatable build-check against the built artifact, not just dev mode), and a StrictMode double-render code-review gate confirms the module-scope `createDOMRenderer`/`RendererProvider` pair does not duplicate or destabilize the renderer
+  3. All 12 leaf components (button, badge, input, label, checkbox, switch, separator, skeleton, progress, textarea, slider, avatar) keep identical export names, props signatures, and `data-slot` attributes; existing `*.test.tsx` suites pass with Radix `data-state` assertions rewritten to ARIA equivalents
+  4. Checkbox/Switch preserve the `onCheckedChange(bool | "indeterminate")` call-site contract despite Fluent's `onChange(ev, data)` signature (including correct `"mixed"` string mapping), `asChild` continues to work via a minimal `cloneElement` shim across all consumers, and ProgressBar's 0–1 scale is correctly adapted from the existing 0–100 API without silent value scaling bugs
+  5. The full pre-existing Playwright E2E suite passes with zero new failures attributable to the leaf-component swap (regression net for the rest of the milestone)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 40: Composite Component Adapters
+**Goal**: The 9 composite components (dialog, sheet, select, dropdown-menu, tabs, tooltip, card, form migrated; scroll-area explicitly excluded and kept on Radix) run on Fluent internals with preserved export surface and ARIA semantics, and the two highest-risk, previously-untested components (select, dropdown-menu) gain real test coverage
+**Depends on**: Phase 39 (theme bridge + adapter pattern must exist first). Independent of Phase 41 (neither touches the other's code paths) — both may execute in either order once Phase 39 is done.
+**Requirements**: COMP-01, COMP-02, COMP-03, COMP-04, COMP-05, COMP-06, COMP-07, COMP-08
+**Success Criteria** (what must be TRUE):
+  1. dialog, sheet, select, dropdown-menu, tabs, tooltip, card, form each keep their existing named exports and props/`data-slot` contract; scroll-area (COMP-08) remains on its current Radix implementation per the 2026-08-05 user decision, with its Radix dependency explicitly retained for Phase 42
+  2. select.tsx and dropdown-menu.tsx — previously zero test coverage — have new ARIA-based test files passing and counted toward the vitest coverage thresholds; form.tsx's coverage gap is also backfilled
+  3. The Sheet `side="bottom"` call site (avatar-page.tsx:446) renders correctly via Fluent `OverlayDrawer`'s native `position="bottom"` support, confirming the research correction that no custom downgrade is needed
+  4. Playwright specs relying on ARIA role/name selectors (e.g. admin-azure-config.spec.ts, theme-picker visual checks) pass unchanged, proving Portal render position/z-index parity for Dialog/Sheet/DropdownMenu with zero new failures
+  5. Each of the 8 migrated composites (C1–C8) is committed independently, so any single component can be `git revert`ed without affecting the others
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 41: Icon & Toast Adapter Layers
+**Goal**: All icon and toast usage across the app is served through dedicated adapter layers (`@fluentui/react-icons` and Fluent Toaster) with zero visual/behavioral regression in icon sizing or toast lifecycle, each rollout gated by its own empirical spike before batch work begins
+**Depends on**: Phase 39 only — independent of Phase 40 (neither touches the other's code paths); may run before, after, or interleaved with Phase 40.
+**Requirements**: ICON-01, ICON-02, ICON-03, TOAST-01, TOAST-02
+**Success Criteria** (what must be TRUE):
+  1. **Entry gate — ICON-01 spike passes first**: a pixel-diff comparison of 3–5 representative Fluent icons at multiple Tailwind `size-*` values against their lucide originals confirms `fontSize` is successfully stripped so Tailwind sizing/`currentColor` control rendering; this spike must pass before any directory-batch icon rollout starts
+  2. **Entry gate — TOAST-01 spike passes first**: a live throwaway test proves `toastId` survives round-trip into `dispatchToast`/`dismissToast` (or the bridge is redesigned with an internal id-mapping layer if it doesn't); this spike must pass before the 46-file toast import migration starts
+  3. All 130 icon import call sites (84 distinct icons, manually reviewed regular/filled mapping) are switched to `src/components/icons/` named exports, batched per directory (admin/shared/voice/pages) with each batch its own commit and a bundle-size comparison noted in the commit message
+  4. `toast.loading()` + `toast.dismiss(id)` at avatar-page.tsx:224-243 continue to work identically through the new pub/sub bridge (`src/lib/toast/`); all 46 files' imports move from `"sonner"` to `"@/lib/toast"`, and every `vi.mock("sonner")` is individually verified as `vi.mock("@/lib/toast")` (not batch-`sed`)
+  5. E2E confirms the Fluent Toaster renders a `role="status"` live region equivalent to the prior sonner behavior
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 42: Cleanup & Foundry Alignment
+**Goal**: Legacy Radix/lucide/sonner/vaul dependencies are safely and irreversibly removed, visual parity with the Azure AI Foundry portal is fine-tuned, and the migration's quality bar (test coverage, accessibility, performance) is confirmed at or above the pre-migration baseline
+**Depends on**: Phase 39, Phase 40, and Phase 41 — ALL must be complete and verified before this phase starts. This is the one phase where the "one component = one commit, revertible" safety net is intentionally given up.
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03
+**Success Criteria** (what must be TRUE):
+  1. A zero-hit grep for `@radix-ui` (except scroll-area's retained package), `lucide-react`, `sonner`, `vaul` across `src/` is confirmed both at planning time and again immediately before the uninstall commit; the dependency removal + lockfile update is the sole irreversible commit in this milestone
+  2. Brand ramp/colors visually match the Azure AI Foundry portal reference screenshots after fine-tuning, with CSS variables kept in sync with `fluent-theme.ts`
+  3. Lighthouse and accessibility (a11y) audit scores are not lower than the pre-migration baseline captured before Phase 39 began
+  4. Full vitest coverage and the full Playwright E2E suite pass at 100%, with dropdown-menu/select/form evaluated for removal from `coverage.exclude` and thresholds raised accordingly
+**Plans**: TBD
+**UI hint**: yes
+
+> **Go/no-go checkpoint required (autonomous: false).** Phase 42 performs an irreversible dependency uninstall — do not auto-advance into this phase. Confirm Phases 39–41 are fully verified complete, then get explicit user go-ahead before executing Phase 42's plans.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 → 35 → 36 → 37 → 38
+Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -374,3 +439,8 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 36. Avatar Persona Selection & Post-Login Landing | v2.1 | 5/5 | Complete    | 2026-08-02 |
 | 37. Persona Fidelity & Hardening | v2.2 | 4/4 | Complete    | 2026-08-03 |
 | 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 3/3 | Complete    | 2026-08-04 |
+| 39. Fluent Infrastructure + Leaf Components | v3.0 | 0/? | Not started | - |
+| 40. Composite Component Adapters | v3.0 | 0/? | Not started | - |
+| 41. Icon & Toast Adapter Layers | v3.0 | 0/? | Not started | - |
+| 42. Cleanup & Foundry Alignment | v3.0 | 0/? | Not started (go/no-go gate) | - |
+</content>
