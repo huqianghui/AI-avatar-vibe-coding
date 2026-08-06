@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Avatar MVP
 status: executing
-stopped_at: Completed 39-04-PLAN.md
-last_updated: "2026-08-06T05:45:40.015Z"
+stopped_at: Completed 39-05-PLAN.md
+last_updated: "2026-08-06T07:28:41.861Z"
 last_activity: 2026-08-06
 progress:
   total_phases: 4
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-06)
 ## Current Position
 
 Phase: 39 (Fluent Infrastructure + Leaf Components) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-08-06
 
@@ -169,6 +169,7 @@ Last activity: 2026-08-06
 | Phase 39 P02 | 45min | 2 tasks | 4 files |
 | Phase 39 P03 | 35min | 3 tasks | 6 files |
 | Phase 39 P04 | 55min | 3 tasks | 6 files |
+| Phase 39 P05 | 50min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -382,6 +383,7 @@ Recent decisions affecting current work:
 - [Phase 39]: 39-03: Separator manually re-emits data-orientation (no Fluent Divider equivalent) so existing Tailwind selectors and all 4 pre-existing separator.test.tsx assertions pass unmodified
 - [Phase 39]: 39-04: Input/Textarea use Fluent's low-level *_unstable hooks (not the high-level components) to erase the internally-controlled value in the genuine-uncontrolled case, preserving react-hook-form's register()-via-ref pattern used across admin forms
 - [Phase 39]: 39-04: Label needed no ref-forwarding fix -- Fluent's Label root slot is already the native <label> element
+- [Phase 39]: 39-05: Checkbox/Switch stayed on Fluent's high-level components (no *_unstable hooks needed) since no consumer uses uncontrolled register()-via-ref binding; className on Checkbox routes to Fluent's root span not the input, requiring one test update
 
 ### Pending Todos
 
@@ -426,6 +428,6 @@ Recent decisions affecting current work:
 
 Last activity: 2026-08-03 - Completed quick task 260803-n3n: fix login redirect loop (GuestRoute now validates token via /me before redirecting away from /login; stale tokens are cleared and login stays reachable)
 Previous: Plan 37-04 complete: useAnonymousVoiceLive negotiates a recvonly video transceiver and surfaces avatarCharacter/avatarStyle/isAvatarConnected; avatar-page.tsx always renders the active persona's identity; E2E proves persona switching flips the displayed avatar identity (Lisa->Harry). PERSONA-05 closed end-to-end. Phase 37 (persona-fidelity-hardening) now 4/4 plans complete.
-Last session: 2026-08-06T05:45:40.011Z
-Stopped at: Completed 39-04-PLAN.md
+Last session: 2026-08-06T07:28:41.857Z
+Stopped at: Completed 39-05-PLAN.md
 Resume file: None
