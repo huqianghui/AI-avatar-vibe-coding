@@ -401,7 +401,16 @@ Plans:
   3. The Sheet `side="bottom"` call site (avatar-page.tsx:446) renders correctly via Fluent `OverlayDrawer`'s native `position="bottom"` support, confirming the research correction that no custom downgrade is needed
   4. Playwright specs relying on ARIA role/name selectors (e.g. admin-azure-config.spec.ts, theme-picker visual checks) pass unchanged, proving Portal render position/z-index parity for Dialog/Sheet/DropdownMenu with zero new failures
   5. Each of the 8 migrated composites (C1–C8) is committed independently, so any single component can be `git revert`ed without affecting the others
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 40-01-PLAN.md — Dialog migration, establishes Fluent overlay/portal pattern + shared asChild shim (COMP-01)
+- [ ] 40-02-PLAN.md — Sheet migration, native OverlayDrawer position="bottom" (COMP-02)
+- [ ] 40-03-PLAN.md — Tabs + Tooltip migration, hand-built Context wrapper + data-state re-emission (COMP-05)
+- [ ] 40-04-PLAN.md — Form migration, Slot->cloneElement + coverage backfill (COMP-07)
+- [ ] 40-05-PLAN.md — Card go/no-go decision + Griffel token layering (COMP-06)
+- [ ] 40-06-PLAN.md — Select migration, value-shape event shim + ARIA coverage (COMP-03)
+- [ ] 40-07-PLAN.md — DropdownMenu migration, lifted checked-state model + theme-picker E2E (COMP-04)
+- [ ] 40-08-PLAN.md — ScrollArea retention verification, full-suite regression gate (COMP-08)
 **UI hint**: yes
 
 ### Phase 41: Icon & Toast Adapter Layers
