@@ -1,45 +1,153 @@
 import * as React from "react";
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import {
+  OverlayDrawer,
+  DrawerBody,
+  mergeClasses,
+  type DialogOpenChangeData,
+  type DialogOpenChangeEvent,
+} from "@fluentui/react-components";
 import { XIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { isSingleRefCapableElement } from "./_shim-as-child";
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+/**
+ * Fluent-backed adapter for the legacy Radix-based `Sheet` (COMP-02).
+ *
+ * Preserves all 8 pre-migration named exports and all 8 `data-slot` values so
+ * the sole consumer, `avatar-page.tsx`'s bottom sheet at lines ~430-449,
+ * keeps compiling and rendering identically.
+ *
+ * Fluent's `OverlayDrawer` has no separate "Root" primitive analogous to
+ * Radix's `SheetPrimitive.Root` -- `OverlayDrawer` itself is the controlled
+ * surface. `Sheet` therefore becomes a lightweight React Context provider
+ * holding `{ open, onOpenChange }` that `SheetTrigger`/`SheetContent`/
+ * `SheetClose` all consume (same hand-rolled-context precedent used by
+ * Dialog in 40-01 for its `DialogContext`).
+ */
+
+export interface SheetRootProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
 }
 
+const SheetContext = React.createContext<{
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} | null>(null);
+
+function Sheet({ open, onOpenChange, children }: SheetRootProps) {
+  return (
+    <SheetContext.Provider value={{ open, onOpenChange }}>
+      <div data-slot="sheet">{children}</div>
+    </SheetContext.Provider>
+  );
+}
+
+/**
+ * No consumer in this codebase imports `SheetTrigger` without `asChild`
+ * (confirmed via repo-wide grep this session: the sole call site,
+ * `avatar-page.tsx`, always passes `asChild` with a single plain `<button>`
+ * child). Unlike Dialog's `FluentDialogTrigger` (which only clones its child
+ * when rendered inside a Fluent `Dialog` context), Sheet has no equivalent
+ * Fluent root component to delegate to, so it reuses the shared
+ * `isSingleRefCapableElement` shim (Pitfall 5) to clone an `onClick` handler
+ * onto the trigger's child directly.
+ */
 function SheetTrigger({
+  asChild,
+  children,
+  onClick,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
+}: React.ComponentProps<"button"> & { asChild?: boolean }) {
+  const ctx = React.useContext(SheetContext);
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent) => {
+      ctx?.onOpenChange?.(true);
+      if (typeof onClick === "function") {
+        (onClick as unknown as (e: React.MouseEvent) => void)(event);
+      }
+    },
+    [ctx, onClick],
+  );
+
+  if (asChild) {
+    if (isSingleRefCapableElement(children)) {
+      const child = children;
+      return React.cloneElement(child, {
+        ...props,
+        "data-slot": "sheet-trigger",
+        onClick: handleClick,
+      } as Partial<{ className?: string }> & Record<string, unknown>);
+    }
+
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "SheetTrigger: asChild requires a single ref-forwarding child element; falling back to default render",
+      );
+    }
+  }
+
+  return (
+    <button type="button" data-slot="sheet-trigger" onClick={handleClick} {...props}>
+      {children}
+    </button>
+  );
 }
 
 function SheetClose({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Close>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
-}
-
-function SheetPortal({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
-}
-
-function SheetOverlay({
   className,
+  children,
+  onClick,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
+}: React.ComponentProps<"button">) {
+  const ctx = React.useContext(SheetContext);
   return (
-    <SheetPrimitive.Overlay
-      data-slot="sheet-overlay"
-      className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
-        className,
-      )}
+    <button
+      type="button"
+      data-slot="sheet-close"
+      className={className}
+      onClick={(event) => {
+        onClick?.(event);
+        ctx?.onOpenChange?.(false);
+      }}
       {...props}
-    />
+    >
+      {children}
+    </button>
   );
+}
+
+export type SheetSide = "top" | "right" | "bottom" | "left";
+
+/**
+ * Maps the legacy `side` prop to Fluent's `OverlayDrawer` `position` prop.
+ * Fluent's `position` type is `'start' | 'end' | 'bottom'` (confirmed via
+ * `.d.ts`) -- there is no native `'top'` value. `side="top"` has zero call
+ * sites in the codebase (confirmed via grep), so rather than invent a
+ * degradation shim for an untested/unused value, it falls back to `'end'`
+ * with a dev-mode warning.
+ */
+function mapSideToPosition(side: SheetSide): "start" | "end" | "bottom" {
+  switch (side) {
+    case "left":
+      return "start";
+    case "right":
+      return "end";
+    case "bottom":
+      return "bottom";
+    case "top":
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "SheetContent: side=\"top\" has no native Fluent OverlayDrawer position equivalent (only 'start'|'end'|'bottom' exist) and has zero usage in this codebase; falling back to 'end'",
+        );
+      }
+      return "end";
+    default:
+      return "end";
+  }
 }
 
 function SheetContent({
@@ -47,35 +155,41 @@ function SheetContent({
   children,
   side = "right",
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: "top" | "right" | "bottom" | "left";
+}: React.ComponentProps<"div"> & {
+  side?: SheetSide;
 }) {
+  const ctx = React.useContext(SheetContext);
+
+  const handleOpenChange = React.useCallback(
+    (_event: DialogOpenChangeEvent, data: DialogOpenChangeData) => {
+      ctx?.onOpenChange?.(data.open);
+    },
+    [ctx],
+  );
+
   return (
-    <SheetPortal>
-      <SheetOverlay />
-      <SheetPrimitive.Content
-        data-slot="sheet-content"
-        className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
-          side === "right" &&
-            "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
-          side === "left" &&
-            "data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
-          side === "top" &&
-            "data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b",
-          side === "bottom" &&
-            "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t",
-          className,
-        )}
-        {...props}
-      >
+    <OverlayDrawer
+      data-slot="sheet-content"
+      open={ctx?.open}
+      position={mapSideToPosition(side)}
+      onOpenChange={handleOpenChange}
+      className={mergeClasses("flex flex-col gap-4", className)}
+      {...(props as Record<string, unknown>)}
+    >
+      <DrawerBody>
         {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+        <button
+          type="button"
+          data-slot="sheet-close"
+          aria-label="Close"
+          className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+          onClick={() => ctx?.onOpenChange?.(false)}
+        >
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
-      </SheetPrimitive.Content>
-    </SheetPortal>
+        </button>
+      </DrawerBody>
+    </OverlayDrawer>
   );
 }
 
@@ -83,7 +197,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      className={mergeClasses("flex flex-col gap-1.5 p-4", className)}
       {...props}
     />
   );
@@ -93,33 +207,27 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={mergeClasses("mt-auto flex flex-col gap-2 p-4", className)}
       {...props}
     />
   );
 }
 
-function SheetTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Title>) {
+function SheetTitle({ className, ...props }: React.ComponentProps<"h2">) {
   return (
-    <SheetPrimitive.Title
+    <h2
       data-slot="sheet-title"
-      className={cn("text-foreground font-semibold", className)}
+      className={mergeClasses("text-foreground font-semibold", className)}
       {...props}
     />
   );
 }
 
-function SheetDescription({
-  className,
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Description>) {
+function SheetDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
-    <SheetPrimitive.Description
+    <p
       data-slot="sheet-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={mergeClasses("text-muted-foreground text-sm", className)}
       {...props}
     />
   );
