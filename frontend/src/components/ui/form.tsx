@@ -1,6 +1,5 @@
 import * as React from "react";
 import * as LabelPrimitive from "@radix-ui/react-label";
-import { Slot } from "@radix-ui/react-slot";
 import {
   Controller,
   FormProvider,
@@ -13,6 +12,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Label } from "./label";
+import { isSingleRefCapableElement } from "./_shim-as-child";
 
 const Form = FormProvider;
 
@@ -102,23 +102,41 @@ function FormLabel({
   );
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+function FormControl({
+  children,
+  ...props
+}: React.ComponentProps<"div"> & { children?: React.ReactNode }) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
 
-  return (
-    <Slot
-      data-slot="form-control"
-      id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
-      aria-invalid={!!error}
-      {...props}
-    />
-  );
+  const slotProps = {
+    ...props,
+    "data-slot": "form-control",
+    id: formItemId,
+    "aria-describedby": !error
+      ? `${formDescriptionId}`
+      : `${formDescriptionId} ${formMessageId}`,
+    "aria-invalid": !!error,
+  };
+
+  if (isSingleRefCapableElement(children)) {
+    return React.cloneElement(children, {
+      ...slotProps,
+      className: cn(
+        (children.props as { className?: string }).className,
+        (props as { className?: string }).className,
+      ),
+    } as Partial<{ className?: string }> & Record<string, unknown>);
+  }
+
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "FormControl: expected a single ref-forwarding child element; falling back to default render",
+    );
+  }
+
+  return <div {...slotProps}>{children}</div>;
 }
 
 function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
