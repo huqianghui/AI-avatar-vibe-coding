@@ -38,7 +38,6 @@ export default defineConfig({
         "src/main.tsx",
         "src/types/**",
         "src/components/ui/dropdown-menu.tsx",
-        "src/components/ui/select.tsx",
       ],
       // TODO: raise to 95 per project testing standard once coverage improves
       // (measured baseline recorded in 29-10-SUMMARY.md: Stmts 71.87%, Branches

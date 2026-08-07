@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { FluentProvider, webLightTheme } from "@fluentui/react-components";
+import { selectFluentOption } from "@/test/test-utils";
 import type { AdminUser } from "@/api/users";
 import type { PersonalizationSummary, UserPreference } from "@/api/user-preferences";
 
@@ -89,7 +91,9 @@ const matchedPreference: UserPreference = {
 
 function renderDialog() {
   return render(
-    <UserPersonalizationDialog user={mockUser} open onOpenChange={vi.fn()} />,
+    <FluentProvider theme={webLightTheme}>
+      <UserPersonalizationDialog user={mockUser} open onOpenChange={vi.fn()} />
+    </FluentProvider>,
   );
 }
 
@@ -152,14 +156,14 @@ describe("UserPersonalizationDialog", () => {
   });
 
   it("calls create-mutation with category and value when Add is clicked", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockSummary = { crm_matched: false, customer_name: null, company: null, preferences: [] };
     renderDialog();
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByText("关注领域"));
     await user.type(screen.getByPlaceholderText("输入偏好内容"), "oncology");
-    await user.click(screen.getByRole("button", { name: "添加" }));
+    const addButton = screen.getByRole("button", { name: "添加" });
+    await selectFluentOption(user, "关注领域", () => !(addButton as HTMLButtonElement).disabled);
+    await user.click(addButton);
 
     expect(mockCreateMutate).toHaveBeenCalledWith(
       { category: "focus_area", value: "oncology" },
@@ -175,7 +179,7 @@ describe("UserPersonalizationDialog", () => {
   });
 
   it("deletes a chip via direct mutation without a blocking second dialog", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockSummary = {
       crm_matched: false,
       customer_name: null,

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { FluentProvider, webLightTheme } from "@fluentui/react-components";
+import { selectFluentOption } from "@/test/test-utils";
 import { AssignHcpDialog } from "../assign-hcp-dialog";
 
 // Polyfill pointer capture methods missing in jsdom (required by Radix Select)
@@ -149,7 +151,7 @@ describe("AssignHcpDialog", () => {
 
   it("calls onOpenChange(false) when cancel button is clicked", async () => {
     const onOpenChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(
       <AssignHcpDialog
@@ -168,7 +170,7 @@ describe("AssignHcpDialog", () => {
 
   it("does not call mutate when assign clicked without selection", async () => {
     mockMutate.mockClear();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(
       <AssignHcpDialog
@@ -208,27 +210,22 @@ describe("AssignHcpDialog", () => {
 
   it("calls mutate when HCP is selected and assign clicked", async () => {
     mockMutate.mockClear();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(
-      <AssignHcpDialog
-        instanceId="inst-2"
-        instanceName="Test Instance"
-        open={true}
-        onOpenChange={vi.fn()}
-      />,
+      <FluentProvider theme={webLightTheme}>
+        <AssignHcpDialog
+          instanceId="inst-2"
+          instanceName="Test Instance"
+          open={true}
+          onOpenChange={vi.fn()}
+        />
+      </FluentProvider>,
     );
 
-    // Click the select trigger to open the dropdown
-    const trigger = screen.getByRole("combobox");
-    await user.click(trigger);
-
-    // Wait for and click an option
-    const option = await screen.findByText(/Dr\. Zhang/);
-    await user.click(option);
-
-    // Now assign button should be enabled, click it
+    // Select an HCP; the assign button enables once the selection commits.
     const assignBtn = screen.getByText("voiceLive.assignToHcp").closest("button")!;
+    await selectFluentOption(user, /Dr\. Zhang/, () => !assignBtn.disabled);
     expect(assignBtn.disabled).toBe(false);
     await user.click(assignBtn);
 
@@ -242,7 +239,7 @@ describe("AssignHcpDialog", () => {
   it("calls toast.success and closes dialog on assign success", async () => {
     const { toast } = await import("sonner");
     const onOpenChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Make mutate call onSuccess synchronously
     mockMutate.mockImplementation((_args: unknown, opts: { onSuccess?: () => void }) => {
@@ -250,20 +247,18 @@ describe("AssignHcpDialog", () => {
     });
 
     render(
-      <AssignHcpDialog
-        instanceId="inst-2"
-        instanceName="Test Instance"
-        open={true}
-        onOpenChange={onOpenChange}
-      />,
+      <FluentProvider theme={webLightTheme}>
+        <AssignHcpDialog
+          instanceId="inst-2"
+          instanceName="Test Instance"
+          open={true}
+          onOpenChange={onOpenChange}
+        />
+      </FluentProvider>,
     );
 
-    const trigger = screen.getByRole("combobox");
-    await user.click(trigger);
-    const option = await screen.findByText(/Dr\. Zhang/);
-    await user.click(option);
-
     const assignBtn = screen.getByText("voiceLive.assignToHcp").closest("button")!;
+    await selectFluentOption(user, /Dr\. Zhang/, () => !assignBtn.disabled);
     await user.click(assignBtn);
 
     expect(toast.success).toHaveBeenCalled();
@@ -274,7 +269,7 @@ describe("AssignHcpDialog", () => {
 
   it("calls toast.error on assign failure", async () => {
     const { toast } = await import("sonner");
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Make mutate call onError synchronously
     mockMutate.mockImplementation((_args: unknown, opts: { onError?: () => void }) => {
@@ -282,20 +277,18 @@ describe("AssignHcpDialog", () => {
     });
 
     render(
-      <AssignHcpDialog
-        instanceId="inst-2"
-        instanceName="Test"
-        open={true}
-        onOpenChange={vi.fn()}
-      />,
+      <FluentProvider theme={webLightTheme}>
+        <AssignHcpDialog
+          instanceId="inst-2"
+          instanceName="Test"
+          open={true}
+          onOpenChange={vi.fn()}
+        />
+      </FluentProvider>,
     );
 
-    const trigger = screen.getByRole("combobox");
-    await user.click(trigger);
-    const option = await screen.findByText(/Dr\. Zhang/);
-    await user.click(option);
-
     const assignBtn = screen.getByText("voiceLive.assignToHcp").closest("button")!;
+    await selectFluentOption(user, /Dr\. Zhang/, () => !assignBtn.disabled);
     await user.click(assignBtn);
 
     expect(toast.error).toHaveBeenCalled();

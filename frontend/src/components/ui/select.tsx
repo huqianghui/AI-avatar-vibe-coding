@@ -1,98 +1,210 @@
 import * as React from "react";
-import * as SelectPrimitive from "@radix-ui/react-select";
 import {
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from "lucide-react";
+  Dropdown,
+  Option,
+  type DropdownProps,
+  type OptionOnSelectData,
+  type SelectionEvents,
+} from "@fluentui/react-components";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Fluent UI adapter for the legacy Radix-shaped Select surface.
+ *
+ * Contract preserved for all 25 consumer files (COMP-03):
+ *  - `Select` keeps the single-value `value` / `onValueChange(string)` controlled API.
+ *  - Internally backed by Fluent `Dropdown` + `Option`.
+ *
+ * value-derivation mechanism (highest-uncertainty decision, empirically probed):
+ *  Fluent `Dropdown` displays whatever its `value` prop contains in the closed
+ *  trigger — it does NOT auto-derive display text from `selectedOptions` alone.
+ *  So we derive the display TEXT for the current `value` by walking the composed
+ *  children to find the matching `SelectItem` (by its `value` prop) and reading
+ *  its rendered text, mirroring how the original Radix Select surfaced the
+ *  selected item's content in `SelectValue`. `onOptionSelect` returns
+ *  `{ optionValue, optionText }` (probe-confirmed), so selection round-trips the
+ *  plain string value back through `onValueChange` unchanged.
+ */
+
+type SelectContextValue = {
+  value?: string;
+  placeholder?: React.ReactNode;
+};
+
+const SelectContext = React.createContext<SelectContextValue>({});
+
+/** Recursively find the SelectItem whose `value` matches and return its text children. */
+function findSelectedText(
+  children: React.ReactNode,
+  value: string | undefined,
+): React.ReactNode {
+  if (value === undefined) return undefined;
+  let found: React.ReactNode;
+  const walk = (nodes: React.ReactNode) => {
+    React.Children.forEach(nodes, (child) => {
+      if (found !== undefined) return;
+      if (!React.isValidElement(child)) return;
+      const props = child.props as { value?: string; children?: React.ReactNode };
+      if (props.value === value && child.type === SelectItem) {
+        found = props.children;
+        return;
+      }
+      if (props.children) walk(props.children);
+    });
+  };
+  walk(children);
+  return found;
+}
+
+/** Extract a plain string from arbitrary React children for the Dropdown `value` prop. */
+function textContent(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textContent).join("");
+  if (React.isValidElement(node)) {
+    return textContent((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
+}
+
+type SelectProps = {
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  disabled?: boolean;
+  children?: React.ReactNode;
+} & Omit<
+  DropdownProps,
+  "value" | "selectedOptions" | "onOptionSelect" | "defaultValue" | "children"
+>;
+
 function Select({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
-}
-
-function SelectGroup({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Group>) {
-  return <SelectPrimitive.Group data-slot="select-group" {...props} />;
-}
-
-function SelectValue({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
-}
-
-function SelectTrigger({
-  className,
-  size = "default",
+  value,
+  defaultValue,
+  onValueChange,
+  disabled,
   children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
-  size?: "sm" | "default";
-}) {
+}: SelectProps) {
+  const [internal, setInternal] = React.useState<string | undefined>(defaultValue);
+  const isControlled = value !== undefined;
+  const currentValue = isControlled ? value : internal;
+
+  // Fluent renders its own trigger button, so the consumer-facing `SelectTrigger`
+  // never renders a distinct visible element. Consumers attach identifying props
+  // (data-testid, aria-label, className, id, …) to `SelectTrigger` expecting them
+  // on the real trigger — so we walk the children once to hoist those props (plus
+  // `size` and the `SelectValue` placeholder) onto the Dropdown.
+  const { placeholder, triggerSize, triggerProps } = React.useMemo(() => {
+    let ph: React.ReactNode;
+    let size: "sm" | "default" = "default";
+    let tProps: Record<string, unknown> = {};
+    const walk = (nodes: React.ReactNode) => {
+      React.Children.forEach(nodes, (child) => {
+        if (!React.isValidElement(child)) return;
+        if (child.type === SelectTrigger) {
+          const { size: s, children: _c, ...rest } = child.props as {
+            size?: "sm" | "default";
+            children?: React.ReactNode;
+          } & Record<string, unknown>;
+          if (s) size = s;
+          tProps = rest;
+        }
+        if (child.type === SelectValue && ph === undefined) {
+          ph = (child.props as { placeholder?: React.ReactNode }).placeholder;
+        }
+        const kids = (child.props as { children?: React.ReactNode }).children;
+        if (kids) walk(kids);
+      });
+    };
+    walk(children);
+    return { placeholder: ph, triggerSize: size, triggerProps: tProps };
+  }, [children]);
+
+  const selectedText = textContent(findSelectedText(children, currentValue));
+
+  const handleOptionSelect = (_ev: SelectionEvents, data: OptionOnSelectData) => {
+    const next = data.optionValue ?? "";
+    if (!isControlled) setInternal(next);
+    onValueChange?.(next);
+  };
+
   return (
-    <SelectPrimitive.Trigger
-      data-slot="select-trigger"
-      data-size={size}
-      className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm whitespace-nowrap transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 opacity-50" />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
+    <SelectContext.Provider value={{ value: currentValue, placeholder }}>
+      <div data-slot="select" className="contents">
+        <Dropdown
+          {...(triggerProps as Record<string, unknown>)}
+          data-slot="select-trigger"
+          data-size={triggerSize}
+          disabled={disabled}
+          placeholder={typeof placeholder === "string" ? placeholder : undefined}
+          value={selectedText}
+          selectedOptions={currentValue ? [currentValue] : []}
+          onOptionSelect={handleOptionSelect}
+          {...props}
+        >
+          {children}
+        </Dropdown>
+      </div>
+    </SelectContext.Provider>
   );
 }
 
+/**
+ * Structural pass-through. Fluent's `Dropdown` renders its own trigger button
+ * (which carries `data-slot="select-trigger"` + `data-size`, hoisted by
+ * `<Select>`), so this component only forwards its children — typically
+ * `SelectValue` — and does NOT re-emit the trigger slot to avoid a duplicate.
+ * The `size` prop is read by `<Select>` during child inspection.
+ */
+function SelectTrigger({
+  className,
+  size: _size = "default",
+  children,
+  ...props
+}: React.ComponentProps<"div"> & { size?: "sm" | "default" }) {
+  void _size;
+  return (
+    <div data-slot="select-trigger-inner" className={cn("contents", className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+/** Renders nothing on its own; Fluent Dropdown surfaces the selected value in its trigger. */
+function SelectValue({
+  className,
+  ...props
+}: React.ComponentProps<"span"> & { placeholder?: React.ReactNode }) {
+  // `placeholder` is consumed by <Select> above; strip it so it isn't spread to the DOM.
+  const { placeholder: _placeholder, ...rest } = props;
+  void _placeholder;
+  return <span data-slot="select-value" className={cn("contents", className)} {...rest} />;
+}
+
+/** Structural pass-through — its children (SelectItems) flow into the Dropdown listbox. */
 function SelectContent({
   className,
   children,
-  position = "popper",
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<"div"> & { position?: string }) {
+  const { position: _position, ...rest } = props;
+  void _position;
   return (
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Content
-        data-slot="select-content"
-        className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
-          position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          className,
-        )}
-        position={position}
-        {...props}
-      >
-        <SelectScrollUpButton />
-        <SelectPrimitive.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1",
-          )}
-        >
-          {children}
-        </SelectPrimitive.Viewport>
-        <SelectScrollDownButton />
-      </SelectPrimitive.Content>
-    </SelectPrimitive.Portal>
+    <div data-slot="select-content" className={cn("contents", className)} {...rest}>
+      {children}
+    </div>
   );
 }
 
-function SelectLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Label>) {
+function SelectGroup({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="select-group" role="group" className={className} {...props} />;
+}
+
+function SelectLabel({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <SelectPrimitive.Label
+    <div
       data-slot="select-label"
       className={cn("text-muted-foreground px-2 py-1.5 text-xs", className)}
       {...props}
@@ -103,74 +215,35 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  value,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: Omit<React.ComponentProps<typeof Option>, "value"> & { value: string }) {
   return (
-    <SelectPrimitive.Item
-      data-slot="select-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className,
-      )}
-      {...props}
-    >
-      <span className="absolute right-2 flex size-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    </SelectPrimitive.Item>
+    <Option data-slot="select-item" value={value} className={className} {...props}>
+      {children}
+    </Option>
   );
 }
 
-function SelectSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Separator>) {
+function SelectSeparator({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <SelectPrimitive.Separator
+    <div
       data-slot="select-separator"
+      role="separator"
       className={cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
       {...props}
     />
   );
 }
 
-function SelectScrollUpButton({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
-  return (
-    <SelectPrimitive.ScrollUpButton
-      data-slot="select-scroll-up-button"
-      className={cn(
-        "flex cursor-default items-center justify-center py-1",
-        className,
-      )}
-      {...props}
-    >
-      <ChevronUpIcon className="size-4" />
-    </SelectPrimitive.ScrollUpButton>
-  );
+/** No-op: Fluent's listbox scrolls natively; retained for import compatibility. */
+function SelectScrollUpButton(_props: React.ComponentProps<"div">) {
+  return null;
 }
 
-function SelectScrollDownButton({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
-  return (
-    <SelectPrimitive.ScrollDownButton
-      data-slot="select-scroll-down-button"
-      className={cn(
-        "flex cursor-default items-center justify-center py-1",
-        className,
-      )}
-      {...props}
-    >
-      <ChevronDownIcon className="size-4" />
-    </SelectPrimitive.ScrollDownButton>
-  );
+/** No-op: Fluent's listbox scrolls natively; retained for import compatibility. */
+function SelectScrollDownButton(_props: React.ComponentProps<"div">) {
+  return null;
 }
 
 export {

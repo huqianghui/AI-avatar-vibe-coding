@@ -1,4 +1,14 @@
 import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
+
+// Unmount React trees between tests so portalled overlays (Fluent Dialog,
+// Dropdown listboxes) don't leak into the next test's DOM and shadow queries
+// like getByRole("combobox"). RTL only auto-cleans when globals are enabled via
+// its own setup entry; we register it explicitly here.
+afterEach(() => {
+  cleanup();
+});
 
 // Fix Node.js 25+ native localStorage shadowing jsdom's polyfill.
 // Node 25 exposes a native localStorage global, but without --localstorage-file
