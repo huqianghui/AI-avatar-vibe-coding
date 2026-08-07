@@ -1,6 +1,7 @@
 from app.models.anonymous_avatar_session import AnonymousAvatarSession
 from app.models.avatar_interaction_log import AvatarInteractionLog
 from app.models.avatar_persona import AvatarPersona
+from app.models.avatar_persona_knowledge_config import AvatarPersonaKnowledgeConfig
 from app.models.base import Base, TimestampMixin
 from app.models.conference import ConferenceAudienceHcp
 from app.models.crm_import_log import CrmImportLog
@@ -43,6 +44,7 @@ __all__ = [
     "AnonymousAvatarSession",
     "AvatarInteractionLog",
     "AvatarPersona",
+    "AvatarPersonaKnowledgeConfig",
     "PersonalizedAvatarSession",
     "CrmImportLog",
     "PublicKnowledgeConfig",
