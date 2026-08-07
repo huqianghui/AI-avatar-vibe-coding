@@ -1,14 +1,20 @@
 import * as React from "react";
+import { mergeClasses } from "@fluentui/react-components";
 
 import { cn } from "@/lib/utils";
+import { useCardStyles } from "./card.styles";
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
+  const styles = useCardStyles();
   return (
     <div
       data-slot="card"
-      className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
-        className,
+      className={mergeClasses(
+        styles.root,
+        cn(
+          "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
+          className,
+        ),
       )}
       {...props}
     />
