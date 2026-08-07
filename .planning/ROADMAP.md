@@ -423,7 +423,19 @@ Plans:
   3. All 130 icon import call sites (84 distinct icons, manually reviewed regular/filled mapping) are switched to `src/components/icons/` named exports, batched per directory (admin/shared/voice/pages) with each batch its own commit and a bundle-size comparison noted in the commit message
   4. `toast.loading()` + `toast.dismiss(id)` at avatar-page.tsx:224-243 continue to work identically through the new pub/sub bridge (`src/lib/toast/`); all 46 files' imports move from `"sonner"` to `"@/lib/toast"`, and every `vi.mock("sonner")` is individually verified as `vi.mock("@/lib/toast")` (not batch-`sed`)
   5. E2E confirms the Fluent Toaster renders a `role="status"` live region equivalent to the prior sonner behavior
-**Plans**: TBD
+**Plans**: 12 plans
+- [ ] 41-01-PLAN.md — ICON-01 spike: Tailwind size-* vs 1em attribute, currentColor, in-situ Button check
+- [ ] 41-02-PLAN.md — ICON-02: build 84-icon adapter module (src/components/icons/)
+- [ ] 41-03-PLAN.md — ICON-03 admin batch: components/admin + pages/admin (51 files)
+- [ ] 41-04-PLAN.md — ICON-03 shared batch: components/shared (23 files)
+- [ ] 41-05-PLAN.md — ICON-03 voice batch: components/voice (6 files)
+- [ ] 41-06-PLAN.md — ICON-03 pages batch: pages/, pages/user/, avatar/coach/conference/layouts/scoring/session (36 files)
+- [ ] 41-07-PLAN.md — TOAST-01 spike: dispatchToast void-return + toastId round-trip via dismissToast
+- [ ] 41-08-PLAN.md — TOAST-02: build toast bridge (src/lib/toast/), wire Fluent Toaster into App.tsx, replace sonner.tsx
+- [ ] 41-09-PLAN.md — TOAST-02 admin batch: components/admin + pages/admin sonner imports + vi.mock rewrites
+- [ ] 41-10-PLAN.md — TOAST-02 shared+voice batch: components/shared, components/voice, hooks/use-unified-session
+- [ ] 41-11-PLAN.md — TOAST-02 pages batch: avatar-page.tsx (critical loading/dismiss round-trip) + pages/user/*
+- [ ] 41-12-PLAN.md — E2E toast role=status + icon smoke check, human visual spot-check (checkpoint)
 **UI hint**: yes
 
 ### Phase 42: Cleanup & Foundry Alignment
@@ -458,6 +470,6 @@ Phases execute in numeric order: ... → 31 (v1.0 last) → 32 → 33 → 34 →
 | 38. Voice Mode Config (Foundry Portal Style) | v2.3 | 3/3 | Complete    | 2026-08-04 |
 | 39. Fluent Infrastructure + Leaf Components | v3.0 | 7/7 | Complete   | 2026-08-06 |
 | 40. Composite Component Adapters | v3.0 | 0/? | Not started | - |
-| 41. Icon & Toast Adapter Layers | v3.0 | 0/? | Not started | - |
+| 41. Icon & Toast Adapter Layers | v3.0 | 0/12 | Not started | - |
 | 42. Cleanup & Foundry Alignment | v3.0 | 0/? | Not started (go/no-go gate) | - |
 </content>
